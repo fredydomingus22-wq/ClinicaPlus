@@ -1,0 +1,20 @@
+{
+  "root": true,
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "no-console": "error",
+    "@typescript-eslint/no-explicit-any": "error",
+    "no-restricted-globals": ["error", "localStorage", "sessionStorage"]
+  },
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  }
+}

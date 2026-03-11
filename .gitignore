@@ -1,0 +1,36 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+.turbo
+coverage
+.next
+*.log
+pnpm-debug.log*
+
+# IDE & Agents
+.qodo
+.agents
+.gemini
+
+# Temp/Debug files
+build_output*.txt
+typecheck*.txt
+typecheck*.log
+out.txt
+lint.log
+vitest-multitenancy.log
+debug-*.ts
+extract_fix_*.ts
+fix_specialties.js
+tmp_seed_*.ts
+
+# Agent kit directories (documentation, not part of the app)
+clinicaplus-agent-kit/
+clinicaplus-agent-kit-v3/
+clinicaplus-docs-v3/
+clinicaplus-docs-v4/
+devreview-agent/
+devfix-agent/
+ui-audit-agent/

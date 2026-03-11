@@ -1,0 +1,644 @@
+/**
+ * ClinicaPlus — Design Tokens
+ * Ficheiro: apps/web/src/styles/tokens.css
+ *
+ * REGRA: Nunca usar valores hardcoded no código.
+ *        Sempre referenciar estes tokens.
+ *        Importar este ficheiro em main.tsx antes de qualquer CSS de componente.
+ *
+ * USO: var(--color-primary-600)
+ */
+
+:root {
+  /* ═══════════════════════════════════════════════════════════════════
+     INDUSTRIAL CLARITY — PALETA MESTRE
+     Alta precisão. Mono-cromática com accent técnico.
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-primary-50: #f5f5f5;
+  --color-primary-100: #e5e5e5;
+  --color-primary-200: #d4d4d4;
+  --color-primary-300: #a3a3a3;
+  --color-primary-400: #737373;
+  --color-primary-500: #525252;
+  --color-primary-600: #1a1a1a; /* accent industrial — preto tipo */
+  --color-primary-700: #0a0a0a;
+  --color-primary-800: #000000;
+  --color-primary-900: #000000;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CORES — SUCESSO (Verde Saúde)
+     Para: estado CONCLUIDO, disponível, triagem normal.
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CORES — AVISO (Âmbar)
+     Para: estado PENDENTE, urgência URGENTE, lembretes.
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CORES — PERIGO / CRÍTICO (Vermelho)
+     RESERVADO PARA: alergias, urgência MUITO_URGENTE, erros destrutivos.
+     NUNCA usar para decoração. O utilizador associa esta cor a perigo real.
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CORES — NEUTROS
+     Para: texto, fundos, bordas, separadores.
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     SEMÂNTICOS — Superfícies e Fundos (Industrial)
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-bg-app: #fafafa; /* fundo geral — cinza industrial muito claro */
+  --color-bg-sidebar: #ffffff; /* sidebar branca limpa */
+  --color-bg-sidebar-hover: #f5f5f5;
+  --color-bg-sidebar-active: #1a1a1a; /* item activo — preto */
+
+  --color-surface: #ffffff; /* cards, painéis */
+  --color-surface-subtle: #f9f9f9; /* sub-camada */
+  --color-surface-raised: #ffffff; /* modais, dropdowns */
+  --color-surface-overlay: rgba(0, 0, 0, 0.5); /* backdrop de modal */
+
+  /* ═══════════════════════════════════════════════════════════════════
+     SEMÂNTICOS — Texto
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-text-primary: var(--color-neutral-900); /* texto principal */
+  --color-text-secondary: #525252; /* labels, legendas - was neutral-500, now darker */
+  --color-text-disabled: var(--color-neutral-300);
+  --color-text-inverse: var(--color-neutral-0); /* texto em fundo escuro */
+  --color-text-link: var(--color-primary-600);
+  --color-text-danger: var(--color-danger-700);
+
+  /* ═══════════════════════════════════════════════════════════════════
+     SEMÂNTICOS — Bordas
+     ═══════════════════════════════════════════════════════════════════ */
+  --color-border: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-300);
+  --color-border-focus: var(--color-primary-500);
+  --color-border-error: var(--color-danger-500);
+
+  /* ═══════════════════════════════════════════════════════════════════
+     ESTADOS DE AGENDAMENTO
+     Usar: bg, text, border de cada estado para StatusBadge e cards.
+     ═══════════════════════════════════════════════════════════════════ */
+  --estado-pendente-bg: #fef3c7;
+  --estado-pendente-text: #92400e;
+  --estado-pendente-border: #fcd34d;
+  --estado-pendente-dot: #f59e0b;
+
+  --estado-confirmado-bg: #dbeafe;
+  --estado-confirmado-text: #1e40af;
+  --estado-confirmado-border: #93c5fd;
+  --estado-confirmado-dot: #3b82f6;
+
+  --estado-em-progresso-bg: #dcfce7;
+  --estado-em-progresso-text: #14532d;
+  --estado-em-progresso-border: #86efac;
+  --estado-em-progresso-dot: #22c55e;
+
+  --estado-concluido-bg: #f1f5f9;
+  --estado-concluido-text: #475569;
+  --estado-concluido-border: #cbd5e1;
+  --estado-concluido-dot: #94a3b8;
+
+  --estado-cancelado-bg: #fee2e2;
+  --estado-cancelado-text: #7f1d1d;
+  --estado-cancelado-border: #fca5a5;
+  --estado-cancelado-dot: #ef4444;
+
+  --estado-nao-compareceu-bg: #fef9c3;
+  --estado-nao-compareceu-text: #713f12;
+  --estado-nao-compareceu-border: #fde047;
+  --estado-nao-compareceu-dot: #ca8a04;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     URGÊNCIA (triagem)
+     ═══════════════════════════════════════════════════════════════════ */
+  --urgencia-normal-bg: #f0fdf4;
+  --urgencia-normal-text: #14532d;
+  --urgencia-normal-border: #86efac;
+
+  --urgencia-urgente-bg: #fffbeb;
+  --urgencia-urgente-text: #78350f;
+  --urgencia-urgente-border: #fcd34d;
+
+  --urgencia-muito-urgente-bg: #fef2f2;
+  --urgencia-muito-urgente-text: #7f1d1d;
+  --urgencia-muito-urgente-border: #fca5a5;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     TIPOGRAFIA
+     ═══════════════════════════════════════════════════════════════════ */
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+  --text-xs: 0.75rem; /* 12px — cabeçalhos de tabela, labels secundários */
+  --text-sm: 0.875rem; /* 14px — texto de tabela, botões sm */
+  --text-base: 1rem; /* 16px — corpo, inputs */
+  --text-lg: 1.125rem; /* 18px — títulos de secção */
+  --text-xl: 1.25rem; /* 20px — títulos de página */
+  --text-2xl: 1.5rem; /* 24px — números de KPI */
+  --text-3xl: 1.875rem; /* 30px — KPI principal do dashboard */
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em; /* cabeçalhos de tabela uppercase */
+
+  /* ═══════════════════════════════════════════════════════════════════
+     ESPAÇAMENTO (base 4px)
+     ═══════════════════════════════════════════════════════════════════ */
+  --space-1: 0.25rem; /*  4px */
+  --space-2: 0.5rem; /*  8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+
+  /* ═══════════════════════════════════════════════════════════════════
+     BORDER RADIUS — INDUSTRIAL (sem arredondamentos)
+     ═══════════════════════════════════════════════════════════════════ */
+  --radius-sm: 0px; /* industrial — sharp corners */
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-full: 0px; /* avatares mantêm round se necessário via className */
+
+  /* ═══════════════════════════════════════════════════════════════════
+     SOMBRAS
+     ═══════════════════════════════════════════════════════════════════ */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+  --shadow-premium: 0 0 1px rgba(226, 232, 240, 1), 0 4px 10px -2px rgba(0, 0, 0, 0.04), 0 12px 20px -4px rgba(0, 0, 0, 0.06);
+  --shadow-glass: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 30px 80px -15px rgba(0, 0, 0, 0.2), 0 10px 25px rgba(0, 0, 0, 0.1);
+  --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.25); /* ring de foco suave */
+
+  /* ═══════════════════════════════════════════════════════════════════
+     ANIMAÇÕES
+     ═══════════════════════════════════════════════════════════════════ */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease-in-out;
+  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ═══════════════════════════════════════════════════════════════════
+     LAYOUT
+     ═══════════════════════════════════════════════════════════════════ */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 56px; /* h-14 */
+  --page-max-width: 1280px;
+  --page-padding-x: 24px;
+  --page-padding-y: 24px;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     Z-INDEX (escala fixa — nunca inventar valores)
+     ═══════════════════════════════════════════════════════════════════ */
+  --z-base: 0;
+  --z-raised: 1;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-bg: 1040;
+  --z-modal: 1050;
+  --z-modal: 1050;
+  --z-toast: 1060;
+  --z-tooltip: 1070;
+  /* Table Semantic Tokens — Industrial */
+  --table-bg: #ffffff;
+  --table-header-bg: #f9f9f9;
+  --table-border: #e5e5e5;
+  --table-text: #1a1a1a;
+  --table-text-muted: #525252;
+  --table-row-hover: #f5f5f5;
+
+  /* Badge Semantic Tokens — Industrial (high contrast, sharp) */
+  --badge-success-bg: #f0fdf4;
+  --badge-success-text: #166534;
+  --badge-success-border: #bbf7d0;
+
+  --badge-warning-bg: #fffbeb;
+  --badge-warning-text: #92400e;
+  --badge-warning-border: #fde68a;
+
+  --badge-error-bg: #fef2f2;
+  --badge-error-text: #991b1b;
+  --badge-error-border: #fecaca;
+
+  --badge-info-bg: #eff6ff;
+  --badge-info-text: #1e40af;
+  --badge-info-border: #bfdbfe;
+
+  --badge-neutral-bg: #f5f5f5;
+  --badge-neutral-text: #404040;
+  --badge-neutral-border: #e5e5e5;
+
+  /* Select Semantic Tokens — Industrial */
+  --select-bg: #ffffff;
+  --select-border: #d4d4d4;
+  --select-text: #1a1a1a;
+  --select-label: #1a1a1a;
+  --select-focus-bg: #ffffff;
+  --select-chevron: #737373;
+
+  /* Input & Textarea Semantic Tokens — Industrial */
+  --input-bg: #ffffff;
+  --input-border: #d4d4d4;
+  --input-text: #1a1a1a;
+  --input-label: #1a1a1a;
+  --input-placeholder: #a3a3a3;
+  --input-focus-bg: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SUPER ADMIN TOKENS (Refined Cyber-Editorial)
+   ═══════════════════════════════════════════════════════════════════ */
+.superadmin-theme {
+  --sa-background: oklch(15% 0.02 260);
+  --sa-surface: oklch(20% 0.02 260);
+  --sa-primary: oklch(70% 0.15 160);
+  --sa-border: oklch(25% 0.02 260);
+  --sa-destructive: oklch(60% 0.2 25);
+  --sa-warning: oklch(75% 0.15 70);
+  --sa-info: oklch(70% 0.12 230);
+  
+  --sa-text: #ffffff;
+  --sa-text-muted: rgba(255, 255, 255, 0.5);
+
+  /* Table Overrides for SA Theme */
+  --table-bg: var(--sa-surface);
+  --table-header-bg: rgba(255, 255, 255, 0.05);
+  --table-border: rgba(255, 255, 255, 0.08);
+  --table-text: var(--sa-text);
+  --table-text-muted: var(--sa-text-muted);
+  --table-row-hover: rgba(255, 255, 255, 0.02);
+
+  /* Select Overrides for SA Theme */
+  --select-bg: var(--sa-background);
+  --select-border: rgba(255, 255, 255, 0.1);
+  --select-text: var(--sa-text);
+  --select-label: var(--sa-text);
+  --select-focus-bg: var(--sa-surface);
+  --select-chevron: var(--sa-text-muted);
+
+
+  /* Badge Overrides for SA Theme (Higher contrast, subtle bg) */
+  --badge-success-bg: color-mix(in srgb, var(--sa-primary), transparent 90%);
+  --badge-success-text: var(--sa-primary);
+  --badge-success-border: color-mix(in srgb, var(--sa-primary), transparent 70%);
+
+  --badge-warning-bg: color-mix(in srgb, var(--sa-warning), transparent 90%);
+  --badge-warning-text: var(--sa-warning);
+  --badge-warning-border: color-mix(in srgb, var(--sa-warning), transparent 70%);
+
+  --badge-error-bg: color-mix(in srgb, var(--sa-destructive), transparent 90%);
+  --badge-error-text: var(--sa-destructive);
+  --badge-error-border: color-mix(in srgb, var(--sa-destructive), transparent 70%);
+
+  --badge-info-bg: color-mix(in srgb, var(--sa-info), transparent 90%);
+  --badge-info-text: var(--sa-info);
+  --badge-info-border: color-mix(in srgb, var(--sa-info), transparent 70%);
+
+  --badge-neutral-bg: rgba(255, 255, 255, 0.05);
+  --badge-neutral-text: var(--sa-text-muted);
+  --badge-neutral-border: rgba(255, 255, 255, 0.1);
+
+  /* Input & Textarea Overrides for SA Theme */
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-border: rgba(255, 255, 255, 0.08);
+  --input-text: var(--sa-text);
+  --input-label: var(--sa-text);
+  --input-placeholder: var(--sa-text-muted);
+  --input-focus-bg: rgba(255, 255, 255, 0.05);
+
+  color: var(--sa-text);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITÁRIOS GLOBAIS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Screen-reader only — acessibilidade */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus visible — Industrial (sem arredondamento, outline nítido) */
+*:focus-visible {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+/* Scrollbar discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-300);
+  border-radius: 0; /* Industrial — no radius */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INDUSTRIAL BASE — Reset global de fonte e cor de texto
+   ═══════════════════════════════════════════════════════════════════ */
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1a1a1a;
+  background-color: #fafafa;
+  line-height: 1.5;
+}
+
+/* Tabela de dados: números e IDs em mono */
+.font-mono, code, kbd, pre, [data-mono] {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Headings: usar IBM Plex Sans Bold */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Skeleton animation */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.skeleton {
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-md);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* Slide-in para toasts */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(calc(100% + var(--space-4)));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right var(--transition-normal);
+}
+
+/* Fade-in para modais */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in var(--transition-fast);
+}
+
+/* Scale-in para modal content */
+@keyframes scale-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-scale-in {
+  animation: scale-in var(--transition-normal);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Luxe (Neo-Clinical Luxe) THEME
+   ═══════════════════════════════════════════════════════════════════ */
+.luxe-theme {
+  /* Editorial Typography */
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "Plus Jakarta Sans", var(--font-ui);
+
+  /* Cromoterapia Palette (OKLCH) */
+  --color-luxe-base: oklch(96% 0.01 220); /* Off-white matte */
+  --color-luxe-primary: oklch(40% 0.12 250); /* Midnight Royal */
+  --color-luxe-accent: oklch(70% 0.15 190); /* Soft Mint */
+  --color-luxe-text: oklch(25% 0.02 250); /* Ultra dark deep blue */
+
+  /* Semantic Overrides */
+  --color-bg-app: var(--color-luxe-base);
+  --color-surface: oklch(98% 0 0);
+  --color-text-primary: var(--color-luxe-text);
+  --color-primary-600: var(--color-luxe-primary);
+  
+  /* Tables & Borders */
+  --table-header-bg: transparent;
+  --table-border: oklch(0% 0 0 / 0.08); /* Ultra-thin separator */
+  --table-text: var(--color-luxe-text);
+
+  /* Shadows */
+  --shadow-luxe: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.02), 0 10px 20px -5px rgba(0,0,0,0.03);
+}
+
+/* Texture Utility: Grain Overlay */
+.grain-overlay {
+  position: relative;
+}
+.grain-overlay::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.025;
+  z-index: 1000;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Staggered Animations */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ═══════════════════════════════════════════════════════════════════
+   INDUSTRIAL Theme (Utility-First)
+   ═══════════════════════════════════════════════════════════════════ */
+.industrial-theme {
+  --font-display: "IBM Plex Mono", monospace;
+  --font-body: "IBM Plex Mono", monospace;
+  --color-industrial-bg: #ffffff;
+  --color-industrial-text: #000000;
+  --color-industrial-accent: #0070f3; /* Vercel Blue */
+  --color-industrial-border: #eaeaea;
+
+  --color-bg-app: var(--color-industrial-bg);
+  --color-surface: #ffffff;
+  --color-text-primary: var(--color-industrial-text);
+  --color-primary-600: var(--color-industrial-accent);
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --table-border: 1px solid var(--color-industrial-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRECISION Theme (Modern SaaS)
+   ═══════════════════════════════════════════════════════════════════ */
+.precision-theme {
+  --font-display: "Outfit", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  
+  --color-precision-primary: oklch(60% 0.15 160); /* Emerald */
+  --color-precision-surface: oklch(98% 0.01 240); /* Soft Slate */
+  
+  --color-bg-app: var(--color-precision-surface);
+  --color-surface: #ffffff;
+  --color-text-primary: oklch(20% 0.05 240);
+  --color-primary-600: var(--color-precision-primary);
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BRUTALIST Theme (High Impact)
+   ═══════════════════════════════════════════════════════════════════ */
+.brutalist-theme {
+  --font-display: "Schibsted Grotesk", sans-serif;
+  --font-body: "Schibsted Grotesk", sans-serif;
+  
+  --color-brutalist-bg: #f5f5f0; /* Cream */
+  --color-brutalist-accent: #ff4500; /* Blood Orange */
+  
+  --color-bg-app: var(--color-brutalist-bg);
+  --color-surface: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-primary-600: var(--color-brutalist-accent);
+  --radius-md: 4px;
+  --shadow-brutalist: 8px 8px 0px #000000;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHROMATIC Theme (Artistic/Canvas)
+   ═══════════════════════════════════════════════════════════════════ */
+.chromatic-theme {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+  
+  --color-chromatic-violet: oklch(45% 0.25 300);
+  --color-chromatic-golden: oklch(80% 0.2 80);
+  --color-chromatic-teal: oklch(60% 0.15 200);
+
+  --color-bg-app: oklch(99% 0.01 300);
+  --color-surface: #ffffff;
+  --color-text-primary: oklch(25% 0.1 300);
+  --color-primary-600: var(--color-chromatic-violet);
+  --radius-md: 100px; /* Hyper-rounded */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CONTINUUM Theme (Login Concept / Aesthetic Continuity)
+   ═══════════════════════════════════════════════════════════════════ */
+.continuum-theme {
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-body: "IBM Plex Sans", sans-serif;
+
+  --color-continuum-teal: #0d9488; /* teal-600 */
+  --color-continuum-dark: #042f2e; /* teal-950 */
+  --color-continuum-accent: #2dd4bf; /* teal-400 */
+
+  --color-bg-app: #f8fafc; /* slate-50 */
+  --color-surface: #ffffff;
+  --color-text-primary: #0f172a; /* slate-900 */
+  --color-primary-600: var(--color-continuum-teal);
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  
+  --shadow-continuum: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}

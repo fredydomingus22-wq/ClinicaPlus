@@ -1,0 +1,492 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum Papel {
+  PACIENTE
+  RECEPCIONISTA
+  MEDICO
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Plano {
+  BASICO
+  PRO
+  ENTERPRISE
+}
+
+enum EstadoAgendamento {
+  PENDENTE
+  CONFIRMADO
+  EM_PROGRESSO
+  CONCLUIDO
+  CANCELADO
+  NAO_COMPARECEU
+}
+
+enum TipoAgendamento {
+  CONSULTA
+  EXAME
+  RETORNO
+}
+
+enum TipoExame {
+  LABORATORIO
+  IMAGEM
+  OUTRO
+}
+
+enum TipoDocumento {
+  RECEITA
+  GUIA_EXAME
+  RELATORIO_MEDICO
+  COMPROVATIVO_AGENDAMENTO
+  DOSSIER_CLINICO
+}
+
+// ── Clinica (tenant root) ──────────────────────────────────────
+
+model Clinica {
+  id           String   @id @default(cuid())
+  nome         String
+  slug         String   @unique
+  logo         String?
+  telefone     String?
+  email        String   @unique
+  endereco     String?
+  cidade       String?
+  provincia    String?
+  plano        Plano    @default(BASICO)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  utilizadores   Utilizador[]
+  pacientes      Paciente[]
+  medicos        Medico[]
+  especialidades Especialidade[]
+  agendamentos   Agendamento[]
+  receitas       Receita[]
+  lembretes      LembreteAgendamento[]
+  configuracao   ConfiguracaoClinica?
+  contactos      ContactoClinica[]
+  subscricao     Subscricao?
+  faturas        Fatura[]
+  prontuarios    Prontuario[]
+  exames         Exame[]
+  documentos     Documento[]
+
+  @@index([slug])
+  @@map("clinicas")
+}
+
+model ContactoClinica {
+  id        String   @id @default(cuid())
+  clinicaId String
+  tipo      String // e.g., 'TELEFONE', 'WHATSAPP', 'EMAIL'
+  valor     String
+  descricao String? // e.g., 'Recepção', 'Urgências'
+  ordem     Int      @default(0)
+  criadoEm  DateTime @default(now())
+
+  clinica Clinica @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+
+  @@index([clinicaId])
+  @@map("contactos_clinica")
+}
+
+// ── Utilizador ────────────────────────────────────────────────
+
+model Utilizador {
+  id           String   @id @default(cuid())
+  clinicaId    String
+  nome         String
+  email        String
+  passwordHash String
+  papel        Papel
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  clinica       Clinica        @relation(fields: [clinicaId], references: [id])
+  refreshTokens RefreshToken[]
+  notificacoes  Notificacao[]
+  medico        Medico?
+  paciente      Paciente?
+  systemLogs    SystemLog[]
+
+  @@unique([clinicaId, email])
+  @@index([clinicaId])
+  @@index([clinicaId, papel])
+  @@map("utilizadores")
+}
+
+model RefreshToken {
+  id           String    @id @default(cuid())
+  utilizadorId String
+  token        String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  criadoEm     DateTime  @default(now())
+
+  utilizador Utilizador @relation(fields: [utilizadorId], references: [id], onDelete: Cascade)
+
+  @@index([utilizadorId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ── Paciente ──────────────────────────────────────────────────
+
+model Paciente {
+  id             String   @id @default(cuid())
+  clinicaId      String
+  numeroPaciente String
+  utilizadorId   String?  @unique
+  nome           String
+  dataNascimento DateTime
+  genero         String
+  tipoSangue     String?
+  alergias       String[] @default([])
+  telefone       String?
+  email          String?
+  endereco       String?
+  provincia      String?
+  seguroSaude    Boolean  @default(false)
+  seguradora     String?
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  clinica      Clinica       @relation(fields: [clinicaId], references: [id])
+  utilizador   Utilizador?   @relation(fields: [utilizadorId], references: [id])
+  agendamentos Agendamento[]
+  receitas     Receita[]
+  prontuarios  Prontuario[]
+  exames       Exame[]
+  documentos   Documento[]
+
+  @@unique([clinicaId, numeroPaciente])
+  @@index([clinicaId])
+  @@index([clinicaId, nome])
+  @@map("pacientes")
+}
+
+// ── Medico ────────────────────────────────────────────────────
+
+model Medico {
+  id              String        @id @default(cuid())
+  clinicaId       String
+  utilizadorId    String        @unique
+  nome            String
+  especialidadeId String
+  especialidade   Especialidade @relation(fields: [especialidadeId], references: [id])
+  ordem           String?
+  telefoneDireto  String?
+  /// Forma: { [segunda...domingo]: { ativo: boolean, inicio?: string, fim?: string, pausaInicio?: string, pausaFim?: string } }
+  horario         Json
+  duracaoConsulta Int           @default(30)
+  preco           Int           @default(0)
+  ativo           Boolean       @default(true)
+  criadoEm        DateTime      @default(now())
+  atualizadoEm    DateTime      @updatedAt
+
+  clinica      Clinica       @relation(fields: [clinicaId], references: [id])
+  utilizador   Utilizador    @relation(fields: [utilizadorId], references: [id])
+  agendamentos Agendamento[]
+  receitas     Receita[]
+  prontuarios  Prontuario[]
+  exames       Exame[]
+  documentos   Documento[]
+
+  @@index([clinicaId])
+  @@index([clinicaId, especialidadeId])
+  @@map("medicos")
+}
+
+// ── Especialidade ─────────────────────────────────────────────
+
+model Especialidade {
+  id           String   @id @default(cuid())
+  clinicaId    String
+  nome         String
+  descricao    String?
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  clinica Clinica  @relation(fields: [clinicaId], references: [id])
+  medicos Medico[]
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("especialidades")
+}
+
+// ── Agendamento ───────────────────────────────────────────────
+
+model Agendamento {
+  id             String            @id @default(cuid())
+  clinicaId      String
+  pacienteId     String
+  medicoId       String
+  dataHora       DateTime
+  duracao        Int               @default(30)
+  tipo           TipoAgendamento   @default(CONSULTA)
+  estado         EstadoAgendamento @default(PENDENTE)
+  motivoConsulta String?
+  observacoes    String?
+  /// Forma: { pa: string, temperatura: number, peso: number, altura: number, imc: number, frequenciaCardiaca: number, sintomas: string[], urgencia: string }
+  triagem        Json?
+  notasConsulta  String?
+  diagnostico    String?
+  canceladoPor   String?
+  canceladoEm    DateTime?
+  criadoEm       DateTime          @default(now())
+  atualizadoEm   DateTime          @updatedAt
+
+  clinica   Clinica               @relation(fields: [clinicaId], references: [id])
+  paciente  Paciente              @relation(fields: [pacienteId], references: [id])
+  medico    Medico                @relation(fields: [medicoId], references: [id])
+  receita   Receita?
+  prontuario Prontuario?
+  exames     Exame[]
+  documentos Documento[]
+  lembretes LembreteAgendamento[]
+
+  @@index([clinicaId])
+  @@index([clinicaId, dataHora])
+  @@index([clinicaId, medicoId, dataHora])
+  @@index([clinicaId, pacienteId])
+  @@index([clinicaId, estado])
+  @@map("agendamentos")
+}
+
+// ── Receita ───────────────────────────────────────────────────
+
+model Receita {
+  id            String   @id @default(cuid())
+  clinicaId     String
+  agendamentoId String   @unique
+  pacienteId    String
+  medicoId      String
+  diagnostico   String
+  /// Forma: Array<{ nome: string, dosagem: string, frequencia: string, duracao: string, instrucoes?: string }>
+  medicamentos  Json
+  observacoes   String?
+  dataEmissao   DateTime @default(now())
+  dataValidade  DateTime
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  clinica     Clinica     @relation(fields: [clinicaId], references: [id])
+  agendamento Agendamento @relation(fields: [agendamentoId], references: [id])
+  paciente    Paciente    @relation(fields: [pacienteId], references: [id])
+  medico      Medico      @relation(fields: [medicoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([clinicaId, pacienteId])
+  @@map("receitas")
+}
+
+// ── Lembretes ─────────────────────────────────────────────────
+
+model LembreteAgendamento {
+  id            String    @id @default(cuid())
+  clinicaId     String
+  agendamentoId String
+  tipo          String
+  agendadoPara  DateTime
+  enviadoEm     DateTime?
+  sucesso       Boolean?
+  erro          String?
+  criadoEm      DateTime  @default(now())
+
+  clinica     Clinica     @relation(fields: [clinicaId], references: [id])
+  agendamento Agendamento @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([agendadoPara, enviadoEm])
+  @@map("lembretes_agendamento")
+}
+
+// ── Configuração ──────────────────────────────────────────────
+
+model ConfiguracaoClinica {
+  id                String   @id @default(cuid())
+  clinicaId         String   @unique
+  lembrete24h       Boolean  @default(true)
+  lembrete2h        Boolean  @default(true)
+  agendamentoOnline Boolean  @default(false)
+  preTriagem        Boolean  @default(true)
+  prontuarioCustom  Boolean  @default(false)
+  horasAntecedencia Int      @default(24)
+  moedaSimbolo      String   @default("Kz")
+  fusoHorario       String   @default("Africa/Luanda")
+  atualizadoEm      DateTime @updatedAt
+
+  clinica Clinica @relation(fields: [clinicaId], references: [id])
+
+  @@map("configuracoes_clinica")
+}
+
+// ── Notificações ──────────────────────────────────────────────
+
+model Notificacao {
+  id           String   @id @default(cuid())
+  utilizadorId String
+  titulo       String
+  mensagem     String
+  tipo         String   @default("INFO")
+  lida         Boolean  @default(false)
+  url          String?
+  criadoEm     DateTime @default(now())
+
+  utilizador Utilizador @relation(fields: [utilizadorId], references: [id], onDelete: Cascade)
+
+  @@index([utilizadorId, lida])
+  @@map("notificacoes")
+}
+
+// ── Super Admin (Global) ──────────────────────────────────────
+
+model SystemLog {
+  id           String   @id @default(cuid())
+  nivel        String   @default("INFO") // INFO, AVISO, ERRO, CRITICO
+  mensagem     String
+  acao         String?
+  utilizadorId String?
+  detalhes     Json?
+  criadoEm     DateTime @default(now())
+
+  utilizador Utilizador? @relation(fields: [utilizadorId], references: [id], onDelete: SetNull)
+
+  @@index([nivel])
+  @@index([acao])
+  @@map("system_logs")
+}
+
+model GlobalSettings {
+  id                   String   @id @default("global_settings")
+  modoManutencao       Boolean  @default(false)
+  registoNovasClinicas Boolean  @default(true)
+  maxUploadSizeMb      Int      @default(5)
+  mensagemSistema      String?
+  atualizadoEm         DateTime @updatedAt
+
+  @@map("global_settings")
+}
+
+// ── Billing & Subscriptions ───────────────────────────────────
+
+model Subscricao {
+  id              String   @id @default(cuid())
+  clinicaId       String   @unique
+  plano           Plano
+  status          String   @default("ATIVO") // ATIVO, CANCELADO, EXPIRADO, PENDENTE
+  dataInicio      DateTime @default(now())
+  dataFim         DateTime
+  proximoFaturamento DateTime
+  canceladoEm     DateTime?
+  atualizadoEm    DateTime @updatedAt
+
+  clinica Clinica @relation(fields: [clinicaId], references: [id])
+
+  @@map("subscricoes")
+}
+
+model Fatura {
+  id            String   @id @default(cuid())
+  clinicaId     String
+  numero        String   @unique // ex: FAT-2024-001
+  valor         Int      // em Kwanza
+  moeda         String   @default("Kz")
+  status        String   @default("PAGO") // PAGO, PENDENTE, CANCELADO, VENCIDO
+  dataEmissao   DateTime @default(now())
+  dataPagamento DateTime?
+  dataVencimento DateTime
+  urlPdf        String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  clinica Clinica @relation(fields: [clinicaId], references: [id])
+
+  @@index([clinicaId])
+  @@map("faturas")
+}
+
+model Prontuario {
+  id            String   @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String?  @unique
+  notas         String
+  diagnostico   String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  clinica     Clinica      @relation(fields: [clinicaId], references: [id])
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id])
+  medico      Medico       @relation(fields: [medicoId], references: [id])
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([pacienteId])
+  @@map("prontuarios")
+}
+
+model Exame {
+  id            String    @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String?
+  nome          String
+  tipo          TipoExame @default(LABORATORIO)
+  status        String    @default("PENDENTE")
+  resultado     String?
+  dataPedido    DateTime  @default(now())
+  dataResultado DateTime?
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+
+  clinica     Clinica      @relation(fields: [clinicaId], references: [id])
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id])
+  medico      Medico       @relation(fields: [medicoId], references: [id])
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([pacienteId])
+  @@map("exames")
+}
+
+model Documento {
+  id            String        @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String?
+  agendamentoId String?
+  tipo          TipoDocumento
+  nome          String
+  url           String
+  criadoEm      DateTime      @default(now())
+
+  clinica     Clinica      @relation(fields: [clinicaId], references: [id])
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id])
+  medico      Medico?      @relation(fields: [medicoId], references: [id])
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([pacienteId])
+  @@map("documentos")
+}

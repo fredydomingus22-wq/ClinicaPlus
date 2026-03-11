@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "error": {
+    "message": "Erro interno do servidor",
+    "code": "INTERNAL_ERROR"
+  }
+}

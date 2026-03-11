@@ -1,0 +1,31 @@
+{
+  "name": "clinicaplus",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "db:generate": "pnpm --filter=api exec prisma generate",
+    "db:migrate": "pnpm --filter=api exec prisma migrate dev",
+    "db:deploy": "pnpm --filter=api exec prisma migrate deploy",
+    "db:seed": "pnpm --filter=api exec prisma db seed",
+    "db:reset": "pnpm --filter=api exec prisma migrate reset",
+    "db:studio": "pnpm --filter=api exec prisma studio"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "^18.2.17",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}
