@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "cd ../.. && npx turbo run build --filter=@clinicaplus/types --filter=@clinicaplus/ui --filter=@clinicaplus/utils",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
