@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
@@ -38,10 +38,10 @@ describe('/api/agendamentos', () => {
     expect(agenda.estado).toBe('PENDENTE');
   });
 
-  it('POST /api/agendamentos com slot disponível -> 201 com estado PENDENTE', async () => {
+  it('POST /api/agendamentos com slot disponÃ­vel -> 201 com estado PENDENTE', async () => {
     const res = await app.post('/api/agendamentos')
       .set(authHeader(ctx.adminToken))
-      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Dor no peito há 3 dias' });
+      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Dor no peito hÃ¡ 3 dias' });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -52,7 +52,7 @@ describe('/api/agendamentos', () => {
     // try exact same slot from previous test
     const res = await app.post('/api/agendamentos')
       .set(authHeader(ctx.adminToken))
-      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Segunda marcação' });
+      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Segunda marcaÃ§Ã£o' });
 
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
@@ -114,7 +114,7 @@ describe('/api/agendamentos', () => {
     expect(res.body.data.triagem.imc).toBeCloseTo(22.86, 1); // verify trigger calculation exists
   });
 
-  it('GET /api/agendamentos/meus com token de PACIENTE -> lista só os seus', async () => {
+  it('GET /api/agendamentos/meus com token de PACIENTE -> lista sÃ³ os seus', async () => {
     const res = await app.get('/api/agendamentos/meus').set(authHeader(ctx.pacienteToken));
 
     expect(res.status).toBe(200);
@@ -158,3 +158,4 @@ describe('/api/agendamentos', () => {
     expect(res.status).toBe(403);
   });
 });
+

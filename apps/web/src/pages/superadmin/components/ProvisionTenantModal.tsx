@@ -22,7 +22,7 @@ export function ProvisionTenantModal({ isOpen, onClose }: ProvisionTenantModalPr
     formState: { errors },
     reset,
   } = useForm<ClinicaCreateInput>({
-    resolver: zodResolver(ClinicaCreateSchema),
+    resolver: zodResolver(ClinicaCreateSchema) as any,
     defaultValues: {
       plano: 'BASICO',
     },

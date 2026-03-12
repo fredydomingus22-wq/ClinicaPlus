@@ -28,7 +28,7 @@ afterEach(() => {
 describe('slots.service', () => {
   describe('isSlotAvailable', () => {
     it('returns true when no overlapping appointments exist', async () => {
-      vi.mocked(prisma.agendamento.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.agendamento.findMany).mockResolvedValue([]);
 
       const result = await isSlotAvailable(
         'm1',
@@ -38,11 +38,13 @@ describe('slots.service', () => {
       );
 
       expect(result).toBe(true);
-      expect(prisma.agendamento.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.agendamento.findMany).toHaveBeenCalledTimes(1);
     });
 
     it('returns false when slot is occupied', async () => {
-      vi.mocked(prisma.agendamento.findFirst).mockResolvedValue({ id: 'ag1' } as any);
+      vi.mocked(prisma.agendamento.findMany).mockResolvedValue([
+        { dataHora: new Date('2026-06-10T09:00:00Z'), duracao: 30 } as any
+      ]);
 
       const result = await isSlotAvailable(
         'm1',

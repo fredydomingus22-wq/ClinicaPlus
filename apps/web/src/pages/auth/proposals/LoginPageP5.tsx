@@ -14,7 +14,7 @@ import { ProposalNav } from './LoginPageP1';
 // Layout assimétrico e cores ricas da P1 aplicados sobre a estrutura semântica/CVA da P3
 export const LoginPageP5 = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +29,7 @@ export const LoginPageP5 = () => {
       setSession(response.accessToken, response.utilizador);
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       setValue('password', '');
       setError('root', { message: error.message || 'Falha na ligação ao servidor.' });
     },

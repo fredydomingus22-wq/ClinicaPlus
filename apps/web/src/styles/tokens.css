@@ -233,8 +233,9 @@
      LAYOUT
      ═══════════════════════════════════════════════════════════════════ */
   --sidebar-width: 240px;
-  --sidebar-width-collapsed: 64px;
-  --topbar-height: 56px; /* h-14 */
+  --sidebar-width-collapsed: 72px; /* Slightly wider for better icon spacing */
+  --topbar-height: 64px; /* standard clear topbar height */
+  --footer-height: 32px;
   --page-max-width: 1280px;
   --page-padding-x: 24px;
   --page-padding-y: 24px;
@@ -305,13 +306,14 @@
   --sa-background: oklch(15% 0.02 260);
   --sa-surface: oklch(20% 0.02 260);
   --sa-primary: oklch(70% 0.15 160);
-  --sa-border: oklch(25% 0.02 260);
+  --sa-border: oklch(35% 0.03 260); /* Increased chroma and lightness for better visibility */
   --sa-destructive: oklch(60% 0.2 25);
   --sa-warning: oklch(75% 0.15 70);
   --sa-info: oklch(70% 0.12 230);
   
   --sa-text: #ffffff;
-  --sa-text-muted: rgba(255, 255, 255, 0.5);
+  --sa-text-muted: oklch(85% 0.01 260); /* High contrast for small text (>4.5:1) */
+  --sa-text-dim: rgba(255, 255, 255, 0.45); /* For tertiary info like dates or separators */
 
   /* Table Overrides for SA Theme */
   --table-bg: var(--sa-surface);

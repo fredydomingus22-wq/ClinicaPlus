@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Hexagon } from 'lucide-react';
 
-import { LoginSchema, type LoginInput, Papel } from '@clinicaplus/types';
+import { LoginSchema, type LoginInput } from '@clinicaplus/types';
 import { authApi } from '../../../api/auth';
 import { useAuthStore } from '../../../stores/auth.store';
 
@@ -13,7 +13,7 @@ import { useAuthStore } from '../../../stores/auth.store';
 // Usando classes do Tailwind v3 existentes na base de código, mas focando em estética premium
 export const LoginPageP1 = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -28,7 +28,7 @@ export const LoginPageP1 = () => {
       setSession(response.accessToken, response.utilizador);
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       setValue('password', '');
       setError('root', { message: error.message || 'Falha na ligação.' });
     },

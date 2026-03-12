@@ -43,7 +43,7 @@ export function SAUsersPage() {
     {
       header: 'Tenant / Clínica',
       accessor: (u: GlobalUserDTO) => (
-        <span className="text-sm font-mono text-sa-text-muted bg-white/5 px-2 py-1 rounded">
+        <span className="text-sm font-mono text-sa-text-muted bg-sa-background border border-sa-border px-2 py-1 rounded">
           {u.clinicaNome}
         </span>
       )
@@ -92,21 +92,21 @@ export function SAUsersPage() {
           <ShieldAlert className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-sa-destructive font-mono font-bold tracking-tight uppercase tracking-wider">Security Control Directory</h2>
+          <h2 className="text-sa-destructive font-mono font-bold tracking-tight uppercase tracking-wider">Diretório de Controlo de Segurança</h2>
           <p className="text-sa-text-muted text-sm mt-1 leading-relaxed">
-            Área de ação direta na base de dados cross-tenant. Alterações de estado nesta secção suspendem os acessos globalmente, independentemente da clínica a que pertençam.
+            Área de ação direta na base de dados global. Alterações de estado nesta secção suspendem os acessos globalmente em todas as clínicas.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
+      <div className="flex flex-col sm:flex-row items-center gap-4 bg-sa-surface border border-sa-border rounded-xl p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sa-text-muted" />
           <Input 
             placeholder="Pesquisar por email, nome..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-10 w-full bg-sa-background border-white/10 text-white placeholder:text-gray-600 focus:ring-sa-primary/50 focus:border-sa-primary/50"
+            className="pl-10 h-10 w-full bg-sa-background border-sa-border text-white placeholder:text-gray-600 focus:ring-sa-primary/50 focus:border-sa-primary/50"
           />
         </div>
         <div className="w-full sm:w-64">
@@ -121,7 +121,7 @@ export function SAUsersPage() {
             ]}
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full bg-sa-background border-white/10 text-white focus:ring-sa-primary/50"
+            className="w-full bg-sa-background border-sa-border text-white focus:ring-sa-primary/50"
           />
         </div>
       </div>
@@ -143,7 +143,7 @@ export function SAUsersPage() {
 
       <div className="flex items-center justify-between mt-4">
         <span className="font-mono text-xs text-sa-text-muted px-4 py-2 rounded-lg bg-sa-primary/10 border border-sa-primary/30 text-sa-primary shadow-sa-glow">
-          MATCHES: {data?.total || 0}
+          RESULTADOS: {data?.total || 0}
         </span>
         <div className="flex gap-2">
           <Button 
@@ -151,18 +151,18 @@ export function SAUsersPage() {
             size="sm" 
             disabled={page <= 1} 
             onClick={() => setPage(p => p - 1)}
-            className="border border-white/10 text-sa-text-muted hover:text-white"
+            className="border border-sa-border text-sa-text-muted hover:text-white"
           >
-            ← PREV
+            ← ANTERIOR
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             disabled={page >= (Math.ceil((data?.total || 0) / 15) || 1)} 
             onClick={() => setPage(p => p + 1)}
-            className="border border-white/10 text-sa-text-muted hover:text-white"
+            className="border border-sa-border text-sa-text-muted hover:text-white"
           >
-            NEXT →
+            PRÓXIMO →
           </Button>
         </div>
       </div>

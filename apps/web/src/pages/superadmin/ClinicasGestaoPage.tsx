@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, MoreVertical, Building2, ShieldAlert, Loader2 } from 'lucide-react';
+import { Search, Filter, MoreVertical, Building2, ShieldAlert, Loader2, CheckCircle } from 'lucide-react';
 import { SlidePanel } from './components/SlidePanel';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { superAdminApi } from '../../api/superadmin';
@@ -27,10 +27,10 @@ export function ClinicasGestaoPage() {
     onSuccess: (updatedClinica) => {
       queryClient.invalidateQueries({ queryKey: ['sa-clinicas-list'] });
       setSelectedClinica(updatedClinica);
-      toast.success('Tenant actualizado com sucesso');
+      toast.success('Clínica atualizada com sucesso');
     },
     onError: () => {
-      toast.error('Erro ao atualizar tenant');
+      toast.error('Ocorreu um erro ao atualizar os dados da clínica');
     },
   });
 
@@ -40,37 +40,37 @@ export function ClinicasGestaoPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/10 pb-6 mb-8 shrink-0">
         <div>
-          <h1 className="text-4xl font-display font-medium tracking-tight text-white mb-2">Tenant Control</h1>
-          <p className="text-sa-text-muted font-mono text-sm uppercase">Manage clinics, plans and suspensions</p>
+          <h1 className="text-4xl font-display font-medium tracking-tight text-white mb-2">Gestão de Clínicas</h1>
+          <p className="text-sa-text-muted text-sm uppercase">Administração de registos, planos e acessos</p>
         </div>
         
         <div className="mt-4 md:mt-0 flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-sa-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative group">
+            <Search className="w-4 h-4 text-sa-text-muted absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-sa-primary transition-colors" />
             <input 
               type="text" 
-              placeholder="Search tenant..." 
+              placeholder="Pesquisar por nome ou identificador..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-sa-background border border-white/10 rounded-lg pl-9 pr-4 py-2 font-mono text-sm text-white focus:outline-none focus:border-sa-primary transition-colors"
+              className="bg-sa-background border border-sa-border rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-sa-primary transition-colors min-w-[280px]"
             />
           </div>
-          <button className="p-2.5 rounded-lg bg-sa-background border border-white/10 text-sa-text-muted hover:text-white hover:bg-white/5 transition-colors">
+          <button className="p-2.5 rounded-lg bg-sa-background border border-sa-border text-sa-text-muted hover:text-white hover:bg-white/5 transition-colors">
             <Filter className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Data Grid */}
-      <div className="flex-1 bg-sa-background border border-white/5 rounded-2xl overflow-hidden flex flex-col relative z-0">
+      <div className="flex-1 bg-sa-background border border-sa-border rounded-2xl overflow-hidden flex flex-col relative z-0">
         
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/10 bg-white/5 font-mono text-xs text-sa-text-muted uppercase tracking-wider shrink-0">
-          <div className="col-span-4">Tenant Name</div>
-          <div className="col-span-2">Slug</div>
-          <div className="col-span-2">Plan</div>
-          <div className="col-span-2">Load (Appts)</div>
-          <div className="col-span-2">Status</div>
+        <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-sa-border bg-white/5 text-xs text-sa-text-muted uppercase tracking-wider font-semibold shrink-0">
+          <div className="col-span-4">Nome da Clínica</div>
+          <div className="col-span-2">Identificador</div>
+          <div className="col-span-2">Plano Ativo</div>
+          <div className="col-span-2 text-center">Consultas</div>
+          <div className="col-span-2 text-right px-4">Estado</div>
         </div>
 
         {/* Table Body */}
@@ -80,8 +80,8 @@ export function ClinicasGestaoPage() {
               <Loader2 className="w-8 h-8 animate-spin text-sa-primary opacity-50" />
             </div>
           ) : clinicas.length === 0 ? (
-            <div className="p-10 text-center font-mono text-xs text-white/30 uppercase">
-              NO TENANTS FOUND MATCHING CRITERIA
+            <div className="p-10 text-center text-sm text-sa-text-muted uppercase tracking-widest opacity-40">
+              Nenhuma clínica encontrada com os critérios atuais
             </div>
           ) : (
             clinicas.map((clinica) => (
@@ -91,37 +91,38 @@ export function ClinicasGestaoPage() {
                 className="grid grid-cols-12 gap-4 px-6 py-4 items-center group cursor-pointer hover:bg-white/[0.02] transition-colors"
               >
                 <div className="col-span-4 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:border-sa-primary/50 group-hover:text-sa-primary transition-colors">
+                  <div className="w-9 h-9 rounded bg-white/5 border border-white/10 flex items-center justify-center text-white/50 group-hover:border-sa-primary/50 group-hover:text-sa-primary transition-all">
                     <Building2 className="w-4 h-4" />
                   </div>
-                  <span className="font-medium text-white group-hover:text-sa-primary transition-colors">{clinica.nome}</span>
+                  <span className="font-medium text-white group-hover:text-sa-primary transition-colors truncate">{clinica.nome}</span>
                 </div>
                 
-                <div className="col-span-2 font-mono text-sm text-sa-text-muted">
+                <div className="col-span-2 font-mono text-xs text-sa-text-muted">
                   {clinica.slug}
                 </div>
                 
                 <div className="col-span-2">
-                  <span className="font-mono text-[10px] px-2 py-1 rounded-full bg-white/10 text-white/70">
-                    {clinica.plano || 'N/A'}
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-sa-primary/5 text-sa-primary border border-sa-primary/20 font-medium uppercase tracking-tighter">
+                    {clinica.plano || 'Nenhum'}
                   </span>
                 </div>
                 
-                <div className="col-span-2 font-mono text-sm text-white/50">
-                  {/* Aggregated query response later if needed, currently N/A */}
-                  -
+                <div className="col-span-2 text-center text-sm text-sa-text-dim font-mono">
+                  —
                 </div>
 
-                <div className="col-span-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="col-span-2 flex items-center justify-end gap-4 px-4">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/20 border border-white/5">
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      clinica.ativo ? 'bg-sa-primary shadow-sa-glow' :
+                      clinica.ativo ? 'bg-sa-primary shadow-[0_0_8px_rgba(var(--sa-primary),0.5)]' :
                       'bg-sa-destructive shadow-[0_0_8px_rgba(var(--sa-destructive),0.5)]'
                     }`} />
-                    <span className={`font-mono text-xs ${clinica.ativo ? 'text-white/70' : 'text-sa-destructive'}`}>{clinica.ativo ? 'ACTIVE' : 'SUSPENDED'}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide ${clinica.ativo ? 'text-sa-primary' : 'text-sa-destructive'}`}>
+                      {clinica.ativo ? 'Ativo' : 'Suspenso'}
+                    </span>
                   </div>
                   
-                  <button className="opacity-0 group-hover:opacity-100 p-1 text-sa-text-muted hover:text-white transition-all">
+                  <button className="p-1 text-sa-text-muted hover:text-white transition-all transform hover:scale-110">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>
@@ -136,44 +137,53 @@ export function ClinicasGestaoPage() {
         isOpen={!!selectedClinica}
         onClose={() => setSelectedClinica(null)}
         title={selectedClinica?.nome || ''}
-        subtitle={`ID: ${selectedClinica?.id} | slug: ${selectedClinica?.slug}`}
+        subtitle={`${selectedClinica?.slug} | ID: ${selectedClinica?.id?.substring(0, 8)}...`}
       >
         {selectedClinica && (
           <div className="space-y-8 animate-fade-in">
             {/* Status Card */}
-            <div className="bg-sa-background border border-white/10 rounded-xl p-5 flex items-start justify-between">
+            <div className="bg-sa-surface border border-white/5 rounded-xl p-6 flex items-start justify-between shadow-xl">
               <div>
-                <p className="font-mono text-xs text-sa-text-muted uppercase mb-1">Current Status</p>
+                <p className="text-[10px] text-sa-text-muted uppercase font-bold tracking-widest mb-2">Estado Atual</p>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${selectedClinica.ativo ? 'bg-sa-primary' : 'bg-sa-destructive'}`} />
-                  <span className="font-medium text-white">{selectedClinica.ativo ? 'ACTIVE' : 'SUSPENDED'}</span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${selectedClinica.ativo ? 'bg-sa-primary' : 'bg-sa-destructive'}`} />
+                  <span className="font-semibold text-lg text-white">{selectedClinica.ativo ? 'Conta Ativa' : 'Acesso Suspenso'}</span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-mono text-xs text-sa-text-muted uppercase mb-1">Active Plan</p>
-                <span className="font-medium text-white">{selectedClinica.plano || 'N/A'}</span>
+                <p className="text-[10px] text-sa-text-muted uppercase font-bold tracking-widest mb-2">Plano de Subscrição</p>
+                <span className="font-semibold text-lg text-sa-primary uppercase">{selectedClinica.plano || 'Nenhum'}</span>
               </div>
             </div>
 
-            {/* Danger Zone */}
-            <div>
-              <h3 className="text-sm font-medium text-sa-destructive uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-sa-destructive/20 pb-2">
-                <ShieldAlert className="w-4 h-4" /> Threat Control
+            {/* Ações de Gestão */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2 border-b border-sa-border pb-3">
+                <ShieldAlert className="w-4 h-4 text-sa-destructive" /> Controlo de Acesso
               </h3>
               
               <div className="space-y-3">
                 <button 
                   onClick={() => updateMutation.mutate({ id: selectedClinica.id, data: { ativo: !selectedClinica.ativo } })}
                   disabled={updateMutation.isPending}
-                  className="w-full flex justify-between items-center p-4 bg-sa-destructive/5 border border-sa-destructive/20 rounded-lg hover:bg-sa-destructive/10 transition-colors group disabled:opacity-50"
+                  className={`w-full flex justify-between items-center p-5 rounded-xl border transition-all group disabled:opacity-50 ${
+                    selectedClinica.ativo 
+                      ? 'bg-sa-destructive/5 border-sa-destructive/20 hover:bg-sa-destructive/10' 
+                      : 'bg-sa-primary/5 border-sa-primary/20 hover:bg-sa-primary/10'
+                  }`}
                  >
                   <div className="text-left">
-                    <p className={`font-medium group-hover:brightness-125 ${selectedClinica.ativo ? 'text-sa-destructive' : 'text-sa-primary'}`}>
-                      {selectedClinica.ativo ? 'Suspend Tenant' : 'Activate Tenant'}
+                    <p className={`font-bold text-base transition-colors ${selectedClinica.ativo ? 'text-sa-destructive' : 'text-sa-primary'}`}>
+                      {selectedClinica.ativo ? 'Suspender Acesso da Clínica' : 'Reativar Acesso da Clínica'}
                     </p>
-                    <p className={`text-xs mt-0.5 ${selectedClinica.ativo ? 'text-sa-destructive/60' : 'text-sa-primary/60'}`}>
-                      {selectedClinica.ativo ? 'Blocks all logins and API requests.' : 'Restores access immediately.'}
+                    <p className="text-xs mt-1 text-sa-text-muted max-w-[240px]">
+                      {selectedClinica.ativo 
+                        ? 'Isto irá bloquear todos os logins, agendamentos e chamadas à API para esta clínica imediatamente.' 
+                        : 'Isto irá restaurar todas as funcionalidades e acessos da clínica ao sistema.'}
                     </p>
+                  </div>
+                  <div className={`p-2 rounded-lg transition-transform group-hover:scale-110 ${selectedClinica.ativo ? 'bg-sa-destructive/10 text-sa-destructive' : 'bg-sa-primary/10 text-sa-primary'}`}>
+                    {selectedClinica.ativo ? <ShieldAlert className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
                   </div>
                 </button>
               </div>

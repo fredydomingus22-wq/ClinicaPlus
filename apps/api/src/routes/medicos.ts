@@ -4,6 +4,7 @@ import {
   MedicoUpdateSchema,
   MedicoListQuerySchema,
   MedicoSlotQuerySchema,
+  MedicoSelfUpdateSchema,
   Papel,
 } from '@clinicaplus/types';
 import { medicosService } from '../services/medicos.service';
@@ -26,6 +27,20 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
+ * GET /medicos/:id
+ * Auth: All authenticated roles
+ */
+router.get('/:id', async (req, res, next) => {
+  try {
+    const medico = await medicosService.getOne(
+      req.params.id as string,
+      req.clinica.id
+    );
+    return res.json({ success: true, data: medico });
+  } catch (err) { return next(err); }
+});
+
+/**
  * GET /medicos/:id/slots?data=YYYY-MM-DD
  * Auth: All authenticated roles
  */
@@ -42,9 +57,36 @@ router.get('/:id/slots', async (req, res, next) => {
 });
 
 /**
- * POST /medicos
- * Auth: ADMIN
+ * GET /medicos/me
+ * Auth: MEDICO — returns the logged-in médico's own profile.
  */
+router.get('/me',
+  requireRole([Papel.MEDICO]),
+  async (req, res, next) => {
+    try {
+      const medico = await medicosService.getByUtilizadorId(req.user!.id, req.clinica.id);
+      return res.json({ success: true, data: medico });
+    } catch (err) { return next(err); }
+  }
+);
+
+/**
+ * PATCH /medicos/me
+ * Auth: MEDICO — the logged-in médico updates their own profile.
+ * Only allows editing: telefoneDireto, horario, duracaoConsulta.
+ */
+router.patch('/me',
+  requireRole([Papel.MEDICO]),
+  async (req, res, next) => {
+    try {
+      const medico = await medicosService.getByUtilizadorId(req.user!.id, req.clinica.id);
+      const body = MedicoSelfUpdateSchema.parse(req.body);
+      const updated = await medicosService.update(medico.id, body, req.clinica.id);
+      return res.json({ success: true, data: updated });
+    } catch (err) { return next(err); }
+  }
+);
+
 router.post('/',
   requireRole([Papel.ADMIN]),
   async (req, res, next) => {

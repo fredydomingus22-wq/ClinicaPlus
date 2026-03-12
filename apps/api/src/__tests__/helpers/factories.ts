@@ -113,6 +113,18 @@ export const factories = {
     
     const { accessToken: pacienteToken } = await authService._issueTokens(pacienteUser as any);
 
+    // Also create a REPCIONISTA user token for role-guard testing
+    const recepcaoUser = await prisma.utilizador.create({
+      data: {
+        clinicaId: clinica.id,
+        nome: 'Rececao Clinica',
+        email: faker.internet.email(),
+        passwordHash: HASH,
+        papel: 'RECEPCIONISTA',
+      }
+    });
+    const { accessToken: recepcaoToken } = await authService._issueTokens(recepcaoUser as any);
+
     return { 
       clinica, 
       admin, 
@@ -122,17 +134,26 @@ export const factories = {
       medico, 
       pacienteUser,
       pacienteToken,
-      paciente 
+      paciente,
+      recepcaoUser,
+      recepcaoToken
     };
   },
 
   async cleanupClinica(clinicaId: string) {
     // Delete in dependency order
     await prisma.receita.deleteMany({ where: { clinicaId } });
+    await prisma.prontuario.deleteMany({ where: { clinicaId } });
+    await prisma.exame.deleteMany({ where: { clinicaId } });
+    await prisma.documento.deleteMany({ where: { clinicaId } });
     await prisma.lembreteAgendamento.deleteMany({ where: { clinicaId } });
     await prisma.agendamento.deleteMany({ where: { clinicaId } });
     await prisma.paciente.deleteMany({ where: { clinicaId } });
     await prisma.medico.deleteMany({ where: { clinicaId } });
+    await prisma.especialidade.deleteMany({ where: { clinicaId } });
+    await prisma.fatura.deleteMany({ where: { clinicaId } });
+    await prisma.subscricao.deleteMany({ where: { clinicaId } });
+    await prisma.configuracaoClinica.deleteMany({ where: { clinicaId } });
     await prisma.refreshToken.deleteMany({ where: { utilizador: { clinicaId } } });
     await prisma.utilizador.deleteMany({ where: { clinicaId } });
     await prisma.clinica.delete({ where: { id: clinicaId } });

@@ -9,7 +9,7 @@ describe('/api/pacientes', () => {
   beforeAll(async () => {
     ctx = await factories.setupClinicaCompleta();
     // Create an extra patient for search tests
-    await factories.createPaciente(ctx.clinica.id, { nome: 'João Silva' });
+    await factories.createPaciente(ctx.clinica.id, { nome: 'JoÃ£o Silva' });
   });
 
   afterAll(async () => {
@@ -28,14 +28,14 @@ describe('/api/pacientes', () => {
     expect(res.body.data.page).toBe(1);
   });
 
-  it('GET /api/pacientes?q=João -> filtra correctamente', async () => {
+  it('GET /api/pacientes?q=JoÃ£o -> filtra correctamente', async () => {
     const res = await app
-      .get('/api/pacientes?q=João')
+      .get('/api/pacientes?q=JoÃ£o')
       .set(authHeader(ctx.adminToken));
 
     expect(res.status).toBe(200);
     expect(res.body.data.items.length).toBeGreaterThanOrEqual(1);
-    expect(res.body.data.items[0].nome).toContain('João');
+    expect(res.body.data.items[0].nome).toContain('JoÃ£o');
   });
 
   it('GET /api/pacientes/:id -> 200 com dados do paciente (inclui alergias)', async () => {
@@ -67,7 +67,7 @@ describe('/api/pacientes', () => {
     expect(res.body.data.nome).toBe('Novo Paciente');
   });
 
-  it('POST /api/pacientes com dados inválidos -> 400 com field errors (Zod, pt-AO)', async () => {
+  it('POST /api/pacientes com dados invÃ¡lidos -> 400 com field errors (Zod, pt-AO)', async () => {
     const res = await app
       .post('/api/pacientes')
       .set(authHeader(ctx.adminToken))
@@ -102,6 +102,43 @@ describe('/api/pacientes', () => {
     expect(res.body.data.alergias).toContain('Amendoim');
   });
 
+  it('GET /api/pacientes/:id as PACIENTE (own) -> 200', async () => {
+    const res = await app
+      .get(`/api/pacientes/${ctx.paciente.id}`)
+      .set(authHeader(ctx.pacienteToken));
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(ctx.paciente.id);
+  });
+
+  it('GET /api/pacientes/:id as PACIENTE (other) -> 403', async () => {
+    const otherPaciente = await factories.createPaciente(ctx.clinica.id);
+    const res = await app
+      .get(`/api/pacientes/${otherPaciente.id}`)
+      .set(authHeader(ctx.pacienteToken));
+
+    expect(res.status).toBe(403);
+  });
+
+  it('PATCH /api/pacientes/:id as PACIENTE (own) -> 200', async () => {
+    const res = await app
+      .patch(`/api/pacientes/${ctx.paciente.id}`)
+      .set(authHeader(ctx.pacienteToken))
+      .send({ nome: 'Nome Alterado pelo Paciente' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.nome).toBe('Nome Alterado pelo Paciente');
+  });
+
+  it('PATCH /api/pacientes/:id as MEDICO -> 403', async () => {
+    const res = await app
+      .patch(`/api/pacientes/${ctx.paciente.id}`)
+      .set(authHeader(ctx.medicoToken))
+      .send({ nome: 'Tentativa do Medico' });
+
+    expect(res.status).toBe(403);
+  });
+
   it('GET /api/pacientes sem token -> 401', async () => {
     const res = await app.get('/api/pacientes');
     expect(res.status).toBe(401);
@@ -116,3 +153,4 @@ describe('/api/pacientes', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 });
+

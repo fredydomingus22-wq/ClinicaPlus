@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { superAdminApi } from '../api/superadmin';
 import toast from 'react-hot-toast';
-import { ClinicaDTO, ClinicaCreateInput } from '@clinicaplus/types';
+import { ClinicaCreateInput } from '@clinicaplus/types';
 import { AxiosError } from 'axios';
 
 export const superAdminKeys = {

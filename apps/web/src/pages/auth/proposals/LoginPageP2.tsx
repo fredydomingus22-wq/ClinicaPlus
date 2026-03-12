@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-import { LoginSchema, type LoginInput, Papel } from '@clinicaplus/types';
+import { LoginSchema, type LoginInput } from '@clinicaplus/types';
 import { Button } from '@clinicaplus/ui';
 import { authApi } from '../../../api/auth';
 import { useAuthStore } from '../../../stores/auth.store';
@@ -15,7 +15,7 @@ import { ProposalNav } from './LoginPageP1'; // Reutilizando a navegação
 // Foco em WCAG AAA, focus rings claros, keyboard navigation, sem ambiguidades
 export const LoginPageP2 = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,7 +31,7 @@ export const LoginPageP2 = () => {
       setSession(response.accessToken, response.utilizador);
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       setValue('password', '');
       setError('root', { message: error.message || 'Ocorreu um erro no servidor. Tente novamente.' });
     },

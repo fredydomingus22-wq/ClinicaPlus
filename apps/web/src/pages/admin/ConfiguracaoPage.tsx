@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useClinicaMe, useUpdateClinicaMe, useUpdateClinicaContactos } from '../../hooks/useClinicas';
 import { useBillingHistory, useSubscriptionStatus } from '../../hooks/useBilling';
-import { formatCurrency, formatDate } from '@clinicaplus/utils';
+import { formatKwanza, formatDate } from '@clinicaplus/utils';
 import { 
   Building2, 
   Globe, 
@@ -239,7 +239,7 @@ export default function ConfiguracaoPage() {
                          <div>
                             <p className="text-sm font-bold text-neutral-800 tracking-tight">Fatura {fatura.numero}</p>
                             <p className="text-[10px] text-neutral-400 font-medium">
-                              Emissão: {formatDate(fatura.dataEmissao)} • {formatCurrency(fatura.valor)}
+                              Emissão: {formatDate(fatura.dataEmissao)} • {formatKwanza(fatura.valor)}
                             </p>
                          </div>
                       </div>

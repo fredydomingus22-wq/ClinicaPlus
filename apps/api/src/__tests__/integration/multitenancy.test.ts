@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
@@ -17,7 +17,7 @@ describe('Multitenancy isolation', () => {
     await factories.cleanupClinica(ctxB.clinica.id);
   });
 
-  it('Admin clínica A não acede a paciente de clínica B → 404', async () => {
+  it('Admin clÃ­nica A nÃ£o acede a paciente de clÃ­nica B â†’ 404', async () => {
     const res = await app
       .get(`/api/pacientes/${ctxB.paciente.id}`)
       .set(authHeader(ctxA.adminToken));
@@ -26,7 +26,7 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clínica A não acede a agendamentos de clínica B → 404', async () => {
+  it('Admin clÃ­nica A nÃ£o acede a agendamentos de clÃ­nica B â†’ 404', async () => {
     // Constant Wednesday future date to prevent any timezone/weekend availability issues
     const dataHoraStr = '2026-10-14T10:00:00.000Z';
     
@@ -46,7 +46,7 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clínica A ao criar agendamento com médico de clínica B → 404', async () => {
+  it('Admin clÃ­nica A ao criar agendamento com mÃ©dico de clÃ­nica B â†’ 404', async () => {
     const res = await app
       .post('/api/agendamentos')
       .set(authHeader(ctxA.adminToken))
@@ -62,7 +62,7 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clínica A não vê médicos de clínica B na lista → sem médico B', async () => {
+  it('Admin clÃ­nica A nÃ£o vÃª mÃ©dicos de clÃ­nica B na lista â†’ sem mÃ©dico B', async () => {
     const res = await app
       .get('/api/medicos')
       .set(authHeader(ctxA.adminToken));
@@ -78,7 +78,7 @@ describe('Multitenancy isolation', () => {
     expect(foundA).toBeDefined();
   });
 
-  it('Super Admin pode listar todas as clínicas', async () => {
+  it('Super Admin pode listar todas as clÃ­nicas', async () => {
     // First let's create a Super Admin (which uses `superadminRouter` bypassing tenant)
     // Here we assume superadmins log in via a special token or role
     // Since factories didn't create a SUPERADMIN, we mock or skip the role implementation details
@@ -91,3 +91,4 @@ describe('Multitenancy isolation', () => {
     expect(unauthRes.status).toBe(403);
   });
 });
+

@@ -6,10 +6,11 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 60000,
     hookTimeout: 60000,
+    fileParallelism: false,
     setupFiles:  ['./src/__tests__/helpers/setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
       thresholds: {
         lines:     70,
         functions: 70,
@@ -18,5 +19,6 @@ export default defineConfig({
       include: ['src/services/**', 'src/routes/**', 'src/utils/**'],
       exclude: ['src/lib/**', 'src/middleware/**'],
     },
+    exclude: ['dist/**', 'node_modules/**']
   },
 });

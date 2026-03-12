@@ -7,10 +7,29 @@ export const PROVINCES = [
 ];
 
 export const SPECIALTIES = [
-  'Clínica Geral', 'Pediatria', 'Ginecologia', 'Obstetrícia', 'Cardiologia',
-  'Dermatologia', 'Ortopedia', 'Oftalmologia', 'Otorrinolaringologia',
-  'Neurologia', 'Psiquiatria', 'Urologia', 'Estomatologia', 'Endocrinologia'
-];
+  'Cardiologia',
+  'Cirurgia Geral',
+  'Cirurgia Ortopédica',
+  'Clínica Geral',
+  'Dermatologia',
+  'Endocrinologia',
+  'Gastroenterologia',
+  'Ginecologia e Obstetrícia',
+  'Infectologia',
+  'Medicina Interna',
+  'Nefrologia',
+  'Neurologia',
+  'Oftalmologia',
+  'Oncologia',
+  'Otorrinolaringologia',
+  'Pediatria',
+  'Pneumologia',
+  'Psicologia',
+  'Psiquiatria',
+  'Radiologia',
+  'Reumatologia',
+  'Urologia',
+] as const;
 
 export const APPOINTMENT_STATES: Record<EstadoAgendamento, { label: string; color: string }> = {
   PENDENTE: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },

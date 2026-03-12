@@ -55,3 +55,15 @@ export type MedicoUpdateInput = z.infer<typeof MedicoUpdateSchema>;
 export type MedicoListQuery = z.infer<typeof MedicoListQuerySchema>;
 export type MedicoSlotQuery = z.infer<typeof MedicoSlotQuerySchema>;
 export type MedicoHorario = z.infer<typeof MedicoHorarioSchema>;
+
+/**
+ * Fields the médico can update on their own profile.
+ * Price, specialty and status are admin-only.
+ */
+export const MedicoSelfUpdateSchema = z.object({
+  telefoneDireto: z.string().max(20).trim().optional(),
+  horario: MedicoHorarioSchema.optional(),
+  duracaoConsulta: z.number().int().min(10).max(120).optional(),
+});
+
+export type MedicoSelfUpdateInput = z.infer<typeof MedicoSelfUpdateSchema>;

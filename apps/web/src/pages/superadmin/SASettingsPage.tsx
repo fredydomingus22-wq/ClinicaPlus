@@ -47,21 +47,21 @@ export function SASettingsPage() {
           <Settings className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-sa-warning font-mono font-bold tracking-tight uppercase">Global System Configuration</h2>
+          <h2 className="text-sa-warning font-mono font-bold tracking-tight uppercase">Configurações Globais do Sistema</h2>
           <p className="text-sa-text-muted text-sm mt-1 leading-relaxed">
             Parâmetros de configuração central do ClinicaPlus. Modificações nestes campos alteram o comportamento de toda a plataforma de imediato.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8 bg-sa-surface border border-white/5 rounded-xl p-8 shadow-2xl relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="space-y-8 bg-sa-surface border border-sa-border rounded-xl p-8 shadow-2xl relative overflow-hidden">
         {/* Glow accent */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sa-primary/50 to-transparent"></div>
 
         <div className="space-y-8">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4 bg-white/5 p-5 rounded-lg border border-white/5">
+            <div className="space-y-4 bg-white/5 p-5 rounded-lg border border-sa-border">
               <label className="flex items-start gap-3 cursor-pointer group">
                 <div className="pt-0.5">
                   <input 
@@ -81,7 +81,7 @@ export function SASettingsPage() {
               </label>
             </div>
 
-            <div className="space-y-4 bg-white/5 p-5 rounded-lg border border-white/5">
+            <div className="space-y-4 bg-white/5 p-5 rounded-lg border border-sa-border">
               <label className="flex items-start gap-3 cursor-pointer">
                 <div className="pt-0.5">
                   <input 
@@ -112,12 +112,12 @@ export function SASettingsPage() {
                   max="100"
                   value={formData.maxUploadSizeMb}
                   onChange={(e) => setFormData(f => ({ ...f, maxUploadSizeMb: parseInt(e.target.value) || 5 }))}
-                  className="bg-sa-background border-white/10 text-white focus:ring-sa-primary/50"
+                  className="bg-sa-background border border-sa-border text-white focus:ring-sa-primary/50"
                   required
                 />
                 <span className="text-sa-text-muted font-mono">MB</span>
               </div>
-              <p className="text-xs text-sa-text-muted mt-2">Aplica-se a relatórios, imagens de perfil e logótipos em todos os tenants.</p>
+              <p className="text-xs text-sa-text-muted mt-2">Aplica-se a relatórios, imagens de perfil e logótipos em todos os registos.</p>
             </div>
 
             <div className="pt-2">
@@ -128,18 +128,18 @@ export function SASettingsPage() {
               <textarea 
                 value={formData.mensagemSistema}
                 onChange={(e) => setFormData(f => ({ ...f, mensagemSistema: e.target.value }))}
-                className="w-full h-24 bg-sa-background border border-white/10 rounded-lg p-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sa-primary/50 focus:border-transparent transition-all disabled:opacity-50"
-                placeholder="Ex: O sistema passará por manutenção agendada às 02h00 CAT..."
+                className="w-full h-24 bg-sa-background border border-sa-border rounded-lg p-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sa-primary/50 focus:border-transparent transition-all disabled:opacity-50"
+                placeholder="Ex: O sistema passará por manutenção agendada às 02h00..."
               />
               <p className="text-xs text-sa-text-muted mt-2">Esta mensagem será exibida no topo do ecrã para todos os utilizadores ativos atualmente no sistema.</p>
             </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/5 flex justify-between items-center">
+        <div className="pt-8 border-t border-sa-border flex justify-between items-center">
           <div className="flex items-center gap-2 text-sa-warning/80 text-[10px] font-mono tracking-widest uppercase">
             <AlertTriangle className="h-4 w-4" />
-            <span>Caution: Global Impact Namespace</span>
+            <span>Aviso: Impacto Global no Sistema</span>
           </div>
           <Button 
             type="submit" 

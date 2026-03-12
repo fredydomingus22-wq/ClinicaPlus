@@ -2,7 +2,11 @@
  * Formata valor inteiro de Kwanza para string: "5.000 Kz"
  */
 export function formatKwanza(amount: number): string {
-  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' Kz';
+  return new Intl.NumberFormat('pt-AO', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount) + ' Kz';
 }
 
 /**

@@ -87,6 +87,20 @@ export const medicosService = {
   },
 
   /**
+   * Returns the medico linked to a specific utilizadorId (for self-service endpoints).
+   */
+  async getByUtilizadorId(utilizadorId: string, clinicaId: string): Promise<MedicoDTO> {
+    const m = await prisma.medico.findFirst({
+      where: { utilizadorId, clinicaId },
+      include: { especialidade: true },
+    });
+    if (!m) {
+      throw new AppError('Perfil de médico não encontrado para este utilizador', 404, 'NOT_FOUND');
+    }
+    return toMedicoDTO(m);
+  },
+
+  /**
    * Returns a single doctor, enforcing clinicaId ownership.
    */
   async getOne(id: string, clinicaId: string): Promise<MedicoDTO> {

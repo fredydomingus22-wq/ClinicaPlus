@@ -11,23 +11,24 @@ export function errorHandler(
   res: Response,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
-) {
+): void {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       success: false,
       error: {
         message: err.message,
         code: err.code,
       },
     });
+    return;
   }
 
   if (err instanceof ZodError || err.name === 'ZodError') {
     const zodErr = err as ZodError;
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: {
-        message: 'Erro de validação',
+        message: 'Os dados enviados são inválidos ou estão incompletos. Por favor, verifique os campos.',
         code: 'VALIDATION_ERROR',
         details: zodErr.issues.map((e) => ({
           path: e.path.join('.'),
@@ -35,26 +36,29 @@ export function errorHandler(
         })),
       },
     });
+    return;
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
-      return res.status(409).json({
+      res.status(409).json({
         success: false,
         error: {
-          message: 'Registo já existe',
+          message: 'Esta informação já se encontra registada no nosso sistema. Por favor, verifique se está a tentar criar um duplicado.',
           code: 'DUPLICATE_ENTRY',
         },
       });
+      return;
     }
     if (err.code === 'P2025') {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: {
-          message: 'Não encontrado',
+          message: 'Não conseguimos encontrar o registo solicitado. Por favor, confirme se os dados estão corretos.',
           code: 'NOT_FOUND',
         },
       });
+      return;
     }
   }
 
@@ -67,13 +71,13 @@ export function errorHandler(
       path: req.path,
       method: req.method,
     },
-    'Unhandled error'
+    'Erro não tratado'
   );
 
-  return res.status(500).json({
+  res.status(500).json({
     success: false,
     error: {
-      message: 'Erro interno do servidor',
+      message: 'Lamentamos, mas ocorreu um erro inesperado no sistema. Por favor, tente novamente mais tarde ou contacte o suporte técnico.',
       code: 'INTERNAL_ERROR',
       ...(config.NODE_ENV !== 'production' && { details: err.message }),
     },

@@ -46,11 +46,11 @@ export function SALogsPage() {
       )
     },
     {
-      header: 'Ação / Mensagem',
+      header: 'Mensagem e Ação',
       accessor: (l: SystemLogDTO) => (
         <div>
-          {l.acao && <span className="text-xs font-mono font-bold uppercase text-sa-primary/80 mr-2">[{l.acao}]</span>}
-          <span className="text-sm text-white/80">{l.mensagem}</span>
+          {l.acao && <span className="text-xs font-mono font-bold uppercase text-sa-primary/80 mr-2">[{l.acao?.replace(/_/g, ' ')}]</span>}
+          <span className="text-sm text-white/90">{l.mensagem}</span>
         </div>
       )
     }
@@ -64,21 +64,21 @@ export function SALogsPage() {
           <Terminal className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-sa-primary font-mono font-bold tracking-tight uppercase tracking-wider">System Audit Logs</h2>
+          <h2 className="text-sa-primary font-mono font-bold tracking-tight uppercase tracking-wider">Auditória do Sistema</h2>
           <p className="text-sa-text-muted text-sm mt-1 leading-relaxed">
-            Registo persistente e avançado de auditoria global cross-tenant. Visibilidade total sobre alertas e ações do sistema.
+            Registo detalhado de auditoria global. Monitorização de atividades e segurança em todas as clínicas do sistema.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/5 border border-white/10 rounded-xl p-4">
+      <div className="flex flex-col sm:flex-row items-center gap-4 bg-sa-surface border border-sa-border rounded-xl p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sa-text-muted" />
           <Input 
             placeholder="Pesquisar mensagens e ações..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-10 w-full bg-sa-background border-white/10 text-white placeholder:text-gray-600 focus:ring-sa-primary/50"
+            className="pl-10 h-10 w-full bg-sa-background border-sa-border text-white placeholder:text-gray-600 focus:ring-sa-primary/50"
           />
         </div>
         <div className="w-full sm:w-64">
@@ -86,14 +86,14 @@ export function SALogsPage() {
             placeholder="Filtrar por Nível"
             options={[
               { value: '', label: 'Todos os Níveis' },
-              { value: 'INFO', label: 'INFO' },
-              { value: 'AVISO', label: 'AVISO' },
-              { value: 'ERRO', label: 'ERRO' },
-              { value: 'CRITICO', label: 'CRÍTICO' },
+              { value: 'INFO', label: 'Informativo' },
+              { value: 'AVISO', label: 'Aviso' },
+              { value: 'ERRO', label: 'Erro' },
+              { value: 'CRITICO', label: 'Crítico' },
             ]}
             value={nivelFilter}
             onChange={(e) => setNivelFilter(e.target.value)}
-            className="w-full bg-sa-background border-white/10 text-white focus:ring-sa-primary/50"
+            className="w-full bg-sa-background border-sa-border text-white focus:ring-sa-primary/50"
           />
         </div>
       </div>
@@ -115,7 +115,7 @@ export function SALogsPage() {
 
       <div className="flex items-center justify-between mt-4">
         <span className="font-mono text-xs text-sa-text-muted px-4 py-2 rounded-lg bg-sa-primary/10 border border-sa-primary/30 text-sa-primary shadow-sa-glow">
-          LOGS COUNT: {data?.total || 0}
+          TOTAL DE REGISTOS: {data?.total || 0}
         </span>
         <div className="flex gap-2">
           <Button 
@@ -123,18 +123,18 @@ export function SALogsPage() {
             size="sm" 
             disabled={page <= 1} 
             onClick={() => setPage(p => p - 1)}
-            className="border border-white/10 text-sa-text-muted hover:text-white"
+            className="border border-sa-border text-sa-text-muted hover:text-white"
           >
-            ← PREV
+            ← ANTERIOR
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             disabled={page >= (Math.ceil((data?.total || 0) / 15) || 1)} 
             onClick={() => setPage(p => p + 1)}
-            className="border border-white/10 text-sa-text-muted hover:text-white"
+            className="border border-sa-border text-sa-text-muted hover:text-white"
           >
-            NEXT →
+            PRÓXIMO →
           </Button>
         </div>
       </div>

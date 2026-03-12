@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { authService } from '../../services/auth.service';
 import { prisma } from '../../lib/prisma';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { AppError } from '../../lib/AppError';
+import { generatePatientNumber } from '../../services/patientNumber.service';
+import type { Utilizador, RefreshToken, Clinica } from '@prisma/client';
+
+vi.mock('../../services/patientNumber.service', () => ({
+  generatePatientNumber: vi.fn(),
+}));
 
 vi.mock('../../lib/prisma', () => ({
   prisma: {
@@ -13,7 +20,10 @@ vi.mock('../../lib/prisma', () => ({
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
+      create: vi.fn(),
+      findFirst: vi.fn(),
     },
+    $transaction: vi.fn((cb: (tx: typeof prisma) => Promise<unknown>) => cb(prisma)),
     refreshToken: {
       create: vi.fn(),
       findUnique: vi.fn(),
@@ -30,6 +40,13 @@ vi.mock('bcrypt', () => ({
   },
 }));
 
+vi.mock('jsonwebtoken', () => ({
+  default: {
+    sign: vi.fn().mockReturnValue('mock-jwt-token'),
+    verify: vi.fn(),
+  },
+}));
+
 // Mock the private _issueTokens method to avoid JWT generation during pure unit tests
 // We are testing the logic of login/refresh/logout, not the JWT library itself.
 authService._issueTokens = vi.fn().mockResolvedValue({
@@ -39,24 +56,29 @@ authService._issueTokens = vi.fn().mockResolvedValue({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Re-apply after clearAllMocks
+  authService._issueTokens = vi.fn().mockResolvedValue({
+    accessToken: 'mocked-access-token',
+    refreshToken: 'mocked-refresh-token',
+  });
 });
 
 describe('auth.service', () => {
   const clinicaSlug = 'clinica-test';
   const email = 'user@test.com';
   const password = 'Password123!';
-  const mockClinica = { id: 'c1', ativo: true };
+  const mockClinica = { id: 'c1', ativo: true } as unknown as Clinica;
   const mockUser = {
     id: 'u1',
     clinicaId: 'c1',
     passwordHash: 'hashed-password',
     ativo: true,
-  };
+  } as unknown as Utilizador;
 
   describe('login', () => {
     it('returns accessToken + refreshToken with valid credentials', async () => {
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica as any);
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
       const result = await authService.login(email, password, clinicaSlug);
@@ -67,8 +89,8 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 401 with wrong password', async () => {
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica as any);
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
       await expect(authService.login(email, password, clinicaSlug))
@@ -76,18 +98,40 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 401 with email not found (same message to not reveal existence)', async () => {
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica as any);
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(null); // User not found
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(null);
 
       await expect(authService.login('wrong@test.com', password, clinicaSlug))
         .rejects.toThrow(new AppError('Credenciais inválidas', 401, 'INVALID_CREDENTIALS'));
     });
 
     it('throws AppError 404 with inactive clinic', async () => {
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue({ ...mockClinica, ativo: false } as any);
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue({ ...mockClinica, ativo: false });
 
       await expect(authService.login(email, password, clinicaSlug))
         .rejects.toThrow(new AppError('Clínica não encontrada ou inativa', 404, 'CLINICA_NOT_FOUND'));
+    });
+  });
+
+  describe('loginSuperAdmin', () => {
+    it('returns tokens for valid super admin', async () => {
+      const mockSA = { ...mockUser, papel: 'SUPER_ADMIN' } as unknown as Utilizador;
+      vi.mocked(prisma.utilizador.findFirst).mockResolvedValue(mockSA);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+      const result = await authService.loginSuperAdmin(email, password);
+
+      expect(result).toHaveProperty('accessToken');
+      expect(prisma.utilizador.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: { email, papel: 'SUPER_ADMIN' }
+      }));
+    });
+
+    it('throws 401 for invalid super admin credentials', async () => {
+      vi.mocked(prisma.utilizador.findFirst).mockResolvedValue(null);
+
+      await expect(authService.loginSuperAdmin(email, password))
+        .rejects.toThrow(AppError);
     });
   });
 
@@ -95,9 +139,9 @@ describe('auth.service', () => {
     const rawToken = 'my-refresh-token';
 
     it('returns new tokens + marks old as used with valid token', async () => {
-      const storedToken = { id: 't1', utilizadorId: 'u1', expiresAt: new Date(Date.now() + 10000), usedAt: null };
-      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken as any);
-      vi.mocked(prisma.utilizador.findUniqueOrThrow).mockResolvedValue(mockUser as any);
+      const storedToken = { id: 't1', utilizadorId: 'u1', expiresAt: new Date(Date.now() + 10000), usedAt: null } as unknown as RefreshToken;
+      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken);
+      vi.mocked(prisma.utilizador.findUniqueOrThrow).mockResolvedValue(mockUser);
 
       const result = await authService.refresh(rawToken);
 
@@ -110,8 +154,8 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 401 + deletes all user tokens if token already used', async () => {
-      const storedToken = { id: 't1', utilizadorId: 'u1', usedAt: new Date() };
-      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken as any);
+      const storedToken = { id: 't1', utilizadorId: 'u1', usedAt: new Date() } as unknown as RefreshToken;
+      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken);
 
       await expect(authService.refresh(rawToken))
         .rejects.toThrow(new AppError('Token de atualização inválido ou reutilizado', 401, 'TOKEN_REUSE_DETECTED'));
@@ -122,8 +166,8 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 401 if token is expired', async () => {
-      const storedToken = { id: 't1', utilizadorId: 'u1', expiresAt: new Date(Date.now() - 10000), usedAt: null };
-      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken as any);
+      const storedToken = { id: 't1', utilizadorId: 'u1', expiresAt: new Date(Date.now() - 10000), usedAt: null } as unknown as RefreshToken;
+      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(storedToken);
 
       await expect(authService.refresh(rawToken))
         .rejects.toThrow(new AppError('Sessão expirada ou inválida', 401, 'SESSION_EXPIRED'));
@@ -142,13 +186,13 @@ describe('auth.service', () => {
   });
 
   describe('forgotPassword', () => {
-    it('generates a token and logs it (returns void) when email exists array', async () => {
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser as any);
-      const signSpy = vi.spyOn(require('jsonwebtoken'), 'sign').mockReturnValue('mock-reset-token');
+    it('generates a token and logs it (returns void) when email exists', async () => {
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
+      vi.mocked(jwt.sign).mockReturnValue('mock-reset-token' as never);
 
       await authService.forgotPassword('user@test.com', 'c1');
 
-      expect(signSpy).toHaveBeenCalledWith(
+      expect(jwt.sign).toHaveBeenCalledWith(
         { sub: 'u1', purpose: 'reset-password' },
         expect.any(String),
         { expiresIn: '15m' }
@@ -164,7 +208,7 @@ describe('auth.service', () => {
 
   describe('resetPassword', () => {
     it('updates password when valid token is provided', async () => {
-      vi.spyOn(require('jsonwebtoken'), 'verify').mockReturnValue({ sub: 'u1', purpose: 'reset-password' } as any);
+      vi.mocked(jwt.verify).mockReturnValue({ sub: 'u1', purpose: 'reset-password' } as never);
       vi.mocked(bcrypt.hash).mockResolvedValue('new-hash' as never);
 
       await authService.resetPassword('valid-token', 'new-pass');
@@ -176,7 +220,7 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 400 if token verify fails', async () => {
-      vi.spyOn(require('jsonwebtoken'), 'verify').mockImplementation(() => {
+      vi.mocked(jwt.verify).mockImplementation(() => {
         throw new Error('invalid signature');
       });
 
@@ -185,7 +229,7 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 400 if token purpose is wrong', async () => {
-      vi.spyOn(require('jsonwebtoken'), 'verify').mockReturnValue({ sub: 'u1', purpose: 'wrong-purpose' } as any);
+      vi.mocked(jwt.verify).mockReturnValue({ sub: 'u1', purpose: 'wrong-purpose' } as never);
 
       await expect(authService.resetPassword('bad-purpose-token', 'new-pass'))
         .rejects.toThrow(new AppError('Token de recuperação inválido ou expirado', 400, 'INVALID_RESET_TOKEN'));
@@ -194,7 +238,7 @@ describe('auth.service', () => {
 
   describe('changePassword', () => {
     it('updates password when old password is correct', async () => {
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
       vi.mocked(bcrypt.hash).mockResolvedValue('new-hash' as never);
 
@@ -214,11 +258,51 @@ describe('auth.service', () => {
     });
 
     it('throws AppError 103 if old password is wrong', async () => {
-      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
       await expect(authService.changePassword('u1', 'wrong-old', 'new'))
         .rejects.toThrow(new AppError('Palavra-passe atual incorreta', 103, 'INVALID_OLD_PASSWORD'));
+    });
+  });
+
+  describe('registerPaciente', () => {
+    const registerData = {
+      nome: 'Novo Paciente',
+      email: 'novo@paciente.com',
+      password: 'Pass123!',
+      dataNascimento: new Date('1990-01-01'),
+      genero: 'M' as const,
+      alergias: [] as string[],
+      seguroSaude: false,
+      clinicaSlug: 'slug-test',
+    };
+
+    it('creates a new user and patient in a transaction', async () => {
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(null);
+      vi.mocked(bcrypt.hash).mockResolvedValue('hash' as never);
+      vi.mocked(generatePatientNumber).mockResolvedValue('P-001');
+      vi.mocked(prisma.utilizador.create).mockResolvedValue({ ...mockUser, nome: registerData.nome, papel: 'PACIENTE' } as unknown as Utilizador);
+
+      const result = await authService.registerPaciente(
+        registerData as unknown as Parameters<typeof authService.registerPaciente>[0],
+        'slug-test'
+      );
+
+      expect(result).toHaveProperty('accessToken');
+      expect(prisma.utilizador.create).toHaveBeenCalled();
+      expect(generatePatientNumber).toHaveBeenCalledWith('c1');
+    });
+
+    it('throws 409 if email already exists', async () => {
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica);
+      vi.mocked(prisma.utilizador.findUnique).mockResolvedValue(mockUser);
+
+      await expect(authService.registerPaciente(
+        registerData as unknown as Parameters<typeof authService.registerPaciente>[0],
+        'slug-test'
+      )).rejects.toThrow(new AppError('Este e-mail já está registado.', 409, 'DUPLICATE_ENTRY'));
     });
   });
 });

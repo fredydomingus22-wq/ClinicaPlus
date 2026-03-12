@@ -1,0 +1,10 @@
+{
+  "apps/api/**/*.ts": [
+    "pnpm --filter api lint",
+    "pnpm --filter api typecheck"
+  ],
+  "apps/web/**/*.{ts,tsx}": [
+    "pnpm --filter web lint",
+    "pnpm --filter web typecheck"
+  ]
+}

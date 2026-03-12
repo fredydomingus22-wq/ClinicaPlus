@@ -1,13 +1,19 @@
-## O que foi alterado?
-<!-- Descrição das alterações -->
+# Descrição
+[Breve descrição das alterações e o seu propósito]
+
+## Tipo de Alteração
+- [ ] fix (correção de bug)
+- [ ] feat (nova funcionalidade)
+- [ ] refactor (refatoração de código)
+- [ ] docs (documentação)
+- [ ] test (adição de testes)
+- [ ] chore (manutenção)
 
 ## Checklist
-- [ ] `pnpm typecheck` passa sem erros
-- [ ] `pnpm test --run` passa sem falhas
-- [ ] `pnpm lint` passa sem erros
-- [ ] Sem `console.log` no código committed
-- [ ] Sem strings em inglês em JSX
-- [ ] Sem money values sem `formatKwanza()`
-- [ ] Sem `any` em TypeScript
-- [ ] `AllergyBanner` visível antes de acções clínicas (se aplicável)
-- [ ] Queries com `clinicaId` onde aplicável
+- [ ] O código segue as regras do projeto (Strict TS, Multitancy guards).
+- [ ] Foram adicionados testes para as novas funcionalidades/correções.
+- [ ] `pnpm lint` e `pnpm typecheck` passam sem erros.
+- [ ] As variáveis de ambiente necessárias foram adicionadas ao `.env.example`.
+
+## Relatório de Testes
+[Inserir evidências de que os testes passam e o coverage atingido]

@@ -51,8 +51,7 @@ export function SuperAdminLoginPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#0A0A0A] text-white font-mono selection:bg-white selection:text-black">
-      
-      {/* LEFT SECTION - BRUTALIST BRANDING & LOGS */}
+           {/* LEFT SECTION - PROFESSIONAL BRANDING */}
       <div className="hidden md:flex flex-col w-1/2 p-12 border-r border-[#333333] relative overflow-hidden bg-[radial-gradient(circle_at_0%_0%,_#1a1a1a_0%,_transparent_50%)]">
         
         {/* Subtle background grid pattern */}
@@ -69,18 +68,18 @@ export function SuperAdminLoginPage() {
                   ClinicaPlus
                 </h1>
                 <p className="text-[10px] tracking-widest text-neutral-400 font-bold uppercase mt-1">
-                  Root Governance
+                  Administração Global
                 </p>
               </div>
             </div>
 
             <div className="space-y-6 max-w-lg">
-              <h2 className="text-4xl lg:text-5xl font-bold leading-tight font-display tracking-tight text-white/90">
-                ACESSO <br /> ESTRITO
+              <h2 className="text-4xl lg:text-5xl font-bold leading-tight font-display tracking-tight text-white">
+                ÁREA <br /> RESTRITA
               </h2>
-              <div className="h-1 w-16 bg-white/20" />
-              <p className="text-neutral-400 text-lg leading-relaxed font-sans mt-8">
-                Esta área é restrita para o pessoal autorizado de manutenção do SaaS. Proceda com a identificação para aceder ao Command Center.
+              <div className="h-1 w-16 bg-sa-primary/40" />
+              <p className="text-sa-text-muted text-lg leading-relaxed font-sans mt-8">
+                Esta área destina-se exclusivamente à gestão e manutenção da plataforma. Por favor, identifique-se para aceder ao painel de controlo.
               </p>
             </div>
           </div>
@@ -88,10 +87,10 @@ export function SuperAdminLoginPage() {
           <div className="space-y-4">
              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] border border-[#333] text-neutral-400 text-xs rounded-sm font-medium tracking-wide">
                 <ShieldAlert size={14} className="text-red-500" />
-                <span>NÍVEL DE SEGURANÇA: MÁXIMO</span>
+                <span>SEGURANÇA: NÍVEL MÁXIMO</span>
              </div>
              <p className="text-neutral-600 text-[10px] uppercase font-bold tracking-widest">
-               IP registado: {new Date().toISOString()}
+               IP registado em: {new Intl.DateTimeFormat('pt-AO', { dateStyle: 'long', timeStyle: 'short' }).format(new Date())}
              </p>
           </div>
         </div>
@@ -110,20 +109,20 @@ export function SuperAdminLoginPage() {
                 ClinicaPlus
               </h1>
               <p className="text-[10px] tracking-widest text-neutral-400 font-bold uppercase mt-1">
-                Root Governance
+                Administração Global
               </p>
             </div>
           </div>
 
           <div className="mb-10">
-            <h3 className="text-2xl font-semibold mb-2 font-display tracking-tight">Iniciar Sessão</h3>
-            <p className="text-neutral-400 text-sm font-sans">Introduza as credenciais master.</p>
+            <h3 className="text-2xl font-semibold mb-2 font-display tracking-tight text-white">Iniciar Sessão</h3>
+            <p className="text-sa-text-muted text-sm font-sans">Introduza as suas credenciais de acesso.</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2 group">
               <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
-                Email Administrativo
+                E-mail de Administrador
               </label>
               <div className="relative">
                 <input
@@ -143,7 +142,7 @@ export function SuperAdminLoginPage() {
 
             <div className="space-y-2 group">
               <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
-                Palavra-Passe Master
+                Palavra-passe de Segurança
               </label>
               <div className="relative">
                 <input
@@ -171,7 +170,7 @@ export function SuperAdminLoginPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    <span>Autenticando...</span>
+                    <span>A verificar...</span>
                   </>
                 ) : (
                   <>
@@ -182,7 +181,7 @@ export function SuperAdminLoginPage() {
               </button>
             </div>
             
-            {/* Cyberpunk decoration line */}
+            {/* Decoration line */}
             <div className="flex items-center gap-4 mt-12 opacity-40">
               <div className="h-px bg-neutral-600 flex-1" />
               <div className="flex gap-1">

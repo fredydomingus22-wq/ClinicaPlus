@@ -17,7 +17,6 @@ export function SystemBroadcastModal({ isOpen, onClose }: SystemBroadcastModalPr
     register,
     handleSubmit,
     formState: { isDirty },
-    reset,
   } = useForm({
     values: {
       mensagemSistema: settings?.mensagemSistema || '',
