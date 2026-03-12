@@ -94,7 +94,7 @@ app.use(errorHandler);
 const PORT = config.PORT || 3001;
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '0.0.0.0', () => {
     logger.info(`🚀 ClinicaPlus API running on port ${PORT} in ${config.NODE_ENV} mode`);
     schedulerService.start();
   });
