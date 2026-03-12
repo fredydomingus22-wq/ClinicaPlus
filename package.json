@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "prebuild": "pnpm --filter=api exec prisma generate",
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
