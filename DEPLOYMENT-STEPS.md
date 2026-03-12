@@ -110,6 +110,8 @@ Start:  node dist/server.js
 | `TEST_DIRECT_URL`         | Supabase dev — Session (5432)      |
 | `TEST_JWT_SECRET`         | Qualquer string 64+ chars          |
 | `TEST_JWT_REFRESH_SECRET` | Outra string 64+ chars (diferente) |
+| `TURBO_TOKEN`             | Token do Vercel para Remote Cache  |
+| `TURBO_TEAM`              | ID do Time no Vercel               |
 
 ---
 

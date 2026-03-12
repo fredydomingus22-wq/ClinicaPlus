@@ -12,13 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.TEST_DIRECT_URL }}
-      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      DIRECT_URL:   ${{ secrets.TEST_DIRECT_URL }}
+      JWT_SECRET:   ${{ secrets.TEST_JWT_SECRET }}
       JWT_REFRESH_SECRET: ${{ secrets.TEST_JWT_REFRESH_SECRET }}
-      NODE_ENV: test
+      NODE_ENV:     test
       FRONTEND_URL: http://localhost:5173
       RESEND_API_KEY: re_test_placeholder
-      PORT: 3001
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM:  ${{ secrets.TURBO_TEAM }}
 
     steps:
       - uses: actions/checkout@v4
@@ -36,10 +37,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared packages
-        run: pnpm build --filter=@clinicaplus/types --filter=@clinicaplus/utils --filter=@clinicaplus/ui
-
-      - name: Generate Prisma Client
-        run: pnpm --filter=api exec prisma generate
+        run: pnpm build --filter=@clinicaplus/types --filter=@clinicaplus/utils
 
       - name: Type check
         run: pnpm typecheck
@@ -51,13 +49,13 @@ jobs:
         run: pnpm test --run --filter=api
 
   migrate-and-deploy:
-    name: Migrate + Deploy (prod)
+    name: Migrate + Deploy
     needs: validate
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}
+      DIRECT_URL:   ${{ secrets.PROD_DIRECT_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -78,4 +76,4 @@ jobs:
         run: pnpm --filter=api exec prisma migrate deploy
 
       # Railway and Vercel deploy automatically via their GitHub integrations
-      # after this job succeeds. No manual deploy step needed here.
+      # after this job succeeds
