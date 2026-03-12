@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "nodemon src/server.ts",
+    "prebuild": "cd ../.. && npx turbo run build --filter=@clinicaplus/types --filter=@clinicaplus/utils",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
