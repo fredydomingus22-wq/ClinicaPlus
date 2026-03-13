@@ -12,9 +12,9 @@ const COOKIE_NAME = 'cp_refresh';
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: config.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  sameSite: (config.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/api/auth',
+  path: '/', // Changed from /api/auth to / for wider compatibility if needed, but keeping it consistent with the reset logic
 };
 
 // POST /api/auth/login
@@ -120,7 +120,7 @@ router.post('/logout', async (req, res, next) => {
       await authService.logout(rawToken);
     }
     
-    res.clearCookie(COOKIE_NAME, { path: '/api/auth' });
+    res.clearCookie(COOKIE_NAME, { path: '/' });
     res.json({ success: true, data: null });
   } catch (error) {
     next(error);
