@@ -31,13 +31,16 @@ async function retryOperation<T>(
  * Manages background jobs and appointment reminder logic.
  */
 export const schedulerService = {
+  task: null as ReturnType<typeof cron.schedule> | null,
   
   /**
    * Initializes the cron jobs.
    */
   start(): void {
+    if (this.task) return;
+
     // Run every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
+    this.task = cron.schedule('*/5 * * * *', async () => {
       try {
         await this.processPendingReminders();
       } catch (err) {
@@ -46,6 +49,17 @@ export const schedulerService = {
     });
 
     logger.info('Reminder scheduler started (every 5 minutes)');
+  },
+
+  /**
+   * Stops the cron jobs.
+   */
+  stop(): void {
+    if (this.task) {
+      this.task.stop();
+      this.task = null;
+      logger.info('Reminder scheduler stopped');
+    }
   },
 
   /**

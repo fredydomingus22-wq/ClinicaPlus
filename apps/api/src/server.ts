@@ -10,7 +10,9 @@ import { authenticate } from './middleware/authenticate';
 import { tenantMiddleware } from './middleware/tenant';
 import { auditLogger } from './middleware/auditLogger';
 import { globalRateLimiter } from './middleware/rateLimiter';
+import { requestLogger } from './middleware/requestLogger';
 import { schedulerService } from './services/scheduler.service';
+import { prisma } from './lib/prisma';
 
 // Routes
 import authRouter from './routes/auth';
@@ -34,7 +36,10 @@ const app = express();
 // Trust proxy for Railway/Cloud environments (needed for express-rate-limit)
 app.set('trust proxy', 1);
 
-// Security & Core Middlewares
+// 1. Request logging (should be the very first middleware)
+app.use(requestLogger);
+
+// 2. Security & Core Middlewares
 app.use(helmet({
   contentSecurityPolicy: true,
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -49,15 +54,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(globalRateLimiter);
 
-// Debug middleware
-if (config.NODE_ENV === 'development') {
-  app.use((req, _res, next) => {
-    logger.debug(`${req.method} ${req.path}`);
-    next();
-  });
-}
-
-// Health check
+// 3. Health check (stays before auth)
 app.get('/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
@@ -66,18 +63,17 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Public Routes (no auth required for public sub-paths)
-// Note: clinicas.ts handles its own auth per-route (authenticate + requireRole inline)
+// Public Routes
 app.use('/api/auth', authRouter);
 app.use('/api/clinicas', clinicasRouter);
 
 // Protected Routes Chain
 app.use('/api', authenticate);
-app.use('/api/superadmin', superadminRouter); // Before tenantMiddleware as it is cross-tenant
+app.use('/api/superadmin', superadminRouter); 
 app.use('/api', tenantMiddleware);
 app.use('/api', auditLogger);
 
-// Other protected domain routes (all require authenticate + tenantMiddleware above)
+// Domain routes
 app.use('/api/pacientes', pacientesRouter);
 app.use('/api/medicos', medicosRouter);
 app.use('/api/agendamentos', agendamentosRouter);
@@ -98,11 +94,28 @@ const PORT = config.PORT || 3001;
 
 if (require.main === module) {
   app.listen(Number(PORT), '0.0.0.0', () => {
-    logger.info(`🚀 ClinicaPlus API running on port ${PORT} in ${config.NODE_ENV} mode`);
+    logger.info(
+      { 
+        port: PORT, 
+        env: config.NODE_ENV, 
+        version: process.env['npm_package_version'] ?? '1.0.0' 
+      },
+      '🚀 ClinicaPlus API started'
+    );
     schedulerService.start();
   });
 }
 
-export { app };
+// Graceful shutdown
+const shutdown = async (signal: string): Promise<void> => {
+  logger.info({ signal }, `Received ${signal} — shutting down gracefully`);
+  schedulerService.stop();
+  await prisma.$disconnect();
+  logger.info('Prisma disconnected, exiting process');
+  process.exit(0);
+};
 
-// Trigger nodemon restart: 2026-03-08
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+export { app };

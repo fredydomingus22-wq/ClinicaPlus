@@ -62,17 +62,29 @@ export function errorHandler(
     }
   }
 
-  logger.error(
-    {
-      err: {
-        message: err.message,
-        stack: config.NODE_ENV === 'production' ? undefined : err.stack,
+  // Structured error logging
+  const isInternalError = !res.statusCode || res.statusCode >= 500;
+  const isDebug = config.NODE_ENV !== 'production' || process.env['DEBUG'];
+
+  if (isInternalError || isDebug) {
+    logger.error(
+      {
+        type: 'error',
+        err: {
+          message: err.message,
+          stack: isInternalError ? err.stack : undefined,
+          code: (err as unknown as Record<string, unknown>).code as string || (err as unknown as Record<string, unknown>).name as string || 'UNKNOWN_ERROR',
+        },
+        request: {
+          method: req.method,
+          path: req.path,
+          userId: req.user?.id,
+          clinicaId: req.user?.clinicaId || req.clinica?.id,
+        },
       },
-      path: req.path,
-      method: req.method,
-    },
-    'Erro não tratado'
-  );
+      `Error ${res.statusCode || 500}: ${err.message}`
+    );
+  }
 
   res.status(500).json({
     success: false,
