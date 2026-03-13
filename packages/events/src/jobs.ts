@@ -3,10 +3,10 @@
  */
 
 export const JobNames = {
-  EMAIL_SEND: 'notificacao/email.enviar',
-  REMINDER_SCHEDULE: 'agendamento/lembrete.agendar',
-  WEBHOOK_TRIGGER: 'integracao/webhook.disparar',
-  REPORT_GENERATE: 'analise/relatorio.gerar',
+  EMAIL_SEND: 'cp-emails-send',
+  REMINDER_SCHEDULE: 'cp-reminders-schedule',
+  WEBHOOK_TRIGGER: 'cp-webhooks-trigger',
+  REPORT_GENERATE: 'cp-reports-generate',
 } as const;
 
 export interface EmailJob {
