@@ -31,6 +31,9 @@ import documentosRouter from './routes/documentos';
 
 const app = express();
 
+// Trust proxy for Railway/Cloud environments (needed for express-rate-limit)
+app.set('trust proxy', 1);
+
 // Security & Core Middlewares
 app.use(helmet({
   contentSecurityPolicy: true,

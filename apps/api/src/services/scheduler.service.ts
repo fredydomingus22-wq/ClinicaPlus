@@ -52,6 +52,9 @@ export const schedulerService = {
    * Fetches and processes pending reminders.
    */
   async processPendingReminders(): Promise<void> {
+    // Small defensive delay to prevent rapid connection collisions in pooler environments
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     const agora = new Date();
     const em5min = new Date(agora.getTime() + 5 * 60 * 1000);
 
