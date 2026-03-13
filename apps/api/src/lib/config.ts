@@ -20,6 +20,11 @@ const configSchema = z.object({
 const parsed = configSchema.safeParse(process.env);
 
 if (!parsed.success) {
+  // Use a simple console.error for bootstrap phase, but we can't because of lint.
+  // We'll import a basic logger or just disable lint for this line.
+  // Since we are in config.ts (bootstrap), importing from '../lib/logger' might cause circular deps.
+  // Let's use eslint-disable for this specific bootstrap error.
+  // eslint-disable-next-line no-console
   console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 2));
   process.exit(1);
 }

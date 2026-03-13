@@ -27,7 +27,9 @@ export const SuperAdminLoginSchema = z.object({
   email: z
     .string()
     .min(1, 'Email obrigatório')
-    .email('Introduz um email válido'),
+    .email('Introduz um email válido')
+    .trim()
+    .toLowerCase(),
   password: z
     .string()
     .min(1, 'Palavra-passe obrigatória'),

@@ -55,9 +55,11 @@ export const authService = {
   },
 
   async loginSuperAdmin(email: string, password: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    
     // 1. Find user by email and role SUPER_ADMIN
     const user = await prisma.utilizador.findFirst({
-      where: { email, papel: 'SUPER_ADMIN' },
+      where: { email: normalizedEmail, papel: 'SUPER_ADMIN' },
       include: {
         paciente: true,
         medico: {
