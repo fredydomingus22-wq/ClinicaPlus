@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import { AppError } from '../lib/AppError';
 import { logger } from '../lib/logger';
 import { config } from '../lib/config';
+import { systemMetrics } from '../lib/metrics';
+import { sendCriticalAlert } from '../lib/alerting';
 
 export function errorHandler(
   err: Error,
@@ -67,6 +69,11 @@ export function errorHandler(
   const isDebug = config.NODE_ENV !== 'production' || process.env['DEBUG'];
 
   if (isInternalError || isDebug) {
+    if (isInternalError) {
+      systemMetrics.errors_5xx_total++;
+      sendCriticalAlert('Server Error', `${err.message}\n${req.method} ${req.path}\nUser: ${req.user?.id || 'N/A'}\nClinica: ${req.clinica?.id || 'N/A'}`);
+    }
+
     logger.error(
       {
         type: 'error',

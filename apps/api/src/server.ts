@@ -13,6 +13,7 @@ import { globalRateLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
 import { schedulerService } from './services/scheduler.service';
 import { prisma } from './lib/prisma';
+import { systemMetrics } from './lib/metrics';
 
 // Routes
 import authRouter from './routes/auth';
@@ -36,8 +37,12 @@ const app = express();
 // Trust proxy for Railway/Cloud environments (needed for express-rate-limit)
 app.set('trust proxy', 1);
 
-// 1. Request logging (should be the very first middleware)
+// 1. Request logging & metrics (should be before other middlewares)
 app.use(requestLogger);
+app.use((_req, _res, next) => {
+  systemMetrics.requests_total++;
+  next();
+});
 
 // 2. Security & Core Middlewares
 app.use(helmet({
@@ -55,11 +60,52 @@ app.use(express.json({ limit: '10mb' }));
 app.use(globalRateLimiter);
 
 // 3. Health check (stays before auth)
-app.get('/health', (_req, res) => {
-  res.json({ 
-    status: 'ok', 
+app.get('/health', async (_req, res) => {
+  const startTime = Date.now();
+  let dbStatus = 'connected';
+  let latencyMs = 0;
+
+  try {
+    // Lightweight DB check with 2s timeout
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 2000))
+    ]);
+    latencyMs = Date.now() - startTime;
+  } catch (err) {
+    dbStatus = 'disconnected';
+    logger.error({ err }, 'Health check: Database connection failed');
+  }
+
+  const uptime = Math.floor((Date.now() - systemMetrics.startTime) / 1000);
+  const status = dbStatus === 'connected' ? 'ok' : 'degraded';
+
+  res.status(status === 'ok' ? 200 : 200).json({ 
+    status, 
     timestamp: new Date().toISOString(), 
-    version: process.env['npm_package_version'] ?? '1.0.0'
+    version: process.env['npm_package_version'] ?? '1.0.0',
+    uptime,
+    database: dbStatus,
+    checks: {
+      db: { status: dbStatus === 'connected' ? 'ok' : 'error', latencyMs: dbStatus === 'connected' ? latencyMs : undefined }
+    }
+  });
+});
+
+// 4. Metrics endpoint (internal only)
+app.get('/metrics', (req, res): void => {
+  const token = req.headers['x-metrics-token'];
+  
+  if (token !== config.METRICS_TOKEN) {
+    res.status(403).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  res.json({
+    requests_total: systemMetrics.requests_total,
+    errors_5xx_total: systemMetrics.errors_5xx_total,
+    uptime_seconds: Math.floor((Date.now() - systemMetrics.startTime) / 1000),
+    active_connections: 0 // Placeholder as Prisma doesn't expose this easily without internal state
   });
 });
 

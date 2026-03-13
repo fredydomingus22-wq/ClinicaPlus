@@ -12,6 +12,8 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url().transform(url => url.replace(/\/$/, '')),
   RESEND_API_KEY: z.string().min(1),
+  METRICS_TOKEN: z.string().min(8),
+  ALERT_EMAIL: z.string().email(),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
   path: ["JWT_REFRESH_SECRET"],
