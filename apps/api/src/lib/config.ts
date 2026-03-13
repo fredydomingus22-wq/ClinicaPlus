@@ -13,7 +13,7 @@ const configSchema = z.object({
   FRONTEND_URL: z.string().url().transform(url => url.replace(/\/$/, '')),
   TENANT_BASE_DOMAIN: z.string().min(3).optional(),
   RESEND_API_KEY: z.string().min(1),
-  REDIS_URL: z.string().url(),
+  REDIS_URL: z.string().min(1), // redis:// ou rediss:// (TLS) — Zod url() rejeita estes protocolos
   METRICS_TOKEN: z.string().min(8),
   ALERT_EMAIL: z.string().email(),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
