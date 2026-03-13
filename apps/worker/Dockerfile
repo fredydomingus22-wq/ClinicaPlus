@@ -16,6 +16,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json turbo.js
 COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
 COPY packages/events/package.json ./packages/events/
+COPY apps/api/package.json ./apps/api/
 COPY apps/worker/package.json ./apps/worker/
 
 # Instalar todas as dependências
@@ -25,7 +26,11 @@ RUN pnpm install --frozen-lockfile
 COPY packages/types ./packages/types
 COPY packages/utils ./packages/utils
 COPY packages/events ./packages/events
+COPY apps/api/prisma ./apps/api/prisma
 COPY apps/worker ./apps/worker
+
+# Gerar Prisma Client (worker usa o mesmo schema da API)
+RUN pnpm --filter=api exec prisma generate
 
 # Build packages e worker
 RUN pnpm --filter=@clinicaplus/types build
