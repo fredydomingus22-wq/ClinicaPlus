@@ -3,7 +3,7 @@ import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
 describe('Multitenancy isolation', () => {
-  let app = createTestApp();
+  const app = createTestApp();
   let ctxA: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
   let ctxB: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
 

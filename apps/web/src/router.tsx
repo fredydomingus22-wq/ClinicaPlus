@@ -34,6 +34,7 @@ const AdminMedicos = React.lazy(() => import('./pages/admin/MedicosPage'));
 const AdminEspecialidades = React.lazy(() => import('./pages/admin/EspecialidadesPage'));
 const AdminEquipa = React.lazy(() => import('./pages/admin/EquipaPage').then(m => ({ default: m.EquipaPage })));
 const AdminConfiguracao = React.lazy(() => import('./pages/admin/ConfiguracaoPage'));
+const AdminPerfilPage = React.lazy(() => import('./pages/admin/PerfilPage'));
 
 // Super Admin
 const SuperAdminLayout = React.lazy(() => import('./components/layout/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })));
@@ -289,6 +290,10 @@ export const router = createBrowserRouter([
           {
             path: '/recepcao/pacientes',
             element: <PacientesPage />
+          },
+          {
+            path: '/recepcao/perfil',
+            element: <AdminPerfilPage />
           }
         ]
       }
@@ -324,6 +329,10 @@ export const router = createBrowserRouter([
           {
             path: '/admin/especialidades',
             element: <AdminEspecialidades />
+          },
+          {
+            path: '/admin/perfil',
+            element: <AdminPerfilPage />
           },
           {
             path: '/admin/configuracao',

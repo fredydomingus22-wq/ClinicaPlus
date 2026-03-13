@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma';
+import { TipoDocumento } from '@prisma/client';
 import type { 
   DocumentoDTO, 
   DocumentoCreateInput 
@@ -31,7 +32,7 @@ export const documentosService = {
         pacienteId: data.pacienteId,
         medicoId: data.medicoId ?? null,
         agendamentoId: data.agendamentoId ?? null,
-        tipo: data.tipo as any, // Cast to any because Prisma enum type mismatch with string
+        tipo: data.tipo as TipoDocumento,
         nome: data.nome,
         url: data.url,
       }

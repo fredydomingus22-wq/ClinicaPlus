@@ -11,7 +11,9 @@ const configSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url().transform(url => url.replace(/\/$/, '')),
+  TENANT_BASE_DOMAIN: z.string().min(3).optional(),
   RESEND_API_KEY: z.string().min(1),
+  REDIS_URL: z.string().url(),
   METRICS_TOKEN: z.string().min(8),
   ALERT_EMAIL: z.string().email(),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {

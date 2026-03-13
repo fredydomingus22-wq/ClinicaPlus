@@ -6,6 +6,7 @@ interface AuthState {
   utilizador: UtilizadorDTO | null;
   isRestoring: boolean;
   setSession: (accessToken: string, utilizador: UtilizadorDTO) => void;
+  setUtilizador: (utilizador: UtilizadorDTO) => void;
   clear: () => void;
   setRestoring: (isRestoring: boolean) => void;
 }
@@ -19,6 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   utilizador: null,
   isRestoring: true,
   setSession: (accessToken, utilizador) => set({ accessToken, utilizador }),
+  setUtilizador: (utilizador) => set({ utilizador }),
   clear: () => set({ accessToken: null, utilizador: null }),
   setRestoring: (isRestoring) => set({ isRestoring }),
 }));

@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
-import { notificationService } from './notification.service';
+import { reminderQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
 
 /**
@@ -118,15 +118,15 @@ export const schedulerService = {
       }
 
       try {
-        await notificationService.sendLembrete({
-          pacienteEmail: ag.paciente.email,
-          pacienteNome: ag.paciente.nome,
-          medicoNome: ag.medico.nome,
-          clinicaNome: ag.clinica.nome,
-          dataHora: ag.dataHora,
-          horasAntecedencia: lembrete.tipo === 'H24' ? 24 : 2,
-          clinicaId: ag.clinicaId,
-        });
+        await reminderQueue.add(
+          lembrete.tipo === 'H24' ? 'reminder-24h' : 'reminder-2h',
+          { agendamentoId: ag.id, tipo: lembrete.tipo === 'H24' ? '24h' : '2h' },
+          { 
+            jobId: `reminder-${lembrete.tipo.toLowerCase()}-${ag.id}`, 
+            attempts: 3, 
+            backoff: { type: 'exponential', delay: 3600000 } 
+          }
+        );
 
         await prisma.lembreteAgendamento.update({
           where: { id: lembrete.id },
@@ -136,11 +136,7 @@ export const schedulerService = {
           },
         });
       } catch (err) {
-        logger.error({ err, lembreteId: lembrete.id }, 'Failed to process reminder');
-        await prisma.lembreteAgendamento.update({
-          where: { id: lembrete.id },
-          data: { erro: String(err) },
-        });
+        logger.error({ err, lembreteId: lembrete.id }, 'Failed to queue fallback reminder');
       }
     }
   },

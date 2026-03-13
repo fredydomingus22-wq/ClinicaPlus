@@ -75,7 +75,7 @@ router.get('/stats', async (req, res, next) => {
 router.post('/clinicas', async (req, res, next) => {
   try {
     const body = ClinicaCreateSchema.parse(req.body);
-    const result = await superAdminService.provisionClinic(body, (req as any).user.id);
+    const result = await superAdminService.provisionClinic(body, (req as unknown as { user: { id: string } }).user.id);
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);

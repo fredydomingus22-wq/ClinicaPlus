@@ -16,8 +16,8 @@ import type {
 } from '@clinicaplus/types';
 import { EstadoAgendamento } from '@clinicaplus/types';
 import type { Prisma } from '@prisma/client';
-import { schedulerService } from './scheduler.service';
 import { notificacoesService } from './notificacoes.service';
+import { reminderQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
 
 /**
@@ -138,8 +138,8 @@ function toAgendamentoDTO(a: AgendamentoWithRelations): AgendamentoDTO {
     } as unknown as MedicoDTO,
     dataHora: a.dataHora.toISOString(),
     duracao: a.duracao,
-    tipo: a.tipo as AgendamentoDTO['tipo'],
-    estado: a.estado as AgendamentoDTO['estado'],
+    tipo: a.tipo as unknown as AgendamentoDTO['tipo'],
+    estado: a.estado as unknown as EstadoAgendamento,
     motivoConsulta: a.motivoConsulta || null,
     observacoes: a.observacoes || null,
     triagem: a.triagem ? (a.triagem as unknown as AgendamentoDTO['triagem']) : null,
@@ -301,7 +301,7 @@ export const agendamentosService = {
         tipo: data.tipo,
         motivoConsulta: data.motivoConsulta ?? null,
         observacoes: data.observacoes ?? null,
-        estado: (data as any).estado || 'PENDENTE',
+        estado: ((data as unknown as { estado?: string }).estado || 'PENDENTE') as NonNullable<Prisma.AgendamentoUncheckedCreateInput['estado']>,
       };
 
       const agendamento = await tx.agendamento.create({
@@ -374,7 +374,27 @@ export const agendamentosService = {
           tipo: dto.tipo,
           clinicaId,
         });
-        await schedulerService.scheduleReminders(dto.id, clinicaId, dataHora);
+
+        // Schedule background reminders via BullMQ
+        const now = new Date();
+        const delay24h = dataHora.getTime() - 24 * 60 * 60 * 1000 - now.getTime();
+        const delay2h = dataHora.getTime() - 2 * 60 * 60 * 1000 - now.getTime();
+
+        if (delay24h > 0) {
+          await reminderQueue.add(
+            'reminder-24h',
+            { agendamentoId: dto.id, tipo: '24h' },
+            { jobId: `reminder-24h-${dto.id}`, delay: delay24h, attempts: 3, backoff: { type: 'exponential', delay: 3600000 } }
+          );
+        }
+
+        if (delay2h > 0) {
+          await reminderQueue.add(
+            'reminder-2h',
+            { agendamentoId: dto.id, tipo: '2h' },
+            { jobId: `reminder-2h-${dto.id}`, delay: delay2h, attempts: 3, backoff: { type: 'exponential', delay: 3600000 } }
+          );
+        }
         
         // Notify Doctor
         const medico = await prisma.medico.findUnique({ where: { id: data.medicoId }, select: { utilizadorId: true } });
@@ -458,7 +478,27 @@ export const agendamentosService = {
           clinicaId,
         });
         
-        await schedulerService.scheduleReminders(dto.id, clinicaId, new Date(dto.dataHora));
+        // Schedule background reminders via BullMQ
+        const now = new Date();
+        const dataHora = new Date(dto.dataHora);
+        const delay24h = dataHora.getTime() - 24 * 60 * 60 * 1000 - now.getTime();
+        const delay2h = dataHora.getTime() - 2 * 60 * 60 * 1000 - now.getTime();
+
+        if (delay24h > 0) {
+          await reminderQueue.add(
+            'reminder-24h',
+            { agendamentoId: dto.id, tipo: '24h' },
+            { jobId: `reminder-24h-${dto.id}`, delay: delay24h, attempts: 3, backoff: { type: 'exponential', delay: 3600000 } }
+          );
+        }
+
+        if (delay2h > 0) {
+          await reminderQueue.add(
+            'reminder-2h',
+            { agendamentoId: dto.id, tipo: '2h' },
+            { jobId: `reminder-2h-${dto.id}`, delay: delay2h, attempts: 3, backoff: { type: 'exponential', delay: 3600000 } }
+          );
+        }
         
         // Notify Patient if confirmed
         if (updated.paciente.utilizadorId) {
@@ -478,6 +518,10 @@ export const agendamentosService = {
           where: { agendamentoId: id, enviadoEm: null },
           data: { enviadoEm: new Date(), sucesso: false, erro: 'Cancelled by user/system' }
         });
+
+        // Remove from background queue
+        await reminderQueue.remove(`reminder-24h-${id}`);
+        await reminderQueue.remove(`reminder-2h-${id}`);
 
         await notificationService.sendCancelamento({
           pacienteEmail: dto.paciente.email || '',

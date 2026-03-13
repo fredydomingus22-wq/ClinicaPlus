@@ -35,7 +35,7 @@ function toReceitaDTO(r: ReceitaWithRelations): ReceitaDTO {
   };
 
   if (r.paciente) {
-    dto.paciente = {
+    const pacienteDto = {
       ...r.paciente,
       utilizadorId: r.paciente.utilizadorId || null,
       tipoSangue: r.paciente.tipoSangue || null,
@@ -47,18 +47,18 @@ function toReceitaDTO(r: ReceitaWithRelations): ReceitaDTO {
       dataNascimento: r.paciente.dataNascimento.toISOString(),
       criadoEm: r.paciente.criadoEm.toISOString(),
       atualizadoEm: r.paciente.atualizadoEm.toISOString(),
-    } as any;
+    };
+    dto.paciente = pacienteDto as unknown as ReceitaDTO['paciente'] & {};
   }
 
   if (r.medico) {
-    dto.medico = {
+    const medicoDto = {
       ...r.medico,
       ordem: r.medico.ordem || null,
       telefoneDireto: r.medico.telefoneDireto || null,
-      horario: r.medico.horario as unknown as any,
-      criadoEm: r.medico.criadoEm.toISOString(),
       atualizadoEm: r.medico.atualizadoEm.toISOString(),
-    } as any;
+    };
+    dto.medico = medicoDto as unknown as ReceitaDTO['medico'] & {};
   }
 
   return dto;
@@ -173,13 +173,13 @@ export const receitasService = {
         pacienteId: agendamento.pacienteId,
         medicoId: agendamento.medicoId,
         diagnostico: data.diagnostico,
-        medicamentos: data.medicamentos as any,
+        medicamentos: data.medicamentos as unknown as Prisma.InputJsonValue,
         observacoes: data.observacoes ?? null,
         dataValidade: new Date(data.dataValidade),
       },
       include: { paciente: true, medico: true },
     });
 
-    return toReceitaDTO(res as any);
+    return toReceitaDTO(res as unknown as ReceitaWithRelations);
   },
 };

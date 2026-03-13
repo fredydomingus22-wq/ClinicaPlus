@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Eye, EyeOff, Hexagon, Building2, User, KeyRound } from 'lucide-react';
 
 import { LoginSchema, type LoginInput, Papel } from '@clinicaplus/types';
+import { getTenantSlugFromURL } from '@clinicaplus/utils';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -29,6 +30,7 @@ export const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
   const [showPassword, setShowPassword] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
 
   const {
     register,
@@ -40,6 +42,18 @@ export const LoginPage = () => {
     resolver: zodResolver(LoginSchema),
     defaultValues: { clinicaSlug: '', email: '', password: '' },
   });
+
+  // Auto-detect tenant from subdomain on mount
+  useEffect(() => {
+    const slug = getTenantSlugFromURL({
+      baseDomain: import.meta.env['VITE_BASE_DOMAIN'] || undefined,
+      devTenantSlug: import.meta.env['VITE_DEV_TENANT_SLUG'] || undefined,
+    });
+    if (slug) {
+      setTenantSlug(slug);
+      setValue('clinicaSlug', slug);
+    }
+  }, [setValue]);
 
   const mutation = useMutation({
     mutationFn: authApi.login,
@@ -106,28 +120,36 @@ export const LoginPage = () => {
         <div className="w-full max-w-md mx-auto py-12 lg:py-28 z-10 animate-in fade-in slide-in-from-right-8 duration-700">
           
           <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Bem-vindo</h2>
-            <p className="text-slate-600 text-sm font-medium">Acesso seguro ao portal da clínica.</p>
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+              {tenantSlug ? `Bem-vindo à ${tenantSlug}` : 'Bem-vindo'}
+            </h2>
+            <p className="text-slate-600 text-sm font-medium">
+              {tenantSlug
+                ? 'Insira as suas credenciais para aceder ao sistema.'
+                : 'Acesso seguro ao portal da clínica.'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
             
-            {/* Input Workspace */}
-            <div className="space-y-1.5 group">
-              <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
-                Identificador da Clínica
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3.5 top-3 h-5 w-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
-                <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
-                  placeholder="slug-da-clinica"
-                  {...register('clinicaSlug')}
-                  onChange={handleSlugChange}
-                />
+            {/* Input Workspace — hidden when tenant is auto-detected from subdomain */}
+            {!tenantSlug && (
+              <div className="space-y-1.5 group">
+                <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+                  Identificador da Clínica
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3.5 top-3 h-5 w-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
+                  <input
+                    className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                    placeholder="slug-da-clinica"
+                    {...register('clinicaSlug')}
+                    onChange={handleSlugChange}
+                  />
+                </div>
+                {errors.clinicaSlug && <p className="text-[13px] text-red-500 font-medium">{errors.clinicaSlug.message}</p>}
               </div>
-              {errors.clinicaSlug && <p className="text-[13px] text-red-500 font-medium">{errors.clinicaSlug.message}</p>}
-            </div>
+            )}
 
             {/* Input Email */}
             <div className="space-y-1.5 group">

@@ -3,6 +3,7 @@ import type {
   DashboardStatsDTO,
   MedicoDashboardDTO,
   DashboardPeriodo,
+  AgendamentoDTO,
 } from '@clinicaplus/types';
 import { EstadoAgendamento } from '@clinicaplus/types';
 
@@ -12,7 +13,7 @@ export const dashboardService = {
    */
   async getStats(clinicaId: string, periodo: DashboardPeriodo): Promise<DashboardStatsDTO> {
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
 
     if (periodo === 'hoje') {
       startDate.setHours(0, 0, 0, 0);
@@ -82,7 +83,7 @@ export const dashboardService = {
       }),
     ]);
 
-    const calculateTrend = (curr: number, prev: number) => {
+    const calculateTrend = (curr: number, prev: number): number => {
       if (prev === 0) return curr > 0 ? 100 : 0;
       return Math.round(((curr - prev) / prev) * 100);
     };
@@ -163,18 +164,18 @@ export const dashboardService = {
       consultasHoje,
       concluidas,
       aAguardar,
-      agendamentos: agendamentos.map((a: any) => ({
+      agendamentos: agendamentos.map((a) => ({
         id: a.id,
         clinicaId: a.clinicaId,
         pacienteId: a.pacienteId,
         medicoId: a.medicoId,
         dataHora: a.dataHora.toISOString(),
         duracao: a.duracao,
-        tipo: a.tipo,
-        estado: a.estado as EstadoAgendamento,
+        tipo: a.tipo as unknown as AgendamentoDTO['tipo'],
+        estado: a.estado as unknown as EstadoAgendamento,
         motivoConsulta: a.motivoConsulta,
         observacoes: a.observacoes,
-        triagem: a.triagem as any,
+        triagem: a.triagem as unknown as MedicoDashboardDTO['agendamentos'][0]['triagem'],
         notasConsulta: a.notasConsulta,
         diagnostico: a.diagnostico,
         paciente: {
@@ -185,7 +186,7 @@ export const dashboardService = {
         },
         medico: {
           ...a.medico,
-          horario: a.medico.horario as any,
+          horario: a.medico.horario as unknown as MedicoDashboardDTO['agendamentos'][0]['medico']['horario'],
           criadoEm: a.medico.criadoEm.toISOString(),
           atualizadoEm: a.medico.atualizadoEm.toISOString(),
         },

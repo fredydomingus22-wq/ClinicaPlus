@@ -5,7 +5,8 @@ import type {
   UtilizadorDTO, 
   ForgotPasswordInput, 
   ResetPasswordInput,
-  SuperAdminLoginInput
+  SuperAdminLoginInput,
+  UtilizadorUpdateInput
 } from '@clinicaplus/types';
 
 export const authApi = {
@@ -48,4 +49,8 @@ export const authApi = {
   changePassword: (oldPassword: string, newPassword: string) =>
     apiClient.patch('/auth/change-password', { oldPassword, newPassword })
       .then(r => r.data),
+
+  updateProfile: (data: UtilizadorUpdateInput) =>
+    apiClient.patch<{ data: UtilizadorDTO }>('/auth/me', data)
+      .then(r => r.data.data),
 };

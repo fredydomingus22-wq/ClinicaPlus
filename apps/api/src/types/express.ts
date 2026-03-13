@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 import { Clinica, Papel } from '@prisma/client';
 
 declare global {

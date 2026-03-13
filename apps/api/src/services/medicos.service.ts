@@ -14,6 +14,7 @@ import type {
   MedicoHorario,
   PaginatedResult,
 } from '@clinicaplus/types';
+import { Prisma } from '@prisma/client';
 import type { Medico, Especialidade } from '@prisma/client';
 
 type MedicoWithEspecialidade = Medico & { especialidade?: Especialidade | null };
@@ -205,7 +206,7 @@ export const medicosService = {
         especialidadeId: data.especialidadeId,
         ordem: data.ordem ?? null,
         telefoneDireto: data.telefoneDireto ?? null,
-        horario: horario as any, // Prisma Json type
+        horario: horario as unknown as Prisma.InputJsonValue, // Prisma Json type
         duracaoConsulta: data.duracaoConsulta ?? 30,
         preco: data.preco,
         ativo: data.ativo ?? true,
@@ -231,7 +232,7 @@ export const medicosService = {
     if (data.especialidadeId !== undefined) updateData.especialidadeId = data.especialidadeId;
     if (data.ordem !== undefined)           updateData.ordem = data.ordem ?? null;
     if (data.telefoneDireto !== undefined)  updateData.telefoneDireto = data.telefoneDireto ?? null;
-    if (data.horario !== undefined)         updateData.horario = data.horario as any;
+    if (data.horario !== undefined)         updateData.horario = data.horario as unknown as Prisma.InputJsonValue;
     if (data.duracaoConsulta !== undefined) updateData.duracaoConsulta = data.duracaoConsulta;
     if (data.preco !== undefined)           updateData.preco = data.preco;
     if (data.ativo !== undefined)           updateData.ativo = data.ativo;

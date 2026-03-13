@@ -7,13 +7,13 @@ import { AppError } from '../lib/AppError';
 import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 import { Prisma } from '@prisma/client';
-import { UtilizadorDTO, MedicoDTO, PacienteCreateInput } from '@clinicaplus/types';
+import { UtilizadorDTO, MedicoDTO, PacienteCreateInput, UtilizadorUpdateInput } from '@clinicaplus/types';
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL_DAYS = 7;
 const REFRESH_TTL_MS = REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
 
-type UtilizadorWithRelations = Prisma.UtilizadorGetPayload<{
+export type UtilizadorWithRelations = Prisma.UtilizadorGetPayload<{
   include: { 
     paciente: true; 
     medico: { include: { especialidade: true } }; 
@@ -178,6 +178,58 @@ export const authService = {
       where: { id: userId },
       data: { passwordHash },
     });
+  },
+
+  async updateProfile(userId: string, data: UtilizadorUpdateInput): Promise<UtilizadorDTO> {
+    const user = await prisma.utilizador.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError('Utilizador não encontrado', 404, 'USER_NOT_FOUND');
+    }
+
+    const updateData: Prisma.UtilizadorUpdateInput = {};
+
+    if (data.nome && data.nome !== user.nome) {
+      updateData.nome = data.nome;
+    }
+
+    // Check email uniqueness if changing
+    if (data.email && data.email !== user.email) {
+      const existing = await prisma.utilizador.findUnique({
+        where: {
+          clinicaId_email: {
+            clinicaId: user.clinicaId,
+            email: data.email
+          }
+        }
+      });
+      if (existing) {
+        throw new AppError('Este e-mail já está a ser utilizado nesta clínica.', 409, 'DUPLICATE_ENTRY');
+      }
+      updateData.email = data.email;
+    }
+
+    // If no changes, just return the current state
+    if (Object.keys(updateData).length === 0) {
+      const current = await prisma.utilizador.findUniqueOrThrow({
+        where: { id: userId },
+        include: {
+          paciente: true,
+          medico: { include: { especialidade: true } }
+        }
+      });
+      return toUtilizadorDTO(current as UtilizadorWithRelations);
+    }
+
+    const updated = await prisma.utilizador.update({
+      where: { id: userId },
+      data: updateData,
+      include: {
+        paciente: true,
+        medico: { include: { especialidade: true } }
+      }
+    });
+
+    return toUtilizadorDTO(updated as UtilizadorWithRelations);
   },
 
   async registerPaciente(data: Omit<PacienteCreateInput, 'ativo'> & { password?: string, clinicaSlug: string }, clinicaSlug: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
