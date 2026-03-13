@@ -11,7 +11,7 @@ async function retryOperation<T>(
   label: string,
   retries = 3
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   for (let i = 0; i < retries; i++) {
     try {
       return await operation();
