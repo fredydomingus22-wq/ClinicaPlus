@@ -10,7 +10,7 @@ const configSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(64),
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  FRONTEND_URL: z.string().url(),
+  FRONTEND_URL: z.string().url().transform(url => url.replace(/\/$/, '')),
   RESEND_API_KEY: z.string().min(1),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
