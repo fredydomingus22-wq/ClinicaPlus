@@ -40,8 +40,15 @@ WORKDIR /app
 
 # Copy built files and node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/types/node_modules ./packages/types/node_modules
+COPY --from=builder /app/packages/utils/dist ./packages/utils/dist
+COPY --from=builder /app/packages/utils/node_modules ./packages/utils/node_modules
+COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
+COPY --from=builder /app/packages/utils/package.json ./packages/utils/package.json
+
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/pnpm-workspace.yaml ./
