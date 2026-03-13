@@ -13,6 +13,7 @@ import { globalRateLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
 import { schedulerService } from './services/scheduler.service';
 import { prisma } from './lib/prisma';
+import { redis, redisSub } from './lib/redis';
 import { systemMetrics } from './lib/metrics';
 
 // Routes
@@ -51,7 +52,38 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: config.FRONTEND_URL,
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (server-to-server, Postman, health checks)
+    if (!origin) return callback(null, true);
+
+    // Always allow the configured primary frontend URL (e.g. https://clinica-plus-web.vercel.app)
+    if (origin === config.FRONTEND_URL) return callback(null, true);
+
+    try {
+      const url = new URL(origin);
+
+      // Allow any subdomain of the tenant base domain (wildcard tenant subdomains)
+      // e.g. TENANT_BASE_DOMAIN=clinicaplus.ao → accepts https://nutrimacho.clinicaplus.ao
+      if (config.TENANT_BASE_DOMAIN) {
+        const tenantDomain = config.TENANT_BASE_DOMAIN;
+        if (
+          url.hostname === tenantDomain ||
+          url.hostname.endsWith(`.${tenantDomain}`)
+        ) {
+          return callback(null, true);
+        }
+      }
+
+      // For development: also allow any localhost origin (different ports)
+      if (config.NODE_ENV === 'development' && url.hostname === 'localhost') {
+        return callback(null, true);
+      }
+    } catch {
+      // Invalid URL — fall through to rejection
+    }
+
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
 }));
 
@@ -76,18 +108,27 @@ app.get('/health', async (_req, res) => {
     dbStatus = 'disconnected';
     logger.error({ err }, 'Health check: Database connection failed');
   }
+  
+  let redisStatus = 'connected';
+  try {
+    const pong = await redis.ping();
+    if (pong !== 'PONG') throw new Error('Redis PONG failed');
+  } catch (err) {
+    redisStatus = 'disconnected';
+    logger.error({ err }, 'Health check: Redis connection failed');
+  }
 
-  const uptime = Math.floor((Date.now() - systemMetrics.startTime) / 1000);
-  const status = dbStatus === 'connected' ? 'ok' : 'degraded';
+  const status = (dbStatus === 'connected' && redisStatus === 'connected') ? 'ok' : 'degraded';
 
-  res.status(status === 'ok' ? 200 : 200).json({ 
+  res.status(status === 'ok' ? 200 : 207).json({ 
     status, 
-    timestamp: new Date().toISOString(), 
-    version: process.env['npm_package_version'] ?? '1.0.0',
-    uptime,
     database: dbStatus,
+    redis: redisStatus,
+    uptime: Math.floor((Date.now() - systemMetrics.startTime) / 1000),
+    version: process.env['npm_package_version'] ?? '1.0.0',
     checks: {
-      db: { status: dbStatus === 'connected' ? 'ok' : 'error', latencyMs: dbStatus === 'connected' ? latencyMs : undefined }
+      db: { status: dbStatus === 'connected' ? 'ok' : 'error', latencyMs: dbStatus === 'connected' ? latencyMs : undefined },
+      redis: { status: redisStatus === 'connected' ? 'ok' : 'error' }
     }
   });
 });
@@ -149,16 +190,30 @@ if (require.main === module) {
       '🚀 ClinicaPlus API started'
     );
     schedulerService.start();
+    
+    // Verify Redis connection on startup
+    redis.ping()
+      .then(() => logger.info('✅ Redis connection verified'))
+      .catch((err: unknown) => logger.error({ err }, '❌ Redis connection failed on startup'));
   });
 }
 
 // Graceful shutdown
 const shutdown = async (signal: string): Promise<void> => {
   logger.info({ signal }, `Received ${signal} — shutting down gracefully`);
-  schedulerService.stop();
-  await prisma.$disconnect();
-  logger.info('Prisma disconnected, exiting process');
-  process.exit(0);
+  try {
+    schedulerService.stop();
+    await Promise.all([
+      prisma.$disconnect(),
+      redis.quit(),
+      redisSub.quit()
+    ]);
+    logger.info('✅ Prisma and Redis disconnected, exiting process');
+    process.exit(0);
+  } catch (err: unknown) {
+    logger.error({ err }, '❌ Error during shutdown');
+    process.exit(1);
+  }
 };
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));

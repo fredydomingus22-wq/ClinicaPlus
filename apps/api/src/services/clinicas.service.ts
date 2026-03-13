@@ -3,7 +3,8 @@ import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { authService } from './auth.service';
 import type { ClinicaCreateInput, ClinicaUpdateInput, ClinicaDTO } from '@clinicaplus/types';
-import type { Clinica, ConfiguracaoClinica, ContactoClinica } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Clinica, ConfiguracaoClinica, ContactoClinica, Papel } from '@prisma/client';
 
 /**
  * Maps a Prisma Clinica record to a ClinicaDTO.
@@ -65,9 +66,14 @@ const SLUG_REGEX = /^[a-z0-9-]{3,50}$/;
 export const clinicasService = {
   /**
    * Registers a new clinic with an ADMIN user and default configuration.
-   * Returns the ClinicaDTO and an accessToken for immediate login.
+   * Returns the ClinicaDTO and tokens for immediate login.
    */
-  async registar(data: ClinicaCreateInput): Promise<any> {
+  async registar(data: ClinicaCreateInput): Promise<{
+    clinica: ClinicaDTO;
+    admin: { id: string; nome: string; email: string; papel: Papel };
+    accessToken: string;
+    refreshToken: string;
+  }> {
     // Validate slug format
     if (!SLUG_REGEX.test(data.slug)) {
       throw new AppError(
@@ -132,9 +138,13 @@ export const clinicasService = {
     // Find the newly created ADMIN user to issue tokens
     const adminUser = await prisma.utilizador.findUniqueOrThrow({
       where: { clinicaId_email: { clinicaId: clinica.id, email: data.adminEmail } },
+      include: {
+        paciente: true,
+        medico: { include: { especialidade: true } }
+      }
     });
 
-    const { accessToken, refreshToken } = await authService._issueTokens(adminUser as any);
+    const { accessToken, refreshToken } = await authService._issueTokens(adminUser);
 
     const fullClinica = await this.getMe(clinica.id);
 
@@ -144,7 +154,7 @@ export const clinicasService = {
         id: adminUser.id,
         nome: adminUser.nome,
         email: adminUser.email,
-        papel: adminUser.papel as any,
+        papel: adminUser.papel as Papel,
       },
       accessToken,
       refreshToken,
@@ -192,11 +202,11 @@ export const clinicasService = {
         ...safeData,
         configuracao: configuracao ? {
           upsert: {
-            create: configuracao as any,
-            update: configuracao as any
+            create: configuracao as unknown as Prisma.ConfiguracaoClinicaCreateWithoutClinicaInput,
+            update: configuracao as unknown as Prisma.ConfiguracaoClinicaUpdateWithoutClinicaInput
           }
         } : undefined
-      } as any,
+      } as Prisma.ClinicaUpdateInput,
       include: { 
         configuracao: true,
         contactos: { orderBy: { ordem: 'asc' } }
@@ -210,7 +220,7 @@ export const clinicasService = {
    * Adds a new contact or updates all if a full list is provided.
    * For simplicity, let's allow a full list update or single operations.
    */
-  async updateContactos(clinicaId: string, contactos: any[]): Promise<ClinicaDTO> {
+  async updateContactos(clinicaId: string, contactos: ({ tipo: string; valor: string; descricao?: string; ordem?: number })[]): Promise<ClinicaDTO> {
     await prisma.$transaction(async (tx) => {
       // Delete all and recreate to ensure order and consistency
       await tx.contactoClinica.deleteMany({ where: { clinicaId } });

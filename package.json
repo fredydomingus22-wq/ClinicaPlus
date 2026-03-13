@@ -33,6 +33,11 @@
     "turbo": "^2.0.0",
     "typescript": "^5.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.4.1"
+    }
+  },
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix"

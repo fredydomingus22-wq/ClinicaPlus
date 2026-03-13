@@ -3,7 +3,7 @@ import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
 describe('/api/pacientes', () => {
-  let app = createTestApp();
+  const app = createTestApp();
   let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
 
   beforeAll(async () => {

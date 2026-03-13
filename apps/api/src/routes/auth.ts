@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authService } from '../services/auth.service';
-import { LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, SuperAdminLoginSchema } from '@clinicaplus/types';
+import { LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, SuperAdminLoginSchema, UtilizadorUpdateSchema } from '@clinicaplus/types';
 import { config } from '../lib/config';
 import { authRateLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/authenticate';
@@ -163,6 +163,22 @@ router.patch('/change-password', authenticate, async (req, res, next) => {
     }
     await authService.changePassword(req.user!.id, oldPassword, newPassword);
     res.json({ success: true, message: 'Palavra-passe alterada com sucesso' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/auth/me
+router.patch('/me', authenticate, async (req, res, next) => {
+  try {
+    const data = UtilizadorUpdateSchema.parse(req.body);
+    const result = await authService.updateProfile(req.user!.id, data);
+    
+    res.json({
+      success: true,
+      data: result,
+      message: 'Perfil atualizado com sucesso'
+    });
   } catch (error) {
     next(error);
   }

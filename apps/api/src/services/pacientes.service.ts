@@ -141,7 +141,7 @@ export const pacientesService = {
     }
 
     // 2. Build explicit update payload to satisfy exactOptionalPropertyTypes
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (data.nome !== undefined)           updateData.nome = data.nome;
     if (data.dataNascimento !== undefined)  updateData.dataNascimento = new Date(data.dataNascimento);
     if (data.genero !== undefined)          updateData.genero = data.genero;
@@ -161,7 +161,7 @@ export const pacientesService = {
 
       // Sync Utilizador if linked
       if (p.utilizadorId && (data.nome !== undefined || data.email !== undefined)) {
-        const userUpdate: any = {};
+        const userUpdate: Record<string, unknown> = {};
         if (data.nome !== undefined) userUpdate.nome = data.nome;
         if (data.email !== undefined) userUpdate.email = data.email || null;
 

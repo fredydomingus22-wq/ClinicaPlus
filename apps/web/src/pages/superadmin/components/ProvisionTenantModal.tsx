@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Building2, User } from 'lucide-react';
 import { ClinicaCreateSchema, ClinicaCreateInput } from '@clinicaplus/types';
@@ -22,14 +22,14 @@ export function ProvisionTenantModal({ isOpen, onClose }: ProvisionTenantModalPr
     formState: { errors },
     reset,
   } = useForm<ClinicaCreateInput>({
-    resolver: zodResolver(ClinicaCreateSchema) as any,
+    resolver: zodResolver(ClinicaCreateSchema) as Resolver<ClinicaCreateInput>,
     defaultValues: {
       plano: 'BASICO',
     },
   });
 
   const onSubmit = (data: ClinicaCreateInput) => {
-    provision(data as any, {
+    provision(data, {
       onSuccess: () => {
         reset();
         onClose();

@@ -4,6 +4,7 @@ import { AppError } from '../lib/AppError';
 import { logger } from '../lib/logger';
 import { generateInitialPassword } from '@clinicaplus/utils';
 import { notificationService } from './notification.service';
+import { Prisma } from '@prisma/client';
 import type { 
   EquipaCreateInput, 
   UtilizadorUpdateInput, 
@@ -22,7 +23,7 @@ function toUtilizadorDTO(u: Utilizador): UtilizadorDTO {
     clinicaId: u.clinicaId,
     nome: u.nome,
     email: u.email,
-    papel: u.papel as any,
+    papel: u.papel as UtilizadorDTO['papel'],
     ativo: u.ativo,
     criadoEm: u.criadoEm.toISOString(),
     atualizadoEm: u.atualizadoEm.toISOString(),
@@ -37,7 +38,7 @@ export const equipaService = {
     const { papel, ativo, q, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.UtilizadorWhereInput = {
       clinicaId,
       // Default to non-patient roles if role not specified
       papel: papel || { not: 'PACIENTE' },
@@ -106,15 +107,45 @@ export const equipaService = {
     const clearPassword = generateInitialPassword(10);
     const hashedPassword = await bcrypt.hash(clearPassword, 10);
 
-    const newUser = await prisma.utilizador.create({
-      data: {
-        clinicaId,
-        nome: data.nome,
-        email: data.email,
-        passwordHash: hashedPassword,
-        papel: data.papel,
-        ativo: data.ativo ?? true,
+    const newUser = await prisma.$transaction(async (tx) => {
+      const u = await tx.utilizador.create({
+        data: {
+          clinicaId,
+          nome: data.nome,
+          email: data.email,
+          passwordHash: hashedPassword,
+          papel: data.papel,
+          ativo: data.ativo ?? true,
+        }
+      });
+
+      // Synchronize Medico record if role is MEDICO
+      if (u.papel === 'MEDICO') {
+        let esp = await tx.especialidade.findFirst({ where: { clinicaId } });
+        if (!esp) {
+          esp = await tx.especialidade.create({
+            data: { clinicaId, nome: 'Clínica Geral', descricao: 'Criada automaticamente (Sistema)' }
+          });
+        }
+
+        await tx.medico.create({
+          data: {
+            clinicaId,
+            utilizadorId: u.id,
+            nome: u.nome,
+            especialidadeId: esp.id,
+            horario: {
+              "1": { ativo: true, inicio: "08:00", fim: "17:00" },
+              "2": { ativo: true, inicio: "08:00", fim: "17:00" },
+              "3": { ativo: true, inicio: "08:00", fim: "17:00" },
+              "4": { ativo: true, inicio: "08:00", fim: "17:00" },
+              "5": { ativo: true, inicio: "08:00", fim: "17:00" }
+            }
+          }
+        });
       }
+
+      return u;
     });
 
     // Send welcome email (fire-and-forget)
@@ -153,9 +184,42 @@ export const equipaService = {
     if (data.papel !== undefined) updateData.papel = data.papel;
     if (data.ativo !== undefined) updateData.ativo = data.ativo;
 
-    const u = await prisma.utilizador.update({
-      where: { id },
-      data: updateData,
+    const u = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.utilizador.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Synchronize Medico record if role is now MEDICO
+      if (updatedUser.papel === 'MEDICO') {
+        const existingMedico = await tx.medico.findUnique({ where: { utilizadorId: id } });
+        if (!existingMedico) {
+          let esp = await tx.especialidade.findFirst({ where: { clinicaId } });
+          if (!esp) {
+            esp = await tx.especialidade.create({
+              data: { clinicaId, nome: 'Clínica Geral', descricao: 'Criada automaticamente (Sistema)' }
+            });
+          }
+
+          await tx.medico.create({
+            data: {
+              clinicaId,
+              utilizadorId: updatedUser.id,
+              nome: updatedUser.nome,
+              especialidadeId: esp.id,
+              horario: {
+                "1": { ativo: true, inicio: "08:00", fim: "17:00" },
+                "2": { ativo: true, inicio: "08:00", fim: "17:00" },
+                "3": { ativo: true, inicio: "08:00", fim: "17:00" },
+                "4": { ativo: true, inicio: "08:00", fim: "17:00" },
+                "5": { ativo: true, inicio: "08:00", fim: "17:00" }
+              }
+            }
+          });
+        }
+      }
+
+      return updatedUser;
     });
 
     return toUtilizadorDTO(u);

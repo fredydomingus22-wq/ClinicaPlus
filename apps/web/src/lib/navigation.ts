@@ -133,6 +133,18 @@ export const NAV_CONFIG: NavItem[] = [
     roles: [Papel.MEDICO] 
   },
   { 
+    to: '/admin/perfil', 
+    label: 'Meu Perfil', 
+    icon: User, 
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/recepcao/perfil', 
+    label: 'Meu Perfil', 
+    icon: User, 
+    roles: [Papel.RECEPCIONISTA] 
+  },
+  { 
     to: '/paciente/perfil', 
     label: 'O Meu Perfil', 
     icon: User, 

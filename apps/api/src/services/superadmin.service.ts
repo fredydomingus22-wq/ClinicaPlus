@@ -191,10 +191,7 @@ export const superAdminService = {
     }
 
     // 2. Delegate to existing clinicasService for transactional creation
-    const result = await clinicasService.registar(data);
-
-    // 3. Trigger asynchronous notifications (non-blocking)
-    const { clinica, admin } = result as any; // Cast because of DTO vs internal user type
+    const { clinica, admin } = await clinicasService.registar(data);
     
     // Notification Service (Emails)
     notificationService.sendClinicaWelcomeEmail({
@@ -227,14 +224,14 @@ export const superAdminService = {
         acao: 'TENANT_PROVISIONING',
         utilizadorId: requestedBy,
         detalhes: {
-          clinicaId: result.clinica.id,
+          clinicaId: clinica.id,
           plano: data.plano,
           adminEmail: data.adminEmail
         }
       }
     });
 
-    return result.clinica;
+    return clinica;
   },
 
   /**

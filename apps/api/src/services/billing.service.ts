@@ -7,18 +7,18 @@ export const billingService = {
    * Returns the billing history (invoices) for a specific clinic.
    */
   async getBillingHistory(clinicaId: string): Promise<FaturaDTO[]> {
-    const faturas = await (prisma.fatura as any).findMany({
+    const faturas = await prisma.fatura.findMany({
       where: { clinicaId },
       orderBy: { dataEmissao: 'desc' },
     });
 
-    return faturas.map((f: Record<string, any>) => ({
+    return faturas.map((f) => ({
       id: f.id,
       clinicaId: f.clinicaId,
       numero: f.numero,
       valor: f.valor,
       moeda: f.moeda,
-      status: f.status as any,
+      status: f.status as FaturaDTO['status'],
       dataEmissao: f.dataEmissao.toISOString(),
       dataPagamento: f.dataPagamento?.toISOString() || null,
       dataVencimento: f.dataVencimento.toISOString(),
@@ -30,7 +30,7 @@ export const billingService = {
    * Returns the current subscription status for a specific clinic.
    */
   async getSubscriptionStatus(clinicaId: string): Promise<SubscriptionStatusDTO> {
-    const subscricao = await (prisma.subscricao as any).findUnique({
+    const subscricao = await prisma.subscricao.findUnique({
       where: { clinicaId },
     });
 

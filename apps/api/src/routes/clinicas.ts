@@ -4,6 +4,7 @@ import { clinicasService } from '../services/clinicas.service';
 import { authenticate } from '../middleware/authenticate';
 import { requireRole } from '../middleware/requireRole';
 import { Papel } from '@clinicaplus/types';
+import { AppError } from '../lib/AppError';
 
 const router = Router();
 const COOKIE_NAME = 'cp_refresh';
@@ -83,11 +84,12 @@ router.put('/me/contactos',
   requireRole([Papel.ADMIN]),
   async (req, res, next) => {
     try {
-      if (!Array.isArray(req.body.contactos)) {
-        throw new Error('Contactos deve ser um array');
+      const { contactos } = req.body;
+      if (!contactos || !Array.isArray(contactos)) {
+        throw new AppError('A lista de contactos é obrigatória e deve ser um array.', 400, 'VALIDATION_ERROR');
       }
-      const clinica = await clinicasService.updateContactos(req.user.clinicaId, req.body.contactos);
-      return res.json({ success: true, data: clinica });
+      const clinica = await clinicasService.updateContactos(req.user.clinicaId, contactos);
+      return res.json({ success: true, data: clinica, message: 'Contactos atualizados com sucesso' });
     } catch (err) { return next(err); }
   }
 );

@@ -15,6 +15,6 @@ export const clinicasApi = {
       .then(r => r.data.data),
 
   updateContactos: (contactos: ContactoClinicaInput[]) =>
-    apiClient.put<{ data: ClinicaDTO }>('/clinicas/me/contactos', contactos)
+    apiClient.put<{ data: ClinicaDTO }>('/clinicas/me/contactos', { contactos })
       .then(r => r.data.data),
 };
