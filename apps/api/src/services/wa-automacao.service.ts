@@ -6,7 +6,7 @@ import { apiKeysService } from './apikeys.service';
 import { auditLogService } from './auditLog.service';
 import { config } from '../lib/config';
 import { logger } from '../lib/logger';
-import { TEMPLATES } from '../lib/n8n-templates/index';
+// import TEMPLATES removed as it is unused
 
 /**
  * Serviço para gestão de automações do WhatsApp.
@@ -34,9 +34,10 @@ export const waAutomacaoService = {
          const updated = await prisma.waAutomacao.findUnique({ where: { id: automacaoId } });
          // eslint-disable-next-line @typescript-eslint/no-explicit-any
          if (updated) (automacao as any).n8nWorkflowId = updated.n8nWorkflowId;
-       } catch (err: any) {
-         logger.error({ err: err.message, stack: err.stack, automacaoId }, 'Falha automática de provisionamento ao activar');
-         throw new AppError(`Não foi possível criar o workflow no n8n: ${err.message}`, 500);
+       } catch (err) {
+         const error = err as Error;
+         logger.error({ err: error.message, stack: error.stack, automacaoId }, 'Falha automática de provisionamento ao activar');
+         throw new AppError(`Não foi possível criar o workflow no n8n: ${error.message}`, 500);
        }
     }
 
