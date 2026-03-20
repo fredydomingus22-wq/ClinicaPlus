@@ -60,8 +60,8 @@ export const WaConexaoCard: React.FC<WaConexaoCardProps> = ({
     );
   }
 
-  // ESTADO: AGUARDA_QR
-  if (isAguardando || qrCode) {
+  // ESTADO: AGUARDA_QR ou QR Disponível (apenas se não estiver conectado)
+  if (!isConectado && (isAguardando || qrCode)) {
     return (
       <Card className="h-full border-warning-200/50 shadow-sm overflow-hidden flex flex-col bg-white min-h-[300px]">
         {/* Header Ribbon */}

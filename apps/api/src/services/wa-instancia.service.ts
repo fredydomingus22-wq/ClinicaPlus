@@ -153,24 +153,31 @@ export const waInstanciaService = {
     let novoEstado = instancia.estado as WaEstadoInstancia;
     let keepQr = instancia.qrCodeBase64;
 
-    if (state === 'open') {
+    const isSucesso = ['open', 'CONNECTED', 'authenticated'].includes(state);
+    const isErro = ['close', 'refused', 'rejected'].includes(state);
+    const isPendente = ['connecting', 'pairing'].includes(state);
+
+    if (isSucesso) {
       novoEstado = WaEstadoInstancia.CONECTADO;
       keepQr = null;
-    } else if (state === 'close') {
+    } else if (isErro) {
       novoEstado = WaEstadoInstancia.DESCONECTADO;
       keepQr = null;
-    } else if (state === 'connecting') {
+    } else if (isPendente) {
       novoEstado = WaEstadoInstancia.AGUARDA_QR;
     }
 
-    await prisma.waInstancia.update({
-      where: { id: instancia.id },
+    if (novoEstado !== instancia.estado || keepQr !== instancia.qrCodeBase64) {
+      logger.info({ evolutionName, old: instancia.estado, new: novoEstado, state }, 'Estado da instância actualizado via Webhook');
+      await prisma.waInstancia.update({
+        where: { id: instancia.id },
       data: {
         estado: novoEstado,
         qrCodeBase64: keepQr,
         ...(numeroTelefone && { numeroTelefone }),
       },
-    });
+      });
+    }
 
     await publishEvent(`clinica:${instancia.clinicaId}`, 'whatsapp:estado', {
       instanciaId: instancia.id,
@@ -187,14 +194,17 @@ export const waInstanciaService = {
       let keepQr = instancia.qrCodeBase64;
       const numeroTelefone = instancia.numeroTelefone;
 
-      if (state === 'open') {
+      const isSucesso = ['open', 'CONNECTED', 'authenticated'].includes(state);
+      const isErro = ['close', 'refused', 'rejected'].includes(state);
+      const isPendente = ['connecting', 'pairing'].includes(state);
+
+      if (isSucesso) {
         novoEstado = WaEstadoInstancia.CONECTADO;
         keepQr = null;
-        // Se abrir agora e não tínhamos o número, buscar opcionalmente (ou esperar webhook/próxima sync)
-      } else if (state === 'close') {
+      } else if (isErro) {
         novoEstado = WaEstadoInstancia.DESCONECTADO;
         keepQr = null;
-      } else if (state === 'connecting' || state === 'refused') {
+      } else if (isPendente) {
         novoEstado = WaEstadoInstancia.AGUARDA_QR;
       }
 
