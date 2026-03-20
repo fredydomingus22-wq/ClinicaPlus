@@ -7,7 +7,11 @@ import type { WaTipoAutomacao } from '@prisma/client';
 
 const n8n = axios.create({
   baseURL: config.N8N_BASE_URL,
-  headers: { 'X-N8N-API-KEY': config.N8N_API_KEY },
+  headers: { 
+    'X-N8N-API-KEY': config.N8N_API_KEY,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
   timeout: 20_000,
 });
 

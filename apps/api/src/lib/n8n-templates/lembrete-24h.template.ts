@@ -56,7 +56,6 @@ export function templateLembrete24h(vars: TemplateVars): object {
       'Receber Trigger Lembrete': { main: [[{ node: 'Enviar Lembrete', type: 'main', index: 0 }]] },
       'Enviar Lembrete':          { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
     },
-    settings: { executionOrder: 'v1' },
-    tags: [{ name: slug }, { name: 'whatsapp' }, { name: 'lembrete' }],
+    settings: { executionOrder: 'v1' }
   };
 }

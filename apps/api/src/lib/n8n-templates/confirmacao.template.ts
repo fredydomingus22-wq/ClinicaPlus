@@ -92,6 +92,5 @@ export function templateConfirmacao(vars: TemplateVars): object {
       'Processar Confirmação':          { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
     },
     settings: { executionOrder: 'v1' },
-    tags: [{ name: slug }, { name: 'whatsapp' }, { name: 'confirmacao' }],
   };
 }

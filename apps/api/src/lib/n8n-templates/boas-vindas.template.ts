@@ -57,6 +57,5 @@ export function templateBoasVindas(vars: TemplateVars): object {
       'É número novo?':   { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
     },
     settings: { executionOrder: 'v1' },
-    tags: [{ name: slug }, { name: 'whatsapp' }, { name: 'boasvindas' }],
   };
 }
