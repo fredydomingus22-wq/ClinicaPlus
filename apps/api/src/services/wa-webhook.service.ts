@@ -4,6 +4,7 @@ import { WaInstancia, WaEstadoConversa, WaDirecao } from '@prisma/client';
 
 import { waConversaService } from './wa-conversa.service';
 import { waInstanciaService } from './wa-instancia.service';
+import { waAutomacaoService } from './wa-automacao.service';
 
 interface EvolutionWebhookPayload {
   event: string;
@@ -136,7 +137,30 @@ export const waWebhookService = {
       },
     });
 
-    // 3. Encaminhar para Máquina de Estados (waConversaService)
+    // 3. Encaminhar para n8n se houver automações activas
+    const automacoes = await prisma.waAutomacao.findMany({
+      where: { 
+        waInstanciaId: instancia.id,
+        ativo: true,
+        n8nWebhookUrl: { not: null }
+      }
+    });
+
+    if (automacoes.length > 0) {
+      for (const automacao of automacoes) {
+        // Disparamos o webhook no n8n. O waAutomacaoService.dispararWebhook já trata erros e logs.
+        waAutomacaoService.dispararWebhook(automacao.id, {
+          ...data,
+          clinicaId: instancia.clinicaId,
+          conversaId: conversa.id,
+          tipoAutomacao: automacao.tipo
+        }).catch(() => {}); // Fogo e esquece, erros já logados no service
+      }
+    }
+
+    // 4. Encaminhar para Máquina de Estados interna (Fallback / Auxiliar)
+    // Se houver automação de n8n, podemos querer saltar a máquina interna?
+    // Por agora mantemos ambas para não quebrar fluxos manuais, mas n8n tem prioridade de execução.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await waConversaService.processarMensagem(conversa as any, conteudo);
 

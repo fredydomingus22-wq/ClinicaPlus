@@ -239,5 +239,25 @@ export const waAutomacaoService = {
     }
 
     return prisma.waAutomacao.findUnique({ where: { id: automacao.id } });
+  },
+
+  /**
+   * Dispara um webhook do n8n para uma automação específica
+   */
+  async dispararWebhook(automacaoId: string, payload: unknown): Promise<void> {
+    const automacao = await prisma.waAutomacao.findUnique({
+      where: { id: automacaoId },
+      select: { n8nWebhookUrl: true, ativo: true }
+    });
+
+    if (!automacao?.n8nWebhookUrl || !automacao.ativo) return;
+
+    try {
+      const axios = (await import('axios')).default;
+      await axios.post(automacao.n8nWebhookUrl, payload, { timeout: 10000 });
+      logger.info({ automacaoId, url: automacao.n8nWebhookUrl }, 'Webhook do n8n disparado com sucesso');
+    } catch (err) {
+      logger.error({ err, automacaoId, url: automacao.n8nWebhookUrl }, 'Erro ao disparar webhook do n8n');
+    }
   }
 };
