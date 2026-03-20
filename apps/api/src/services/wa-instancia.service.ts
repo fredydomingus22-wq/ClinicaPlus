@@ -189,18 +189,36 @@ export const waInstanciaService = {
     const instancia = await this.getInstanciaOrThrow(id, clinicaId);
 
     try {
-      const { state } = await evolutionApi.estadoConexao(instancia.evolutionName);
+      const resp = await evolutionApi.estadoConexao(instancia.evolutionName);
+      const { state } = resp;
+      
+      logger.info({ id, evolutionName: instancia.evolutionName, rawState: state, resp }, 'Sincronização activa: Resposta da Evolution API');
+
       let novoEstado = instancia.estado;
       let keepQr = instancia.qrCodeBase64;
-      const numeroTelefone = instancia.numeroTelefone;
+      let numeroTelefone = instancia.numeroTelefone;
 
-      const isSucesso = ['open', 'CONNECTED', 'authenticated'].includes(state);
-      const isErro = ['close', 'refused', 'rejected'].includes(state);
-      const isPendente = ['connecting', 'pairing'].includes(state);
+      const safeState = (state || '').toLowerCase();
+      const isSucesso = ['open', 'connected', 'authenticated', 'connecting'].includes(safeState);
+      const isErro = ['close', 'refused', 'rejected', 'disconnected'].includes(safeState);
+      const isPendente = ['connecting', 'pairing'].includes(safeState);
 
       if (isSucesso) {
         novoEstado = WaEstadoInstancia.CONECTADO;
         keepQr = null;
+
+        // Se conectou e não temos o número, tentar recuperar activamente
+        if (!numeroTelefone) {
+          try {
+            const detalhes = await evolutionApi.obterDetalhes(instancia.evolutionName);
+            if (detalhes.number) {
+              numeroTelefone = detalhes.number;
+              logger.info({ id, numeroTelefone }, 'Número de telefone recuperado durante sincronização activa');
+            }
+          } catch (err) {
+            logger.warn({ id, err }, 'Não foi possível recuperar detalhes da instância durante a sincronização');
+          }
+        }
       } else if (isErro) {
         novoEstado = WaEstadoInstancia.DESCONECTADO;
         keepQr = null;
@@ -209,6 +227,7 @@ export const waInstanciaService = {
       }
 
       if (novoEstado !== instancia.estado || keepQr !== instancia.qrCodeBase64) {
+        logger.info({ id, old: instancia.estado, new: novoEstado }, 'Persistindo novo estado sincronizado');
         return await prisma.waInstancia.update({
           where: { id: instancia.id },
           data: {
@@ -220,8 +239,8 @@ export const waInstanciaService = {
       }
 
       return instancia;
-    } catch {
-      logger.info({ id }, 'Erro ao sincronizar estado com Evolution API (instância pode estar offline)');
+    } catch (err) {
+      logger.error({ id, err }, 'Falha crítica na sincronização com Evolution API');
       return instancia;
     }
   },

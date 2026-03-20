@@ -56,16 +56,20 @@ export const evolutionApi = {
    */
   async obterQrCode(instanceName: string): Promise<{ base64: string }> {
     const { data } = await evo.get(this.makeEvoUrl(`/instance/connect/${instanceName}`));
-    return data as { base64: string };
+    // Evolution API v2 aninha em 'qrcode' ou retorna o campo base64
+    const base64 = data.base64 || data.qrcode?.base64 || data.instance?.qrcode?.base64;
+    return { base64 };
   },
 
   /**
    * Verifica o estado da conexão da instância.
    * @param instanceName Nome da instância
    */
-  async estadoConexao(instanceName: string): Promise<{ state: 'open' | 'close' | 'connecting' }> {
+  async estadoConexao(instanceName: string): Promise<{ state: string }> {
     const { data } = await evo.get(this.makeEvoUrl(`/instance/connectionState/${instanceName}`));
-    return data as { state: 'open' | 'close' | 'connecting' };
+    // Evolution API v2 aninha em 'instance'
+    const state = data.instance?.state || data.state || 'close';
+    return { state };
   },
 
   /**
@@ -81,6 +85,20 @@ export const evolutionApi = {
       delay: 1200,  // simula digitação (ms) — melhor UX
     });
     return data as EvolutionMessageResponse;
+  },
+
+  /**
+   * Obtém detalhes da instância (incluindo número conectado).
+   * @param instanceName Nome da instância
+   */
+  async obterDetalhes(instanceName: string): Promise<{ number?: string; profileName?: string }> {
+    const { data } = await evo.get(this.makeEvoUrl(`/instance/fetchInstances?instanceName=${instanceName}`));
+    // Evolution v2 retorna um array ou objeto
+    const instance = Array.isArray(data) ? data[0] : data.instance || data;
+    return {
+      number: instance?.owner || instance?.number || instance?.jid?.split('@')[0],
+      profileName: instance?.profileName || instance?.name,
+    };
   },
 
   /**

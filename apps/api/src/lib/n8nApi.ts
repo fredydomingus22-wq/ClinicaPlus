@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { config } from './config';
+import { logger } from './logger';
 import { TEMPLATES } from './n8n-templates/index';
 // Remover a importação directa do Prisma aqui se não for preciso; importamos WaTipoAutomacao do types/prisma ou só usamos type.
 import type { WaTipoAutomacao } from '@prisma/client';
@@ -32,10 +33,28 @@ export const n8nApi = {
       throw new Error(`Template não encontrado para o tipo: ${tipo}`);
     }
     const template = templateFactory(vars);
-    const { data } = await n8n.post('/api/v1/workflows', template);
-    await n8n.post(`/api/v1/workflows/${data.id}/activate`);
-    const webhookPath = extrairWebhookPath(data);
-    return { workflowId: data.id as string, webhookPath };
+    
+    try {
+      const { data } = await n8n.post('/api/v1/workflows', template);
+      const workflowId = data.id as string;
+      const webhookPath = extrairWebhookPath(data);
+
+      // Activação é opcional ou protegida com try-catch
+      try {
+        await n8n.post(`/api/v1/workflows/${workflowId}/activate`);
+      } catch (err: unknown) {
+        logger.warn({ err, workflowId }, 'Workflow criado mas activação falhou no n8n.');
+      }
+
+      return { workflowId, webhookPath };
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: unknown }; message?: string };
+      logger.error({ 
+        error: axiosError.response?.data || axiosError.message, 
+        tipo 
+      }, 'Erro ao criar workflow no n8n');
+      throw new Error('Falha na comunicação com o n8n.', { cause: error });
+    }
   },
 
   /**

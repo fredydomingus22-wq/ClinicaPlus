@@ -28,7 +28,16 @@ export const waAutomacaoService = {
 
     // Se ainda não tem workflowId (foi adicionado mas n8n falhou na altura), criamos agora
     if (!automacao.n8nWorkflowId) {
-       await this.provisionarWorkflow(automacao.id, clinicaId);
+       try {
+         await this.provisionarWorkflow(automacao.id, clinicaId);
+         // Recarregar objecto com o novo ID
+         const updated = await prisma.waAutomacao.findUnique({ where: { id: automacaoId } });
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         if (updated) (automacao as any).n8nWorkflowId = updated.n8nWorkflowId;
+       } catch (err) {
+         logger.error({ err, automacaoId }, 'Falha automática de provisionamento ao activar');
+         throw new AppError('Não foi possível criar o workflow no n8n. Verifica a ligação com o n8n.', 500);
+       }
     }
 
     try {
@@ -36,8 +45,8 @@ export const waAutomacaoService = {
         await n8nApi.activar(automacao.n8nWorkflowId);
       }
     } catch (error) {
-      logger.error({ error, automacaoId }, 'Erro ao activar workflow no n8n');
-      throw new AppError('Erro ao comunicar com o n8n para activar workflow.', 500);
+      logger.error({ error, automacaoId }, 'Erro ao criar workflow no n8n');
+      throw new Error('Falha na comunicação com o n8n.', { cause: error });
     }
 
     await prisma.waAutomacao.update({
@@ -107,7 +116,7 @@ export const waAutomacaoService = {
       clinicaId,
       clinicaSlug: clinica.slug,
       instanceName: automacao.instancia.evolutionName,
-      apiBaseUrl: config.FRONTEND_URL.replace(':5173', ':3001'),
+      apiBaseUrl: config.API_PUBLIC_URL || config.FRONTEND_URL.replace(':5173', ':3001'),
       apiKey: apiKey.tokenPlain,
       configuracao: (automacao.configuracao as Record<string, unknown>) || {},
     };
