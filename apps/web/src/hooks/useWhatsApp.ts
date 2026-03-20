@@ -108,10 +108,10 @@ export function useWhatsApp() {
   useSocketEvent('whatsapp:qrcode', handleQrUpdate);
 
   return {
-    instancias: instanciasQuery.data ?? [],
-    automacoes: automacoesQuery.data ?? [],
-    templates: templatesQuery.data ?? [],
-    actividade: actividadeQuery.data ?? [],
+    instancias: Array.isArray(instanciasQuery.data) ? instanciasQuery.data : [],
+    automacoes: Array.isArray(automacoesQuery.data) ? automacoesQuery.data : [],
+    templates: Array.isArray(templatesQuery.data) ? templatesQuery.data : [],
+    actividade: Array.isArray(actividadeQuery.data) ? actividadeQuery.data : [],
     metricas: metricasQuery.data,
     isLoading: instanciasQuery.isLoading || automacoesQuery.isLoading || templatesQuery.isLoading,
     

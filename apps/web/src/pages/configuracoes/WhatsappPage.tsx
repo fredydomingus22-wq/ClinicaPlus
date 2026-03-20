@@ -147,10 +147,10 @@ export function WhatsappPage() {
             
             <Card className="p-0 border-neutral-200/60 shadow-sm overflow-hidden flex flex-col">
               <div className="flex flex-col">
-                {templates.length === 0 ? (
+                {(Array.isArray(templates) ? templates : []).length === 0 ? (
                   <div className="p-8 text-center text-xs font-bold text-neutral-500 uppercase tracking-widest">A carregar configurações...</div>
                 ) : (
-                  templates
+                  (Array.isArray(templates) ? templates : [])
                     .filter(tpl => ['MARCACAO_CONSULTA', 'LEMBRETE_24H', 'LEMBRETE_2H', 'CONFIRMACAO_CANCELAMENTO', 'BOAS_VINDAS'].includes(tpl.tipo))
                     .map((tpl, idx, arr) => {
                     const defaultInst = instancias.find((i) => i.estado === 'CONECTADO') || instancias[0];

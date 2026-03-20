@@ -12,7 +12,7 @@ interface WaActividadeRecenteProps {
 }
 
 export function WaActividadeRecente({ actividade, isLoading }: WaActividadeRecenteProps) {
-  const logs = actividade || [];
+  const logs = Array.isArray(actividade) ? actividade : [];
 
   const getIcon = (tipo: string) => {
     switch (tipo) {
