@@ -94,7 +94,7 @@ export function BookingWizard({ pacienteId, onSuccess, onCancel, isStaff = false
   const { data: especialidadesData, isLoading: loadingSpecialties } = useEspecialidades({ ativo: true, limit: 100 });
   
   const { data: medicos, isLoading: loadingMedicos } = useMedicos({ 
-    especialidadeId: selectedSpecialty as string,
+    especialidadeId: (selectedSpecialty as string) || undefined,
     ativo: true,
     page: 1,
     limit: 100

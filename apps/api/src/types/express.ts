@@ -6,8 +6,10 @@ declare global {
     interface Request {
       user: {
         id: string;
-        clinicaId: string;
+        clinicaId: string | null;
         papel: Papel;
+        isApiKey?: boolean;
+        escopos?: string[];
       };
       clinica: Clinica & {
         configuracao?: unknown;

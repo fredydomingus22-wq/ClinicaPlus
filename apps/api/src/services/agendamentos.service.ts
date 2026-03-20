@@ -19,6 +19,10 @@ import type { Prisma } from '@prisma/client';
 import { notificacoesService } from './notificacoes.service';
 import { reminderQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
+import { publishEvent } from '../lib/eventBus';
+import { subscricaoService } from './subscricao.service';
+import { webhooksService } from './webhooks.service';
+import { EventoWebhook } from '@clinicaplus/types';
 
 /**
  * Shared Prisma select clause — fetches only columns needed by `toAgendamentoDTO`.
@@ -268,10 +272,12 @@ export const agendamentosService = {
     return toAgendamentoDTO(a);
   },
 
-  /**
-   * Creates a new appointment, validates slot availability, and sets up reminders.
-   */
+
+/**
+ * Creates a new appointment, validates slot availability, and sets up reminders.
+ */
   async create(data: AgendamentoCreateInput, clinicaId: string): Promise<AgendamentoDTO> {
+    await subscricaoService.verificarLimite(clinicaId, 'consultas');
     const dataHora = new Date(data.dataHora);
     const duracao = data.duracao ?? 30;
 
@@ -421,6 +427,10 @@ export const agendamentosService = {
       }).catch(err => logger.error({ err }, 'Failed to trigger post-create notifications'));
     }
 
+    // 4. Publish real-time event
+    // 5. Trigger Webhooks
+    webhooksService.trigger(EventoWebhook.AGENDAMENTO_CRIADO, dto, clinicaId);
+
     return dto;
   },
 
@@ -557,6 +567,16 @@ export const agendamentosService = {
       }).catch(err => logger.error({ err }, 'Failed to trigger post-cancellation notifications'));
     }
 
+    // 4. Publish real-time event
+    // 5. Trigger Webhooks
+    if (data.estado === 'CONFIRMADO') {
+      webhooksService.trigger(EventoWebhook.AGENDAMENTO_CONFIRMADO, dto, clinicaId);
+    } else if (data.estado === 'CANCELADO') {
+      webhooksService.trigger(EventoWebhook.AGENDAMENTO_CANCELADO, dto, clinicaId);
+    } else if (data.estado === 'CONCLUIDO') {
+      webhooksService.trigger(EventoWebhook.AGENDAMENTO_CONCLUIDO, dto, clinicaId);
+    }
+
     return dto;
   },
 
@@ -593,7 +613,18 @@ export const agendamentosService = {
       select: agendamentoSelect,
     });
 
-    return toAgendamentoDTO(updated);
+    const dto = toAgendamentoDTO(updated);
+
+    // Publish real-time event
+    try {
+      await publishEvent(`clinica:${clinicaId}`, 'agendamento:triagem', {
+        agendamentoId: dto.id
+      });
+    } catch (err) {
+      logger.error({ err }, 'Failed to publish agendamento:triagem event');
+    }
+
+    return dto;
   },
 
   /**
@@ -652,6 +683,13 @@ export const agendamentosService = {
       }).catch(err => logger.error({ err, agendamentoId: id }, 'Failed to create prontuario entry after finalising consultation'));
     }
 
-    return toAgendamentoDTO(updated as unknown as AgendamentoWithRelations);
+    const dto = toAgendamentoDTO(updated as unknown as AgendamentoWithRelations);
+
+    // Trigger Webhooks
+    if (shouldFinalize) {
+      webhooksService.trigger(EventoWebhook.AGENDAMENTO_CONCLUIDO, dto, clinicaId);
+    }
+
+    return dto;
   },
 };

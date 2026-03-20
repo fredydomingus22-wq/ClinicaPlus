@@ -83,7 +83,9 @@ describe('/api/pacientes', () => {
     expect(res.body.error.details).toBeInstanceOf(Array);
     
     const errors = res.body.error.details;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(errors.some((e: any) => e.path === 'nome')).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(errors.some((e: any) => e.path === 'genero')).toBe(true);
   });
 

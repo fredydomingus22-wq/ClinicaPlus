@@ -3,7 +3,9 @@ import {
   useAgendamentosHoje, 
   useUpdateEstadoAgendamento 
 } from '../../hooks/useAgendamentos';
+import { useAgendamentosRealtime } from '../../hooks/useAgendamentosRealtime';
 import { useMedicos } from '../../hooks/useMedicos';
+import { RealtimeBadge } from '../../components/RealtimeBadge';
 import { 
   Button, 
   Card, 
@@ -39,6 +41,8 @@ export default function HojePage() {
   const { data: medicosData } = useMedicos({ page: 1, limit: 100, ativo: true });
   const updateEstado = useUpdateEstadoAgendamento();
 
+  useAgendamentosRealtime();
+
   const medicosOptions = useMemo(() => [
     { value: '', label: 'Todos os Médicos' },
     ...(medicosData?.items?.map(m => ({ value: m.id, label: m.nome })) || [])
@@ -67,7 +71,10 @@ export default function HojePage() {
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Vista de Hoje</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Vista de Hoje</h1>
+            <RealtimeBadge />
+          </div>
           <p className="text-neutral-600 text-sm font-medium">Gestão de consultas e triagem para {new Date().toLocaleDateString('pt-AO')}</p>
         </div>
         <div className="flex items-center gap-2">

@@ -87,7 +87,7 @@ export const RegistoPacientePage = () => {
 
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
-            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+            <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
               <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
@@ -121,7 +121,7 @@ export const RegistoPacientePage = () => {
               <div className="relative">
                 <Building2 className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   placeholder="slug-da-clinica"
                   {...register('clinicaSlug')}
                   onChange={handleSlugChange}
@@ -138,7 +138,7 @@ export const RegistoPacientePage = () => {
               <div className="relative">
                 <User className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.nome ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.nome ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   placeholder="Ex: João da Silva"
                   {...register('nome')}
                 />
@@ -156,7 +156,7 @@ export const RegistoPacientePage = () => {
                   <Calendar className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                   <input
                     type="date"
-                    className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.dataNascimento ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                    className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.dataNascimento ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                     {...register('dataNascimento')}
                   />
                 </div>
@@ -171,7 +171,7 @@ export const RegistoPacientePage = () => {
                 <div className="relative">
                   <Users className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                   <select
-                    className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 pr-8 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none ${errors.genero ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                    className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 pr-8 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none ${errors.genero ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                     {...register('genero')}
                   >
                     <option value="M">Masculino</option>
@@ -192,7 +192,7 @@ export const RegistoPacientePage = () => {
                 <Phone className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                 <input
                   type="tel"
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.telefone ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.telefone ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   placeholder="9xx xxx xxx"
                   {...register('telefone')}
                 />
@@ -208,7 +208,7 @@ export const RegistoPacientePage = () => {
               <div className="relative">
                 <User className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   placeholder="nome@clinica.ao"
                   type="email"
                   {...register('email')}
@@ -227,7 +227,7 @@ export const RegistoPacientePage = () => {
               <div className="relative">
                 <KeyRound className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
@@ -235,7 +235,7 @@ export const RegistoPacientePage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 h-5 w-5 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-teal-600 rounded-md transition-colors"
+                  className="absolute right-3 top-3 h-5 w-5 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-teal-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -245,7 +245,7 @@ export const RegistoPacientePage = () => {
 
             {/* Root Errors */}
             {errors.root && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm font-medium border border-red-100 mt-2">
+              <div className="p-3 bg-red-50 text-red-700 text-sm font-medium border border-red-100 mt-2">
                 {errors.root.message}
               </div>
             )}
@@ -255,7 +255,7 @@ export const RegistoPacientePage = () => {
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
+                className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
               >
                 {mutation.isPending ? 'A registar...' : 'Criar Conta Gratuita'}
               </button>

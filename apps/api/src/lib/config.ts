@@ -12,10 +12,19 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().url().transform(url => url.replace(/\/$/, '')),
   TENANT_BASE_DOMAIN: z.string().min(3).optional(),
+  USE_MOCK_REDIS: z.string().optional().transform(v => v === 'true'),
   RESEND_API_KEY: z.string().min(1),
   REDIS_URL: z.string().min(1), // redis:// ou rediss:// (TLS) — Zod url() rejeita estes protocolos
   METRICS_TOKEN: z.string().min(8),
   ALERT_EMAIL: z.string().email(),
+  // WhatsApp & Evolution API
+  EVOLUTION_API_URL: z.string().url(),
+  EVOLUTION_API_KEY: z.string().min(1),
+  EVOLUTION_WEBHOOK_SECRET: z.string().min(1),
+  // n8n
+  N8N_BASE_URL: z.string().url(),
+  N8N_API_KEY: z.string().min(1),
+  API_PUBLIC_URL: z.string().url(),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
   path: ["JWT_REFRESH_SECRET"],

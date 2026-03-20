@@ -42,15 +42,22 @@ vi.mock('bullmq', () => ({
 
 vi.mock('../../lib/redis', () => ({
   redis: {
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue('OK'),
+    del: vi.fn().mockResolvedValue(1),
+    keys: vi.fn().mockResolvedValue([]),
     ping: vi.fn().mockResolvedValue('PONG'),
+    publish: vi.fn().mockResolvedValue(1),
     quit: vi.fn().mockResolvedValue('OK'),
     on: vi.fn(),
   },
   redisSub: {
+    subscribe: vi.fn().mockResolvedValue(1),
     quit: vi.fn().mockResolvedValue('OK'),
     on: vi.fn(),
   },
 }));
+
 
 // Ensure test DB env vars are set
 if (!process.env.DATABASE_URL) {

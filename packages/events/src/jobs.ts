@@ -7,7 +7,17 @@ export const JobNames = {
   REMINDER_SCHEDULE: 'cp-reminders-schedule',
   WEBHOOK_TRIGGER: 'cp-webhooks-trigger',
   REPORT_GENERATE: 'cp-reports-generate',
+  WHATSAPP_MESSAGE: 'cp-whatsapp-message',
+  WHATSAPP_MAINTENANCE: 'cp-whatsapp-maintenance',
 } as const;
+
+export interface WhatsappMessageJob {
+  conversaId?: string;
+  numero?: string;
+  clinicaId: string;
+  texto: string;
+  agendamentoId?: string;
+}
 
 export interface EmailJob {
   to: string;

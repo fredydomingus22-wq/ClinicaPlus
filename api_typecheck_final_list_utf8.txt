@@ -1,0 +1,51 @@
+﻿
+> clinicaplus@1.0.0 typecheck C:\Users\LENOVO\Documents\Projectos\ClinicaPlus
+> turbo typecheck "--filter=api"
+
+node.exe : ÔÇó turbo 2.8.13
+At C:\Users\LENOVO\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÇó turbo 2.8.13:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ÔÇó Packages in scope: api
+ÔÇó Running typecheck in 1 packages
+ÔÇó Remote caching enabled
+@clinicaplus/events:build: cache hit, replaying logs 1809556de03cd637
+@clinicaplus/events:build: 
+@clinicaplus/events:build: > @clinicaplus/events@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\events
+@clinicaplus/events:build: > tsc
+@clinicaplus/events:build: 
+@clinicaplus/types:build: cache hit, replaying logs a9d0cf41164cdee9
+@clinicaplus/types:build: 
+@clinicaplus/types:build: > @clinicaplus/types@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\types
+@clinicaplus/types:build: > tsc
+@clinicaplus/types:build: 
+@clinicaplus/utils:build: cache hit, replaying logs c2da3e8d49c58492
+@clinicaplus/utils:build: 
+@clinicaplus/utils:build: > @clinicaplus/utils@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\utils
+@clinicaplus/utils:build: > tsc
+@clinicaplus/utils:build: 
+api:typecheck: cache miss, executing 4a8a78baea7c3e42
+api:typecheck: 
+api:typecheck: > api@1.0.0 typecheck C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api
+api:typecheck: > tsc --noEmit
+api:typecheck: 
+api:typecheck: src/__tests__/api-error.test.ts(83,41): error TS2307: Cannot find module '../api/users' or its corresponding type declarations.
+api:typecheck: src/__tests__/api-error.test.ts(87,11): error TS2488: Type '[input: string | URL | Request, init?: RequestInit | undefined] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+api:typecheck: src/__tests__/integration/exames.test.ts(38,25): error TS2339: Property 'createExameData' does not exist on type '{ createClinica(overrides?: {}): Promise<{ id: string; nome: string; slug: string; logo: string | null; telefone: string | null; email: string; endereco: string | null; cidade: string | null; ... 6 more ...; atualizadoEm: Date; }>; ... 5 more ...; cleanupClinica(clinicaId: string): Promise<...>; }'.
+api:typecheck: src/__tests__/integration/exames.test.ts(46,25): error TS2339: Property 'createExameData' does not exist on type '{ createClinica(overrides?: {}): Promise<{ id: string; nome: string; slug: string; logo: string | null; telefone: string | null; email: string; endereco: string | null; cidade: string | null; ... 6 more ...; atualizadoEm: Date; }>; ... 5 more ...; cleanupClinica(clinicaId: string): Promise<...>; }'.
+api:typecheck: ÔÇëELIFECYCLEÔÇë Command failed with exit code 2.
+api:typecheck: ERROR: command finished with error: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run typecheck exited (2)
+api#typecheck: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run typecheck exited (2)
+
+ Tasks:    3 successful, 4 total
+Cached:    3 cached, 4 total
+  Time:    12.284s 
+Failed:    api#typecheck
+
+ ERROR  run failed: command  exited (2)
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 2.

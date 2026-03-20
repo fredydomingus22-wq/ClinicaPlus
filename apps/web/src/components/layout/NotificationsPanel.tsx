@@ -13,6 +13,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useNotificacoes } from '../../hooks/useNotificacoes';
+import { useAuthStore } from '../../stores/auth.store';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NotificacaoDTO } from '@clinicaplus/types';
@@ -24,6 +25,7 @@ interface NotificationsPanelProps {
 
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
   const { notificacoes, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotificacoes();
+  const { utilizador } = useAuthStore();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +56,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
     }
   };
 
+
   const handleNotificationClick = (n: NotificacaoDTO) => {
     if (!n.lida) {
       markAsRead.mutate(n.id);
@@ -62,6 +65,13 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       navigate(n.url);
       onClose();
     }
+  };
+
+  const goToHistory = () => {
+    const papel = utilizador?.papel.toLowerCase();
+    const basePath = papel === 'recepcionista' ? 'recepcao' : papel;
+    navigate(`/${basePath}/notificacoes`);
+    onClose();
   };
 
   return (
@@ -146,10 +156,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
 
       <div className="p-3 border-t border-neutral-100 bg-neutral-50/50 text-center">
         <button 
-          onClick={() => {
-            navigate('/notificacoes');
-            onClose();
-          }}
+          onClick={goToHistory}
           className="text-xs font-black text-neutral-600 hover:text-primary-600 transition-colors uppercase tracking-wider"
         >
           Ver histórico completo

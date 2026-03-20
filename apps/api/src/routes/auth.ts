@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { prisma } from '../lib/prisma';
 import { authService } from '../services/auth.service';
 import { LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, SuperAdminLoginSchema, UtilizadorUpdateSchema } from '@clinicaplus/types';
 import { config } from '../lib/config';
@@ -14,7 +15,14 @@ const COOKIE_OPTS = {
   secure: config.NODE_ENV === 'production',
   sameSite: (config.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/', // Changed from /api/auth to / for wider compatibility if needed, but keeping it consistent with the reset logic
+  path: '/',
+  // If TENANT_BASE_DOMAIN is set, we use it as the domain for the cookie
+  // so it can be shared across subdomains (e.g., .clinicaplus.ao)
+  ...(config.TENANT_BASE_DOMAIN ? { 
+    domain: config.NODE_ENV === 'production' || config.TENANT_BASE_DOMAIN !== 'localhost'
+      ? `.${config.TENANT_BASE_DOMAIN}` 
+      : config.TENANT_BASE_DOMAIN 
+  } : {}),
 };
 
 // POST /api/auth/login
@@ -130,8 +138,15 @@ router.post('/logout', async (req, res, next) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', authRateLimiter, async (req, res, next) => {
   try {
-    const { email } = ForgotPasswordSchema.parse(req.body);
-    const clinicaId = req.body.clinicaId;
+    const { email, clinicaSlug } = ForgotPasswordSchema.parse(req.body);
+    let clinicaId = req.body.clinicaId;
+
+    if (!clinicaId && clinicaSlug) {
+      const clinica = await prisma.clinica.findUnique({ where: { slug: clinicaSlug } });
+      if (clinica) {
+        clinicaId = clinica.id;
+      }
+    }
     
     if (clinicaId) {
        await authService.forgotPassword(email, clinicaId);

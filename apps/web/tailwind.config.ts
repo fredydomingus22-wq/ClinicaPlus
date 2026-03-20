@@ -7,6 +7,17 @@ const config: Config = {
     "../../packages/ui/src/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
+    borderRadius: {
+      DEFAULT: '0px',
+      'none': '0px',
+      'sm': 'var(--radius-sm)',
+      'md': 'var(--radius-md)',
+      'lg': 'var(--radius-lg)',
+      'xl': 'var(--radius-xl)',
+      '2xl': 'var(--radius-2xl)',
+      '3xl': 'var(--radius-3xl)',
+      'full': 'var(--radius-full)',
+    },
     extend: {
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
@@ -138,13 +149,6 @@ const config: Config = {
       spacing: {
         'page-x': 'var(--page-padding-x)',
         'page-y': 'var(--page-padding-y)',
-      },
-      borderRadius: {
-        'sm': 'var(--radius-sm)',
-        'md': 'var(--radius-md)',
-        'lg': 'var(--radius-lg)',
-        'xl': 'var(--radius-xl)',
-        '2xl': 'var(--radius-2xl)',
       },
       boxShadow: {
         'sm': 'var(--shadow-sm)',

@@ -4,9 +4,8 @@ const request = createTestApp();
 import { factories } from '../helpers/factories';
 
 describe('/api/prontuarios', () => {
-  let ctx: any;
+  let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
   let agendamentoId: string;
-  let prontuarioId: string;
 
   beforeAll(async () => {
     ctx = await factories.setupClinicaCompleta();
@@ -48,7 +47,6 @@ describe('/api/prontuarios', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.data ? res.body.data.notas : res.body.notas).toBe('O paciente apresentou melhoras.');
-      prontuarioId = res.body.data ? res.body.data.id : res.body.id;
     });
   });
 

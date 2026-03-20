@@ -1,0 +1,54 @@
+﻿
+> clinicaplus@1.0.0 typecheck C:\Users\LENOVO\Documents\Projectos\ClinicaPlus
+> turbo typecheck "--filter=web"
+
+node.exe : ÔÇó turbo 2.8.13
+At C:\Users\LENOVO\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÇó turbo 2.8.13:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ÔÇó Packages in scope: web
+ÔÇó Running typecheck in 1 packages
+ÔÇó Remote caching enabled
+@clinicaplus/events:build: cache hit, replaying logs 1809556de03cd637
+@clinicaplus/events:build: 
+@clinicaplus/events:build: > @clinicaplus/events@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\events
+@clinicaplus/events:build: > tsc
+@clinicaplus/events:build: 
+@clinicaplus/types:build: cache hit, replaying logs a9d0cf41164cdee9
+@clinicaplus/types:build: 
+@clinicaplus/types:build: > @clinicaplus/types@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\types
+@clinicaplus/types:build: > tsc
+@clinicaplus/types:build: 
+@clinicaplus/utils:build: cache hit, replaying logs c2da3e8d49c58492
+@clinicaplus/utils:build: 
+@clinicaplus/utils:build: > @clinicaplus/utils@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\utils
+@clinicaplus/utils:build: > tsc
+@clinicaplus/utils:build: 
+@clinicaplus/ui:build: cache hit, replaying logs 65b8cbc0b188c0aa
+@clinicaplus/ui:build: 
+@clinicaplus/ui:build: > @clinicaplus/ui@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\ui
+@clinicaplus/ui:build: > tsc
+@clinicaplus/ui:build: 
+web:typecheck: cache miss, executing 0dd20866224aa916
+web:typecheck: 
+web:typecheck: > web@1.0.0 typecheck C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web
+web:typecheck: > tsc --noEmit
+web:typecheck: 
+web:typecheck: src/__tests__/api-error.test.ts(60,12): error TS18046: 'error' is of type 'unknown'.
+web:typecheck: src/__tests__/api-error.test.ts(91,11): error TS2488: Type '[input: string | URL | Request, init?: RequestInit | undefined] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+web:typecheck: ÔÇëELIFECYCLEÔÇë Command failed with exit code 2.
+web:typecheck: ERROR: command finished with error: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run typecheck exited (2)
+web#typecheck: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run typecheck exited (2)
+
+ Tasks:    4 successful, 5 total
+Cached:    4 cached, 5 total
+  Time:    16.949s 
+Failed:    web#typecheck
+
+ ERROR  run failed: command  exited (2)
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 2.

@@ -21,7 +21,7 @@ export function HeroBanner({
 }: HeroBannerProps) {
   return (
     <div className={cn(
-      "w-full px-5 py-4 mb-6 bg-white border border-neutral-100 rounded-xl shadow-sm",
+      "w-full px-5 py-4 mb-6 bg-white border border-neutral-100 shadow-sm",
       className
     )}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

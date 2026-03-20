@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { authApi } from './api/auth';
 import { useAuthStore } from './stores/auth.store';
 import { queryClient } from './lib/queryClient';
+import { useSocket } from './hooks/useSocket';
 import { router } from './router';
 
 /**
@@ -24,6 +25,19 @@ function FullPageSpinner() {
  */
 export function App() {
   const { isRestoring, setSession, setRestoring } = useAuthStore();
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('connect', () => {
+        queryClient.invalidateQueries();
+      });
+      return () => {
+        socket.off('connect');
+      };
+    }
+    return undefined;
+  }, [socket]);
 
   useEffect(() => {
     // Attempt to restore session on mount

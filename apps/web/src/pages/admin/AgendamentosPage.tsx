@@ -63,6 +63,23 @@ export default function AgendamentosPage() {
 
   const queryClient = useQueryClient();
 
+  // Auto-open modal if ID is in URL
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id && data?.items) {
+      const found = data.items.find(a => a.id === id);
+      if (found) {
+        setSelectedAgendamento(found);
+      } else {
+        // If not in current page, we might need a direct fetch, 
+        // but for now, we look in current results.
+        // A better approach would be useAgendamento(id) if found is null.
+        agendamentosApi.getOne(id).then(setSelectedAgendamento).catch(() => {});
+      }
+    }
+  }, [data?.items]);
+
   // Local filtering for search term since backend doesn't support text search
   const filteredItems = React.useMemo(() => {
     if (!data?.items) return [];

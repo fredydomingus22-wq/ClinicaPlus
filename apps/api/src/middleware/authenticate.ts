@@ -10,7 +10,7 @@ interface JwtPayload {
   papel: Papel;
 }
 
-export async function authenticate(req: Request, _res: Response, next: NextFunction) {
+export async function authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   
   if (!header?.startsWith('Bearer ')) {
@@ -29,7 +29,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     };
     
     next();
-  } catch (err) {
+  } catch {
     next(new AppError('Token inválido ou expirado', 401, 'INVALID_TOKEN'));
   }
 }

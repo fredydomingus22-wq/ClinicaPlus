@@ -17,7 +17,13 @@ export const logger: Logger = pino({
     env: config.NODE_ENV,
   },
   redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+    paths: [
+      'req.headers.authorization', 
+      'req.headers.cookie', 
+      'res.headers["set-cookie"]',
+      'req.headers["x-api-key"]',
+      'req.headers["x-clinicaplus-signature"]'
+    ],
     censor: '[REDACTED]',
   },
   timestamp: pino.stdTimeFunctions.isoTime,

@@ -1,0 +1,101 @@
+﻿
+> clinicaplus@1.0.0 lint C:\Users\LENOVO\Documents\Projectos\ClinicaPlus
+> turbo lint "--filter=api"
+
+node.exe : ÔÇó turbo 2.8.13
+At C:\Users\LENOVO\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÇó turbo 2.8.13:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ÔÇó Packages in scope: api
+ÔÇó Running lint in 1 packages
+ÔÇó Remote caching enabled
+api:lint: cache miss, executing 7de88ed22b27348f
+api:lint: 
+api:lint: > api@1.0.0 lint C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api
+api:lint: > eslint src --ext .ts
+api:lint: 
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\__tests__\helpers\factories.ts
+api:lint:   192:14  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\__tests__\unit\permissao.test.ts
+api:lint:    57:109  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    67:111  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    68:94   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    79:111  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    80:93   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    90:111  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    92:87   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   102:111  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\lib\redis.ts
+api:lint:   37:23  error  'key' is defined but never used      @typescript-eslint/no-unused-vars
+api:lint:   37:36  error  'seconds' is defined but never used  @typescript-eslint/no-unused-vars
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\middleware\requirePlan.ts
+api:lint:   16:61  warning  Missing return type on function  @typescript-eslint/explicit-function-return-type
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\routes\audit-logs.ts
+api:lint:   28:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\routes\utilizadores.ts
+api:lint:     1:18  error  'Request' is defined but never used       @typescript-eslint/no-unused-vars
+api:lint:     1:27  error  'Response' is defined but never used      @typescript-eslint/no-unused-vars
+api:lint:    28:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    40:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    45:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    45:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   100:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   107:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\services\auditLog.service.ts
+api:lint:   28:34  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   29:36  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   38:3   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   38:26  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   53:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\services\medicos.service.ts
+api:lint:   39:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\services\permissao.service.ts
+api:lint:   31:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   45:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   58:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   76:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\services\subscricao.service.ts
+api:lint:    24:15  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:    79:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   117:7   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   118:7   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   124:7   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   125:7   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   155:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   204:44  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   222:58  warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+api:lint:   239:36  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api\src\services\superadmin.service.ts
+api:lint:   29:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   30:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint:   30:65  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+api:lint: 
+api:lint: Ô£û 44 problems (37 errors, 7 warnings)
+api:lint: 
+api:lint: ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.
+api:lint: ERROR: command finished with error: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run lint exited (1)
+api#lint: command (C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api) 
+C:\Users\LENOVO\AppData\Local\pnpm\.tools\pnpm\9.15.4\bin\pnpm.CMD run lint exited (1)
+
+ Tasks:    0 successful, 1 total
+Cached:    0 cached, 1 total
+  Time:    13.817s 
+Failed:    api#lint
+
+ ERROR  run failed: command  exited (1)
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.

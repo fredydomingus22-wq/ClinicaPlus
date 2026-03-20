@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { billingService } from '../../services/billing.service';
 import { prisma } from '../../lib/prisma';
@@ -5,7 +6,7 @@ import { AppError } from '../../lib/AppError';
 
 vi.mock('../../lib/prisma', () => ({
   prisma: {
-    fatura: {
+    faturaAssinatura: {
       findMany: vi.fn(),
     },
     subscricao: {
@@ -38,7 +39,7 @@ describe('billing.service', () => {
           urlPdf: 'http://test.com/f1.pdf',
         }
       ];
-      vi.mocked((prisma.fatura as any).findMany).mockResolvedValue(mockFaturas);
+      vi.mocked((prisma.faturaAssinatura as any).findMany).mockResolvedValue(mockFaturas);
 
       const result = await billingService.getBillingHistory('c1');
 
@@ -60,32 +61,39 @@ describe('billing.service', () => {
   });
 
   describe('getSubscriptionStatus', () => {
-    it('returns subscription when it exists', async () => {
-      const mockSub = {
+    it('returns subscription status from clinic cache', async () => {
+      const mockClinica = {
+        id: 'c1',
         plano: 'PRO',
-        status: 'ATIVO',
-        proximoFaturamento: new Date('2024-12-31'),
-        dataFim: new Date('2024-12-31'),
+        subscricaoEstado: 'ACTIVA',
+        subscricaoValidaAte: new Date('2024-12-31'),
       };
-      vi.mocked((prisma.subscricao as any).findUnique).mockResolvedValue(mockSub);
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue({ id: 'c1', plano: 'PRO' } as any);
+      
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica as any);
 
       const result = await billingService.getSubscriptionStatus('c1');
 
       expect(result.plano).toBe('PRO');
-      expect(result.status).toBe('ATIVO');
-      expect(result.proximaFatura).toBe(mockSub.proximoFaturamento.toISOString());
+      expect(result.status).toBe('ACTIVA');
+      expect(result.proximaFatura).toBe(mockClinica.subscricaoValidaAte.toISOString());
+      expect(result.diasRestantes).toBeGreaterThanOrEqual(0);
     });
 
-    it('returns default status when no subscription exists', async () => {
-      vi.mocked((prisma.subscricao as any).findUnique).mockResolvedValue(null);
-      vi.mocked(prisma.clinica.findUnique).mockResolvedValue({ id: 'c1', plano: 'BASICO' } as any);
+    it('returns default status when date is null', async () => {
+      const mockClinica = {
+        id: 'c1',
+        plano: 'BASICO',
+        subscricaoEstado: 'TRIAL',
+        subscricaoValidaAte: null,
+      };
+      
+      vi.mocked(prisma.clinica.findUnique).mockResolvedValue(mockClinica as any);
 
       const result = await billingService.getSubscriptionStatus('c1');
 
       expect(result.plano).toBe('BASICO');
-      expect(result.status).toContain('Trial');
-      expect(result.diasRestantes).toBe(30);
+      expect(result.status).toBe('TRIAL');
+      expect(result.diasRestantes).toBe(0);
     });
 
     it('throws 404 if clinic not found', async () => {

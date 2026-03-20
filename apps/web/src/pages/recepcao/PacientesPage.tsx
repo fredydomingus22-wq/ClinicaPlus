@@ -32,6 +32,15 @@ export default function PacientesPage() {
   const [selectedPacienteId, setSelectedPacienteId] = useState<string | null>(null);
   const [bookingPacienteId, setBookingPacienteId] = useState<string | null>(null);
 
+  // Auto-open detail panel if ID is in URL
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      setSelectedPacienteId(id);
+    }
+  }, []);
+
   const { data, isLoading, error } = useListaPacientes({ 
     page, 
     limit: 10, 

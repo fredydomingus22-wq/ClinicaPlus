@@ -12,10 +12,34 @@ export function Card({ children, className, id }: CardProps) {
     <div 
       id={id}
       className={cn(
-        "bg-white border border-[#e5e5e5] p-5",
+        "bg-white border border-neutral-200 overflow-hidden",
         className
       )}
     >
+      {children}
+    </div>
+  );
+}
+
+export function CardHeader({ children, className }: CardProps) {
+  return (
+    <div className={cn("px-6 py-4 border-b border-neutral-100 bg-neutral-50/30", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function CardTitle({ children, className }: CardProps) {
+  return (
+    <h3 className={cn("font-bold text-neutral-900 tracking-tight", className)}>
+      {children}
+    </h3>
+  );
+}
+
+export function CardContent({ children, className }: CardProps) {
+  return (
+    <div className={cn("px-6 py-4", className)}>
       {children}
     </div>
   );

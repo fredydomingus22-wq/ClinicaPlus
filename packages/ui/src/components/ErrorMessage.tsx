@@ -13,7 +13,7 @@ export function ErrorMessage({ error, className = '' }: ErrorMessageProps) {
     : error.message || 'Ocorreu um erro inesperado';
 
   return (
-    <div className={`text-sm text-danger-600 bg-danger-50 border border-danger-100 p-3 rounded-md animate-shake ${className}`}>
+    <div className={`text-sm text-danger-600 bg-danger-50 border border-danger-100 p-3 animate-shake ${className}`}>
       {message}
     </div>
   );

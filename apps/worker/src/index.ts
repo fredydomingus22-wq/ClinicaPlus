@@ -6,6 +6,7 @@ import { emailWorker } from './workers/email.worker';
 import { reminderWorker } from './workers/reminder.worker';
 import { webhookWorker } from './workers/webhook.worker';
 import { reportWorker } from './workers/report.worker';
+import { schedulerService } from './services/scheduler.service';
 
 async function main() {
   logger.info('🚀 ClinicaPlus Worker starting...');
@@ -47,6 +48,7 @@ async function main() {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
+  schedulerService.start();
   logger.info('Worker is running and waiting for jobs');
 }
 

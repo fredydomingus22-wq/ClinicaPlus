@@ -13,8 +13,8 @@ export function AllergyBanner({ alergias }: AllergyBannerProps) {
   if (!alergias || alergias.length === 0) return null;
 
   return (
-    <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-start gap-3 animate-shake">
-      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+    <div className="bg-red-50 border border-red-100 p-4 flex items-start gap-3 animate-shake">
+      <div className="h-10 w-10 bg-red-100 flex items-center justify-center shrink-0">
         <AlertCircle className="h-5 w-5 text-red-600" />
       </div>
       <div>

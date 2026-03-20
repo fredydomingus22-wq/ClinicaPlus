@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
@@ -17,7 +17,7 @@ describe('Multitenancy isolation', () => {
     await factories.cleanupClinica(ctxB.clinica.id);
   });
 
-  it('Admin clÃ­nica A nÃ£o acede a paciente de clÃ­nica B â†’ 404', async () => {
+  it('Admin clínica A não acede a paciente de clínica B → 404', async () => {
     const res = await app
       .get(`/api/pacientes/${ctxB.paciente.id}`)
       .set(authHeader(ctxA.adminToken));
@@ -26,8 +26,8 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clÃ­nica A nÃ£o acede a agendamentos de clÃ­nica B â†’ 404', async () => {
-    // Constant Wednesday future date to prevent any timezone/weekend availability issues
+  it('Admin clínica A não acede a agendamentos de clínica B → 404', async () => {
+    // Constant Wednesday future date to prevent unknown timezone/weekend availability issues
     const dataHoraStr = '2026-10-14T10:00:00.000Z';
     
     // Create an appointment in Clinic B
@@ -46,7 +46,7 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clÃ­nica A ao criar agendamento com mÃ©dico de clÃ­nica B â†’ 404', async () => {
+  it('Admin clínica A ao criar agendamento com médico de clínica B → 404', async () => {
     const res = await app
       .post('/api/agendamentos')
       .set(authHeader(ctxA.adminToken))
@@ -62,7 +62,7 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(404);
   });
 
-  it('Admin clÃ­nica A nÃ£o vÃª mÃ©dicos de clÃ­nica B na lista â†’ sem mÃ©dico B', async () => {
+  it('Admin clínica A não vê médicos de clínica B na lista → sem médico B', async () => {
     const res = await app
       .get('/api/medicos')
       .set(authHeader(ctxA.adminToken));
@@ -70,15 +70,17 @@ describe('Multitenancy isolation', () => {
     expect(res.status).toBe(200);
     
     // Ensure Clinic B's doctor is NOT in the response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const foundB = res.body.data.items.find((m: any) => m.id === ctxB.medico.id);
     expect(foundB).toBeUndefined();
     
     // But Clinic A's doctor IS there
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const foundA = res.body.data.items.find((m: any) => m.id === ctxA.medico.id);
     expect(foundA).toBeDefined();
   });
 
-  it('Super Admin pode listar todas as clÃ­nicas', async () => {
+  it('Super Admin pode listar todas as clínicas', async () => {
     // First let's create a Super Admin (which uses `superadminRouter` bypassing tenant)
     // Here we assume superadmins log in via a special token or role
     // Since factories didn't create a SUPERADMIN, we mock or skip the role implementation details

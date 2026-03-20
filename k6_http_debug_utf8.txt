@@ -1,0 +1,348 @@
+﻿
+         /\      Grafana   /ÔÇ¥ÔÇ¥/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ÔÇ¥ÔÇ¥\ 
+  /          \   |   (  |  (ÔÇ¥)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6/load-agendamentos.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 1 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+k6.exe : time="2026-03-
+16T04:00:48+01:00" 
+level=info 
+msg="Request:\nPOST 
+/api/auth/login 
+HTTP/1.1\nHost: localho
+st:3001\nUser-Agent: 
+Grafana k6/1.6.1\nConte
+nt-Length: 
+93\nContent-Type: appli
+cation/json\nAccept-Enc
+oding: gzip\n\n{\"email
+\":\"contacto.naturamed
+@gmail.com\",\"password
+\":\"Demo1234!\",\"clin
+icaSlug\":\"nutrimacho-
+ao\"}\n" 
+group="::setup" iter=0 
+request_id=6df2e90f-ad4
+7-4772-bafa-9e0709d4f39
+d source=http-debug 
+vu=0
+At line:1 char:1
++ & "C:\Program 
+Files\k6\k6.exe" run k6
+/load-agendamentos.js 
+-e BASE_UR ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (time="2026-03   
+ -1...http-debug vu    
+=0:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+
+Run       [ 100% ] setup()
+default   [   0% ]
+
+Run       [ 100% ] setup()
+default   [   0% ]
+
+Run       [ 100% ] setup()
+default   [   0% ]
+
+Run       [ 100% ] setup()
+default   [   0% ]
+
+Run       [ 100% ] setup()
+default   [   0% ]
+
+Run       [ 100% ] setup()
+default   [   0% ]
+time="2026-03-16T04:00:
+54+01:00" level=info ms
+g="Response:\nHTTP/1.1 
+200 
+OK\nContent-Length: 552
+\nAccess-Control-Allow-
+Credentials: 
+true\nConnection: keep-
+alive\nContent-Security
+-Policy: default-src 
+'self';base-uri 
+'self';font-src 'self' 
+https: 
+data:;form-action 
+'self';frame-ancestors 
+'self';img-src 'self' 
+data:;object-src 
+'none';script-src 
+'self';script-src-attr 
+'none';style-src 
+'self' https: 'unsafe-i
+nline';upgrade-insecure
+-requests\nContent-Type
+: application/json; cha
+rset=utf-8\nCross-Origi
+n-Opener-Policy: same-o
+rigin\nCross-Origin-Res
+ource-Policy: 
+cross-origin\nDate: 
+Mon, 16 Mar 2026 
+03:00:54 GMT\nEtag: W/\
+"228-y6Iypcby6yu/6oFj++
+xYVxbo2JI\"\nKeep-Alive
+: timeout=5\nOrigin-Age
+nt-Cluster: 
+?1\nRatelimit-Limit: 10
+00\nRatelimit-Policy: 1
+000;w=60\nRatelimit-Rem
+aining: 
+998\nRatelimit-Reset: 
+15\nReferrer-Policy: no
+-referrer\nSet-Cookie: 
+cp_refresh=643477523648
+f1a208d64eef40b7cd1e1e2
+4f589415ebd38d76132c9cc
+6c2f8cf2c34c33d83fdf005
+2b62f4f1c10ae3cfef16194
+b502e3d73bbb651e1f21d89
+6; Max-Age=604800; 
+Domain=localhost; 
+Path=/; Expires=Mon, 
+23 Mar 2026 03:00:54 
+GMT; HttpOnly; SameSite
+=Lax\nStrict-Transport-
+Security: 
+max-age=31536000; inclu
+deSubDomains\nVary: Ori
+gin\nX-Content-Type-Opt
+ions: nosniff\nX-Dns-Pr
+efetch-Control: off\nX-
+Download-Options: noope
+n\nX-Frame-Options: SAM
+EORIGIN\nX-Permitted-Cr
+oss-Domain-Policies: 
+none\nX-Request-Id: 12c
+cf49d-2ead-4041-960f-fe
+0148111c7f\nX-Xss-Prote
+ction: 0\n\n{\"success\
+":true,\"data\":{\"acce
+ssToken\":\"eyJhbGciOiJ
+IUzI1NiIsInR5cCI6IkpXVC
+J9.eyJzdWIiOiJjbW1vdGM1
+d3EwMDA1MTNxMnBpNzh1cHc
+zIiwiY2xpbmljYUlkIjoiY2
+1tb3RjNW9jMDAwMzEzcTJpM
+3U2d2t4YiIsInBhcGVsIjoi
+QURNSU4iLCJpYXQiOjE3NzM
+2MzAwNTIsImV4cCI6MTc3Mz
+YzMDk1Mn0.r_iNyQDBMrd2a
+FBJU5rCK0Xz3R5s323FzFjP
+IOnA_z8\",\"utilizador\
+":{\"id\":\"cmmotc5wq00
+0513q2pi78upw3\",\"clin
+icaId\":\"cmmotc5oc0003
+13q2i3u6wkxb\",\"nome\"
+:\"Juliana Cambongo\",\
+"email\":\"contacto.nat
+uramed@gmail.com\",\"pa
+pel\":\"ADMIN\",\"ativo
+\":true,\"criadoEm\":\"
+2026-03-13T11:28:06.122
+Z\",\"atualizadoEm\":\"
+2026-03-16T02:17:54.672
+Z\"}}}\n" 
+group="::setup" iter=0 
+request_id=6df2e90f-ad4
+7-4772-bafa-9e0709d4f39
+d source=http-debug 
+vu=0
+time="2026-03-16T04:00:
+54+01:00" level=info 
+msg="Login status: 
+200" source=console
+time="2026-03-16T04:00:
+54+01:00" level=info 
+msg="Token obtained: 
+YES" source=console
+time="2026-03-16T04:00:
+54+01:00" level=info 
+msg="Request:\nGET /api
+/medicos/cmmov2qes000h1
+3q274a8t9fd/slots?data=
+2026-03-20 
+HTTP/1.1\nHost: localho
+st:3001\nUser-Agent: 
+Grafana k6/1.6.1\nAutho
+rization: Bearer eyJhbG
+ciOiJIUzI1NiIsInR5cCI6I
+kpXVCJ9.eyJzdWIiOiJjbW1
+vdGM1d3EwMDA1MTNxMnBpNz
+h1cHczIiwiY2xpbmljYUlkI
+joiY21tb3RjNW9jMDAwMzEz
+cTJpM3U2d2t4YiIsInBhcGV
+sIjoiQURNSU4iLCJpYXQiOj
+E3NzM2MzAwNTIsImV4cCI6M
+Tc3MzYzMDk1Mn0.r_iNyQDB
+Mrd2aFBJU5rCK0Xz3R5s323
+FzFjPIOnA_z8\nContent-T
+ype: application/json\n
+Accept-Encoding: 
+gzip\n\n\n" group= 
+iter=0 request_id=c6ddb
+c11-f692-4f5f-97f6-da9c
+c7acc0f7 
+scenario=default 
+source=http-debug vu=1
+
+running (00m07.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m00.5s/10m0s  0/1 shared iters
+
+running (00m08.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m01.5s/10m0s  0/1 shared iters
+
+running (00m09.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m02.5s/10m0s  0/1 shared iters
+
+running (00m10.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m03.5s/10m0s  0/1 shared iters
+time="2026-03-16T04:00:
+58+01:00" level=info ms
+g="Response:\nHTTP/1.1 
+404 Not 
+Found\nContent-Length: 
+82\nAccess-Control-Allo
+w-Credentials: 
+true\nConnection: keep-
+alive\nContent-Security
+-Policy: default-src 
+'self';base-uri 
+'self';font-src 'self' 
+https: 
+data:;form-action 
+'self';frame-ancestors 
+'self';img-src 'self' 
+data:;object-src 
+'none';script-src 
+'self';script-src-attr 
+'none';style-src 
+'self' https: 'unsafe-i
+nline';upgrade-insecure
+-requests\nContent-Type
+: application/json; cha
+rset=utf-8\nCross-Origi
+n-Opener-Policy: same-o
+rigin\nCross-Origin-Res
+ource-Policy: 
+cross-origin\nDate: 
+Mon, 16 Mar 2026 
+03:00:58 GMT\nEtag: W/\
+"52-ISHzTSHfS58xty08cwB
+tyxGnjwg\"\nKeep-Alive:
+ timeout=5\nOrigin-Agen
+t-Cluster: 
+?1\nRatelimit-Limit: 10
+00\nRatelimit-Policy: 1
+000;w=60\nRatelimit-Rem
+aining: 
+993\nRatelimit-Reset: 
+9\nReferrer-Policy: no-
+referrer\nStrict-Transp
+ort-Security: 
+max-age=31536000; inclu
+deSubDomains\nVary: Ori
+gin\nX-Content-Type-Opt
+ions: nosniff\nX-Dns-Pr
+efetch-Control: off\nX-
+Download-Options: noope
+n\nX-Frame-Options: SAM
+EORIGIN\nX-Permitted-Cr
+oss-Domain-Policies: 
+none\nX-Request-Id: fb3
+6e77c-ae72-41ba-88db-9c
+e7fb234804\nX-Xss-Prote
+ction: 0\n\n{\"success\
+":false,\"error\":{\"me
+ssage\":\"M├®dico n├úo 
+encontrado\",\"code\":\
+"NOT_FOUND\"}}\n" 
+group= iter=0 request_i
+d=c6ddbc11-f692-4f5f-97
+f6-da9cc7acc0f7 
+scenario=default 
+source=http-debug vu=1
+
+running (00m11.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+default   [   0% ] 1 VUs  00m04.5s/10m0s  0/1 shared iters
+
+running (00m12.0s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default Ô£ô [ 100% ] 1 VUs  00m05.5s/10m0s  1/1 shared iters
+
+
+  Ôûê THRESHOLDS 
+
+    http_req_duration
+    Ô£ù 'p(95)<500' p(95)=6.26s
+
+    http_req_failed
+    Ô£ù 'rate<0.01' rate=50.00%
+
+    slot_latency_ms
+    Ô£ù 'p(95)<300' p(95)=3669
+
+
+  Ôûê TOTAL RESULTS 
+
+    checks_total.......: 1       0.083424/s
+    checks_succeeded...: 0.00%   0 out of 1
+    checks_failed......: 100.00% 1 out of 1
+
+    Ô£ù slots 200
+      Ôå│  0% ÔÇö Ô£ô 0 / Ô£ù 1
+
+    CUSTOM
+    slot_latency_ms................: avg=3669  min=3669  med=3669  max=3669  p(90)=3669  p(95)=3669 
+
+    HTTP
+    http_req_duration..............: avg=5.03s min=3.66s med=5.03s max=6.4s  p(90)=6.12s p(95)=6.26s
+      { expected_response:true }...: avg=6.4s  min=6.4s  med=6.4s  max=6.4s  p(90)=6.4s  p(95)=6.4s 
+    http_req_failed................: 50.00% 1 out of 2
+    http_reqs......................: 2      0.166847/s
+
+    EXECUTION
+    iteration_duration.............: avg=5.45s min=5.45s med=5.45s max=5.45s p(90)=5.45s p(95)=5.45s
+    iterations.....................: 1      0.083424/s
+    vus............................: 1      min=0      max=1
+    vus_max........................: 1      min=1      max=1
+
+    NETWORK
+    data_received..................: 3.1 kB 255 B/s
+    data_sent......................: 663 B  55 B/s
+
+
+
+
+running (00m12.0s), 0/1 VUs, 1 complete and 0 interrupted iterations
+default Ô£ô [ 100% ] 1 VUs  00m05.5s/10m0s  1/1 shared iters
+time="2026-03-16T04:01:
+00+01:00" level=error 
+msg="thresholds on 
+metrics 
+'http_req_duration, 
+http_req_failed, 
+slot_latency_ms' have 
+been crossed"

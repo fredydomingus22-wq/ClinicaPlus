@@ -7,6 +7,7 @@ import {
 import { especialidadesService } from '../services/especialidades.service';
 import { requireRole } from '../middleware/requireRole';
 import { Papel } from '@prisma/client';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -15,6 +16,8 @@ const requireAdmin = requireRole([Papel.ADMIN]);
 
 router.get('/', async (req, res, next) => {
   try {
+    // Debug log for persistent 400 issues
+    logger.warn({ path: req.path, query: req.query }, '🔍 GET /api/especialidades listing request');
     const query = EspecialidadeListQuerySchema.parse(req.query);
     const result = await especialidadesService.list(req.clinica.id, query);
     res.json({ success: true, data: result });

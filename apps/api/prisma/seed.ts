@@ -144,6 +144,10 @@ async function main() {
     },
   });
 
+  // 7. Limites de Plano
+  const { seedPlanoLimites } = await import('../src/seeds/plano-limites.seed');
+  await seedPlanoLimites(prisma);
+
   console.log('Seeding completed successfully.');
 }
 

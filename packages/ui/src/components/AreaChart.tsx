@@ -92,8 +92,8 @@ export function AreaChart({
 
       <div className="flex-1 relative min-h-0" style={{ height }}>
         {isLoading ? (
-          <div className="w-full h-full bg-neutral-50 animate-pulse rounded-xl flex items-center justify-center">
-             <div className="w-1/2 h-4 bg-neutral-100 rounded-full" />
+          <div className="w-full h-full bg-neutral-50 animate-pulse flex items-center justify-center">
+             <div className="w-1/2 h-4 bg-neutral-100" />
           </div>
         ) : !data || data.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm italic">

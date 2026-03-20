@@ -8,18 +8,33 @@ import { z } from 'zod';
 
 import { authApi } from '../../api/auth';
 import type { ForgotPasswordInput } from '@clinicaplus/types';
+import { getTenantSlugFromURL } from '@clinicaplus/utils';
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email('E-mail inválido').trim().toLowerCase(),
+  clinicaSlug: z.string().optional(),
 });
 
 export const ForgotPasswordPage = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordInput>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(ForgotPasswordSchema),
-    defaultValues: { email: '' },
+    defaultValues: { email: '', clinicaSlug: '' },
   });
 
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const [tenantSlug, setTenantSlug] = React.useState<string | null>(null);
+
+  // Auto-detect tenant from subdomain on mount
+  React.useEffect(() => {
+    const slug = getTenantSlugFromURL({
+      baseDomain: import.meta.env['VITE_BASE_DOMAIN'] || undefined,
+      devTenantSlug: import.meta.env['VITE_DEV_TENANT_SLUG'] || undefined,
+    });
+    if (slug) {
+      setTenantSlug(slug);
+      setValue('clinicaSlug', slug);
+    }
+  }, [setValue]);
 
   const mutation = useMutation({
     mutationFn: (data: ForgotPasswordInput) => authApi.forgotPassword(data),
@@ -40,7 +55,7 @@ export const ForgotPasswordPage = () => {
 
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
-            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+            <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
               <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
@@ -64,14 +79,18 @@ export const ForgotPasswordPage = () => {
 
         <div className="w-full max-w-md mx-auto py-12 lg:py-28 z-10 animate-in fade-in slide-in-from-right-8 duration-700">
           
-          <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Recuperar Acesso</h2>
-            <p className="text-slate-500 text-sm font-medium">Introduza o e-mail associado à sua conta.</p>
+          <div className="mb-8 text-center lg:text-left">
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+              {tenantSlug ? `Recuperar acesso em ${tenantSlug}` : 'Recuperar acesso'}
+            </h2>
+            <p className="text-slate-600 text-sm font-medium">
+              Introduza o seu email para receber instruções de recuperação.
+            </p>
           </div>
 
           {isSuccess ? (
-            <div className="p-6 bg-emerald-50 text-emerald-800 rounded-2xl border border-emerald-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+            <div className="p-6 bg-emerald-50 text-emerald-800 border border-emerald-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
                 <Send className="w-6 h-6" />
               </div>
               <h3 className="font-semibold text-lg mb-2">Instruções enviadas!</h3>
@@ -82,6 +101,29 @@ export const ForgotPasswordPage = () => {
           ) : (
             <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5" noValidate>
               
+              {/* Input Workspace — hidden when tenant is auto-detected from subdomain */}
+              {!tenantSlug && (
+                <div className="space-y-1.5 group">
+                  <label htmlFor="clinicaSlug" className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+                    Identificador da Clínica
+                  </label>
+                  <div className="relative">
+                    <Hexagon className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+                    <input
+                      id="clinicaSlug"
+                      className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                      placeholder="slug-da-clinica"
+                      {...register('clinicaSlug')}
+                      onChange={(e) => {
+                        const formatted = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                        setValue('clinicaSlug', formatted);
+                      }}
+                    />
+                  </div>
+                  {errors.clinicaSlug && <p className="text-[13px] text-red-500 font-medium">{errors.clinicaSlug.message}</p>}
+                </div>
+              )}
+
               {/* Input Email */}
               <div className="space-y-1.5 group">
                 <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
@@ -90,7 +132,7 @@ export const ForgotPasswordPage = () => {
                 <div className="relative">
                   <User className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                   <input
-                    className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                    className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                     placeholder="nome@clinica.ao"
                     type="email"
                     {...register('email')}
@@ -100,7 +142,7 @@ export const ForgotPasswordPage = () => {
               </div>
 
               {mutation.isError && (
-                <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm font-medium border border-red-100 mt-2">
+                <div className="p-3 bg-red-50 text-red-700 text-sm font-medium border border-red-100 mt-2">
                   Não foi possível enviar o e-mail de recuperação.
                 </div>
               )}
@@ -110,7 +152,7 @@ export const ForgotPasswordPage = () => {
                 <button
                   type="submit"
                   disabled={mutation.isPending}
-                  className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
+                  className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
                 >
                   {mutation.isPending ? 'A enviar...' : 'Enviar Instruções'}
                 </button>

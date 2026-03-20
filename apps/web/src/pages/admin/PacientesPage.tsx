@@ -50,6 +50,15 @@ export default function PacientesPage() {
 
   const queryClient = useQueryClient();
 
+  // Auto-open detail panel if ID is in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      setSelectedPacienteId(id);
+    }
+  }, []);
+
   const { mutate: createPaciente, isPending: isCreating } = useCreatePaciente();
   const { mutate: updatePaciente, isPending: isUpdating } = useUpdatePaciente();
 
