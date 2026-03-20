@@ -24,6 +24,7 @@ export interface TemplateVars {
   instanceName: string;
   apiBaseUrl:   string;
   apiKey:       string;  // API key interna gerada para o n8n
+  automacaoId:  string;
   configuracao: Record<string, unknown>;
 }
 

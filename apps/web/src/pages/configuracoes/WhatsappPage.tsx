@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, Plus, Smartphone, MessageSquare } from 'lucide-react';
 import { useWhatsApp } from '../../hooks/useWhatsApp';
 import { PlanGate } from '../../components/PlanGate';
 import { WaConexaoCard } from '../../components/wa/WaConexaoCard';
 import { WaAutomacaoCard } from '../../components/wa/WaAutomacaoCard';
 import { WaActividadeRecente } from '../../components/wa/WaActividadeRecente';
-import { Button, Card, Badge, EmptyState, KpiCard } from '@clinicaplus/ui';
+import { Button, Card, Badge, EmptyState, KpiCard, Select } from '@clinicaplus/ui';
+import { WaInstancia } from '../../api/whatsapp';
 
 /**
  * Página de Gestão de WhatsApp e Automações (Multi-Instância)
@@ -22,12 +23,27 @@ export function WhatsappPage() {
     eliminarInstancia, 
     actualizarAutomacao,
     adicionarAutomacao,
+    configurarAutomacao,
     criando,
     eliminando,
     toggling,
     adicionando,
+    configurando,
     refetchQrCode
   } = useWhatsApp();
+
+  const [activeInstanciaId, setActiveInstanciaId] = useState<string>('');
+
+  const connectedInstancias = (instancias as WaInstancia[]).filter(i => i.estado === 'CONECTADO');
+
+  // Inicializa a instância activa com a primeira disponível se não estiver definida
+  useEffect(() => {
+    if (!activeInstanciaId && connectedInstancias.length > 0) {
+      setActiveInstanciaId(connectedInstancias[0]?.id || '');
+    }
+  }, [connectedInstancias, activeInstanciaId]);
+
+  const selectedInstancia = connectedInstancias.find(i => i.id === activeInstanciaId) || connectedInstancias[0];
 
   // Mapeamos as métricas agregadas da API para os 4 KPIs requeridos
   const kpiMensagens = metricas?.totalMensagens || 0;
@@ -139,11 +155,25 @@ export function WhatsappPage() {
           
           {/* Coluna Automações (3/5) */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
-                Automações
-              </h2>
-            </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
+                  Automações
+                </h2>
+                
+                {connectedInstancias.length > 1 && (
+                  <div className="w-full sm:w-64">
+                    <Select 
+                      options={connectedInstancias.map(i => ({ 
+                        value: i.id, 
+                        label: i.numeroTelefone || i.evolutionName 
+                      }))}
+                      value={activeInstanciaId}
+                      onChange={(e) => setActiveInstanciaId(e.target.value)}
+                      placeholder="Escolher Número"
+                    />
+                  </div>
+                )}
+              </div>
             
             <Card className="p-0 border-neutral-200/60 shadow-sm overflow-hidden flex flex-col">
               <div className="flex flex-col">
@@ -168,16 +198,19 @@ export function WhatsappPage() {
                       <WaAutomacaoCard 
                         key={tpl.id || tpl.tipo} 
                         automacao={automacaoObj}
-                        isDisconnected={!defaultInst || defaultInst.estado !== 'CONECTADO'}
+                        instancias={instancias}
+                        isDisconnected={!selectedInstancia}
                         isToggling={toggling || adicionando}
+                        isSaving={configurando}
                         hasSeparator={idx < arr.length - 1}
                         onToggle={(tipo, id, active) => {
                           if (id) {
                             actualizarAutomacao(id, active);
-                          } else if (defaultInst && active) {
-                            adicionarAutomacao(tipo, defaultInst.id);
+                          } else if (selectedInstancia && active) {
+                            adicionarAutomacao(tipo, selectedInstancia.id);
                           }
                         }}
+                        onSaveConfig={(id, config) => configurarAutomacao(id, config)}
                       />
                     );
                   })

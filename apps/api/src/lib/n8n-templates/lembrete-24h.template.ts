@@ -2,11 +2,13 @@ import { TemplateVars } from '../n8nApi';
 
 export function templateLembrete24h(vars: TemplateVars): object {
   const slug = vars.clinicaSlug;
+  const instanceClean = vars.instanceName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const webhookPath = `wa-lembrete24h-${instanceClean}-${vars.automacaoId.slice(-4)}`;
   const config = vars.configuracao as { mensagem?: string };
   const template = config.mensagem || 'lembrete_24h';
 
   return {
-    name: `[${slug}] WA — Lembrete 24h`,
+    name: `[${slug}] WA — Lembrete 24h (${vars.instanceName})`,
     nodes: [
       {
         id: 'node-webhook',
@@ -15,11 +17,11 @@ export function templateLembrete24h(vars: TemplateVars): object {
         position: [240, 300],
         typeVersion: 2,
         parameters: {
-          path: `wa-lembrete24h-${slug}`,
+          path: webhookPath,
           responseMode: 'responseNode',
           httpMethod: 'POST',
         },
-        webhookId: `wa-lembrete24h-${slug}`,
+        webhookId: webhookPath,
       },
       {
         id: 'node-enviar',

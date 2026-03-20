@@ -82,6 +82,18 @@ export function useWhatsApp() {
     },
   });
 
+  const configurarMutation = useMutation({
+    mutationFn: ({ id, config }: { id: string; config: Record<string, unknown> }) => 
+      whatsappApi.configurarAutomacao(id, config),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: whatsappKeys.automacoes() });
+      toast.success('Configuração guardada.');
+    },
+    onError: () => {
+      toast.error('Erro ao guardar configuração.');
+    }
+  });
+
   const refetchQrMutation = useMutation({
     mutationFn: (id: string) => whatsappApi.getQrCode(id),
     onSuccess: () => {
@@ -121,6 +133,8 @@ export function useWhatsApp() {
     actualizarAutomacao: (id: string, active: boolean) => toggleMutation.mutate({ id, active }),
     adicionarAutomacao: (tipo: string, waInstanciaId: string) => 
       adicionarMutation.mutate({ tipo, waInstanciaId }),
+    configurarAutomacao: (id: string, config: Record<string, unknown>) => 
+      configurarMutation.mutate({ id, config }),
     refetchQrCode: (id: string) => refetchQrMutation.mutate(id),
     
     // Loading states
@@ -128,6 +142,7 @@ export function useWhatsApp() {
     eliminando: eliminarMutation.isPending,
     toggling: toggleMutation.isPending,
     adicionando: adicionarMutation.isPending,
+    configurando: configurarMutation.isPending,
   };
 }
 

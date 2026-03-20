@@ -2,10 +2,11 @@ import type { TemplateVars } from '../n8nApi';
 
 export function templateMarcacao(vars: TemplateVars): object {
   const slug = vars.clinicaSlug;
-  const webhookPath = `wa-marcacao-${slug}`;
+  const instanceClean = vars.instanceName.toLowerCase().replace(/[^a-z0-h0-9]/g, '-');
+  const webhookPath = `wa-marcacao-${instanceClean}-${vars.automacaoId.slice(-4)}`;
 
   return {
-    name: `[${slug}] WA — Marcação de Consulta`,
+    name: `[${slug}] WA — Marcação de Consulta (${vars.instanceName})`,
     nodes: [
       {
         id: 'node-webhook',

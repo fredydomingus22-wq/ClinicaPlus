@@ -2,9 +2,11 @@ import { TemplateVars } from '../n8nApi';
 
 export function templateConfirmacao(vars: TemplateVars): object {
   const slug = vars.clinicaSlug;
+  const instanceClean = vars.instanceName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const webhookPath = `wa-confirmacao-${instanceClean}-${vars.automacaoId.slice(-4)}`;
 
   return {
-    name: `[${slug}] WA — Confirmação/Cancelamento`,
+    name: `[${slug}] WA — Confirmação/Cancelamento (${vars.instanceName})`,
     nodes: [
       {
         id: 'node-webhook',
@@ -13,11 +15,11 @@ export function templateConfirmacao(vars: TemplateVars): object {
         position: [240, 200],
         typeVersion: 2,
         parameters: {
-          path: `wa-confirmacao-${slug}`,
+          path: webhookPath,
           responseMode: 'responseNode',
           httpMethod: 'POST',
         },
-        webhookId: `wa-confirmacao-${slug}`,
+        webhookId: webhookPath,
       },
       {
         id: 'node-if-msg',

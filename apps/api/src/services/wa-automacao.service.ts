@@ -113,12 +113,19 @@ export const waAutomacaoService = {
       select: { slug: true }
     });
 
+    if (automacao.n8nWorkflowId) {
+      await n8nApi.eliminar(automacao.n8nWorkflowId).catch(err => {
+        logger.warn({ err, workflowId: automacao.n8nWorkflowId }, 'Falha ao eliminar workflow antigo ao re-provisionar');
+      });
+    }
+
     const vars: TemplateVars = {
       clinicaId,
       clinicaSlug: clinica.slug,
       instanceName: automacao.instancia.evolutionName,
       apiBaseUrl: config.API_PUBLIC_URL || config.FRONTEND_URL.replace(':5173', ':3001'),
       apiKey: apiKey.tokenPlain,
+      automacaoId: automacao.id,
       configuracao: (automacao.configuracao as Record<string, unknown>) || {},
     };
 
@@ -129,6 +136,7 @@ export const waAutomacaoService = {
       data: {
         n8nWorkflowId: workflowId,
         n8nWebhookPath: webhookPath,
+        n8nWebhookUrl: `${config.N8N_BASE_URL}/webhook/${webhookPath}`
       },
     });
   },
@@ -159,7 +167,12 @@ export const waAutomacaoService = {
       depois: { configuracao }
     });
 
-    return automacao;
+    // Se configurou algo novo, re-provisionamos no n8n para actualizar as vars
+    await this.provisionarWorkflow(automacao.id, clinicaId).catch(err => {
+      logger.error({ err, automacaoId }, 'Falha ao re-provisionar após configuração');
+    });
+
+    return prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacaoId } });
   },
 
   async sincronizar(clinicaId: string, waInstanciaId: string): Promise<void> {

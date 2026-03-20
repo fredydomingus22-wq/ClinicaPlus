@@ -2,12 +2,14 @@ import { TemplateVars } from '../n8nApi';
 
 export function templateBoasVindas(vars: TemplateVars): object {
   const slug = vars.clinicaSlug;
+  const instanceClean = vars.instanceName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const webhookPath = `wa-boasvindas-${instanceClean}-${vars.automacaoId.slice(-4)}`;
   const config = vars.configuracao as { mensagem?: string };
   const mensagem = config.mensagem
     ?? `Olá! 👋 Bem-vindo à nossa clínica.\nPara marcar uma consulta escreve *marcar*.`;
 
   return {
-    name: `[${slug}] WA — Boas-vindas`,
+    name: `[${slug}] WA — Boas-vindas (${vars.instanceName})`,
     nodes: [
       {
         id: 'node-webhook',
@@ -16,11 +18,11 @@ export function templateBoasVindas(vars: TemplateVars): object {
         position: [240, 300],
         typeVersion: 2,
         parameters: {
-          path: `wa-boasvindas-${slug}`,
+          path: webhookPath,
           responseMode: 'responseNode',
           httpMethod: 'POST',
         },
-        webhookId: `wa-boasvindas-${slug}`,
+        webhookId: webhookPath,
       },
       {
         id: 'node-check-novo',
