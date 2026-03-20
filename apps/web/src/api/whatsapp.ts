@@ -1,4 +1,4 @@
-import { apiFetch } from '../lib/fetch-wrapper';
+import { apiClient } from './client';
 
 export interface WaInstancia {
   id: string;
@@ -33,65 +33,69 @@ export const whatsappApi = {
   // --- INSTÂNCIAS ---
   
   async listarInstancias(): Promise<WaInstancia[]> {
-    return apiFetch<WaInstancia[]>('/api/whatsapp/instancias');
+    const res = await apiClient.get<WaInstancia[]>('/whatsapp/instancias');
+    return res.data;
   },
 
   async getEstado(id: string): Promise<WaInstancia> {
-    return apiFetch<WaInstancia>(`/api/whatsapp/instancias/${id}/estado`);
+    const res = await apiClient.get<WaInstancia>(`/whatsapp/instancias/${id}/estado`);
+    return res.data;
   },
 
   async getQrCode(id: string): Promise<{ qrcode: string }> {
-    return apiFetch<{ qrcode: string }>(`/api/whatsapp/instancias/${id}/qrcode`);
+    const res = await apiClient.get<{ qrcode: string }>(`/whatsapp/instancias/${id}/qrcode`);
+    return res.data;
   },
 
   async conectar(): Promise<WaInstancia> {
-    return apiFetch<WaInstancia>('/api/whatsapp/instancias', { method: 'POST' });
+    const res = await apiClient.post<WaInstancia>('/whatsapp/instancias');
+    return res.data;
   },
 
   async desligar(id: string): Promise<void> {
-    await apiFetch(`/api/whatsapp/instancias/${id}`, { method: 'DELETE' });
+    await apiClient.delete(`/whatsapp/instancias/${id}`);
   },
 
   // --- AUTOMAÇÕES ---
 
   async listarAutomacoes(instanciaId?: string): Promise<WaAutomacao[]> {
-    const url = instanciaId ? `/api/whatsapp/automacoes?instanciaId=${instanciaId}` : '/api/whatsapp/automacoes';
-    return apiFetch<WaAutomacao[]>(url);
+    const url = instanciaId ? `/whatsapp/automacoes?instanciaId=${instanciaId}` : '/whatsapp/automacoes';
+    const res = await apiClient.get<WaAutomacao[]>(url);
+    return res.data;
   },
 
   async listarTemplates(): Promise<{ id: string; tipo: string }[]> {
-    return apiFetch<{ id: string; tipo: string }[]>('/api/whatsapp/templates');
+    const res = await apiClient.get<{ id: string; tipo: string }[]>('/whatsapp/templates');
+    return res.data;
   },
 
   async adicionarAutomacao(data: { tipo: string; waInstanciaId: string }): Promise<WaAutomacao> {
-    return apiFetch<WaAutomacao>('/api/whatsapp/automacoes', { 
-      method: 'POST',
-      json: data 
-    });
+    const res = await apiClient.post<WaAutomacao>('/whatsapp/automacoes', data);
+    return res.data;
   },
 
   async activarAutomacao(id: string): Promise<void> {
-    await apiFetch(`/api/whatsapp/automacoes/${id}/activar`, { method: 'POST' });
+    await apiClient.post(`/whatsapp/automacoes/${id}/activar`);
   },
 
   async desactivarAutomacao(id: string): Promise<void> {
-    await apiFetch(`/api/whatsapp/automacoes/${id}/desactivar`, { method: 'POST' });
+    await apiClient.post(`/whatsapp/automacoes/${id}/desactivar`);
   },
 
   async configurarAutomacao(id: string, config: Record<string, unknown>): Promise<WaAutomacao> {
-    return apiFetch<WaAutomacao>(`/api/whatsapp/automacoes/${id}`, {
-      method: 'PATCH',
-      json: config
-    });
+    const res = await apiClient.patch<WaAutomacao>(`/whatsapp/automacoes/${id}`, config);
+    return res.data;
   },
 
   // --- ACTIVIDADE ---
 
   async getActividade(): Promise<WaActividade[]> {
-    return apiFetch<WaActividade[]>('/api/whatsapp/actividade');
+    const res = await apiClient.get<WaActividade[]>('/whatsapp/actividade');
+    return res.data;
   },
 
   async getMetricas(): Promise<WaMetricas> {
-    return apiFetch<WaMetricas>('/api/whatsapp/metricas');
+    const res = await apiClient.get<WaMetricas>('/whatsapp/metricas');
+    return res.data;
   }
 };
