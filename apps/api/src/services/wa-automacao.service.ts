@@ -6,7 +6,7 @@ import { apiKeysService } from './apikeys.service';
 import { auditLogService } from './auditLog.service';
 import { config } from '../lib/config';
 import { logger } from '../lib/logger';
-// import TEMPLATES removed as it is unused
+import { TEMPLATES } from '../lib/n8n-templates/index';
 
 /**
  * Serviço para gestão de automações do WhatsApp.
@@ -182,5 +182,49 @@ export const waAutomacaoService = {
         update: {}
       });
     }
+  },
+
+  async obterTemplates(): Promise<{ id: string; tipo: WaTipoAutomacao }[]> {
+    return Object.keys(TEMPLATES).map(tipo => ({
+      id: tipo,
+      tipo: tipo as WaTipoAutomacao,
+    }));
+  },
+
+  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, waInstanciaId: string): Promise<WaAutomacao | null> {
+    const instancia = await prisma.waInstancia.findFirst({
+      where: { id: waInstanciaId, clinicaId }
+    });
+
+    if (!instancia) {
+      throw new AppError('Instância do WhatsApp não encontrada.', 404);
+    }
+
+    let automacao = await prisma.waAutomacao.findFirst({
+      where: { waInstanciaId, tipo }
+    });
+
+    if (!automacao) {
+      automacao = await prisma.waAutomacao.create({
+        data: {
+          clinicaId,
+          tipo,
+          waInstanciaId,
+          ativo: false,
+          configuracao: {}
+        }
+      });
+    }
+
+    // Tentamos provisionar logo no n8n
+    try {
+      if (!automacao.n8nWorkflowId) {
+        await this.provisionarWorkflow(automacao.id, clinicaId);
+      }
+    } catch (err) {
+      logger.error({ err, automacaoId: automacao.id }, 'Falha ao provisionar workflow no n8n');
+    }
+
+    return prisma.waAutomacao.findUnique({ where: { id: automacao.id } });
   }
 };
