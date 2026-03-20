@@ -32,6 +32,7 @@ describe('n8nApi', () => {
     instanceName: 'instancia-1',
     apiBaseUrl: 'https://api-test.ao',
     apiKey: 'internal-key',
+    automacaoId: 'auto-1',
     configuracao: {},
   };
 
