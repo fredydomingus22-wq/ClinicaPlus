@@ -1,17 +1,16 @@
-import type { TemplateVars } from '../n8nApi';
+import { TemplateVars } from '../n8nApi';
 
 export function templateLembrete24h(vars: TemplateVars): object {
   const slug = vars.clinicaSlug;
-  const config = vars.configuracao as { template?: string };
-  const template = config.template
-    ?? 'Olá {nome}! 👋 Lembrete da tua consulta amanhã às *{hora}* com *{medico}*.\n\nPara confirmar responde *SIM*, para cancelar responde *NÃO*.';
+  const config = vars.configuracao as { mensagem?: string };
+  const template = config.mensagem || 'lembrete_24h';
 
   return {
     name: `[${slug}] WA — Lembrete 24h`,
     nodes: [
       {
         id: 'node-webhook',
-        name: 'Receber Trigger Lembrete',
+        name: 'Receber Trigger',
         type: 'n8n-nodes-base.webhook',
         position: [240, 300],
         typeVersion: 2,
@@ -27,10 +26,11 @@ export function templateLembrete24h(vars: TemplateVars): object {
         name: 'Enviar Lembrete',
         type: 'n8n-nodes-base.httpRequest',
         position: [460, 300],
-        typeVersion: 4.2,
+        typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/enviar-lembrete`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/notificacoes/enviar`,
+          authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
           sendBody: true,
@@ -53,9 +53,9 @@ export function templateLembrete24h(vars: TemplateVars): object {
       },
     ],
     connections: {
-      'Receber Trigger Lembrete': { main: [[{ node: 'Enviar Lembrete', type: 'main', index: 0 }]] },
-      'Enviar Lembrete':          { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
+      'Receber Trigger': { main: [[{ node: 'Enviar Lembrete', type: 'main', index: 0 }]] },
+      'Enviar Lembrete':  { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
     },
-    settings: { executionOrder: 'v1' }
+    settings: { executionOrder: 'v1' },
   };
 }

@@ -27,10 +27,11 @@ export function templateBoasVindas(vars: TemplateVars): object {
         name: 'É número novo?',
         type: 'n8n-nodes-base.httpRequest',
         position: [460, 300],
-        typeVersion: 4.2,
+        typeVersion: 4.1,
         parameters: {
           method: 'POST',
           url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/boas-vindas`,
+          authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
           sendBody: true,
