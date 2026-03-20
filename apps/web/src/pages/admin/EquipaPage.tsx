@@ -17,8 +17,10 @@ import {
   Edit,
   UserCheck,
   UserX,
-  Shield
+  Shield,
+  Key
 } from 'lucide-react';
+import PermissoesModal from '../../components/admin/PermissoesModal';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
@@ -35,6 +37,7 @@ export const EquipaPage = () => {
   const [page] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UtilizadorDTO | null>(null);
+  const [userForPerms, setUserForPerms] = useState<UtilizadorDTO | null>(null);
   
   const { data, isLoading, error } = useEquipa({ 
     page, 
@@ -162,6 +165,15 @@ export const EquipaPage = () => {
               {u.ativo ? <UserX className="h-4 w-4" aria-hidden="true" /> : <UserCheck className="h-4 w-4" aria-hidden="true" />}
             </Button>
           )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setUserForPerms(u)} 
+            title="Gerir Permissões" 
+            className="p-2 h-8 w-8 text-primary-500 hover:text-primary-600 hover:bg-primary-50"
+          >
+             <Key className="h-4 w-4" aria-hidden="true" />
+          </Button>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -298,6 +310,14 @@ export const EquipaPage = () => {
         </form>
       </Modal>
 
+      {userForPerms && (
+        <PermissoesModal 
+          isOpen={!!userForPerms}
+          onClose={() => setUserForPerms(null)}
+          utilizadorId={userForPerms.id}
+          utilizadorNome={userForPerms.nome}
+        />
+      )}
     </div>
   );
 };

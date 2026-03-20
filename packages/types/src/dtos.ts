@@ -27,6 +27,8 @@ export interface ClinicaDTO {
   cidade: string | null;
   provincia: string | null;
   plano: Plano;
+  subscricaoEstado: 'TRIAL' | 'ACTIVA' | 'GRACE_PERIOD' | 'SUSPENSA' | 'CANCELADA';
+  subscricaoValidaAte: string | null;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
@@ -46,7 +48,7 @@ export interface ClinicaDTO {
 
 export interface UtilizadorDTO {
   id: string;
-  clinicaId: string;
+  clinicaId: string | null;
   nome: string;
   email: string;
   papel: Papel;

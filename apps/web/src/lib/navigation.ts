@@ -8,6 +8,8 @@ import {
   ShieldCheck,
   Clock,
   User,
+  Wallet,
+  BarChart3,
   type LucideIcon
 } from 'lucide-react';
 import { Papel } from '@clinicaplus/types';
@@ -151,6 +153,26 @@ export const NAV_CONFIG: NavItem[] = [
     roles: [Papel.PACIENTE] 
   },
   { 
+    to: '/admin/financeiro', 
+    label: 'Financeiro', 
+    icon: Wallet, 
+    priority: true,
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/admin/relatorios', 
+    label: 'Relatórios', 
+    icon: BarChart3, 
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/recepcao/financeiro', 
+    label: 'Financeiro', 
+    icon: Wallet, 
+    priority: true,
+    roles: [Papel.RECEPCIONISTA] 
+  },
+  { 
     to: '/admin/medicos', 
     label: 'Equipa Médica', 
     icon: Stethoscope, 
@@ -168,6 +190,12 @@ export const NAV_CONFIG: NavItem[] = [
     to: '/admin/especialidades', 
     label: 'Especialidades', 
     icon: Stethoscope, 
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/admin/integracoes', 
+    label: 'Integrações', 
+    icon: ShieldCheck, // Using ShieldCheck as a temporary icon if Puzzle not imported, or just ShieldCheck
     roles: [Papel.ADMIN] 
   },
   { 

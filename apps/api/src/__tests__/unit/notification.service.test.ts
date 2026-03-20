@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '../../lib/prisma';
-import { Resend } from 'resend';
 
 const { mockSend } = vi.hoisted(() => ({
   mockSend: vi.fn().mockResolvedValue({ data: { id: 'mock-id' }, error: null })
@@ -71,7 +70,8 @@ describe('notification.service', () => {
       const resetData = {
         email: 'user@test.com',
         nome: 'Utilizador',
-        resetToken: 'token123'
+        resetUrl: 'http://localhost:5173/reset-password?token=token123',
+        expiresInMinutes: 15
       };
 
       await notificationService.sendResetPassword(resetData);

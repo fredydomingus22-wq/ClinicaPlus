@@ -3,7 +3,7 @@ import { Papel } from '@prisma/client';
 import { AppError } from '../lib/AppError';
 
 export function requireRole(roles: Papel[]) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new AppError('Não autenticado', 401, 'UNAUTHENTICATED'));
     }

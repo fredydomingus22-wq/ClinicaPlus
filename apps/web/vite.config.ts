@@ -7,6 +7,12 @@ export default defineConfig({
   // Trigger Vite restart to clear deps cache
   server: {
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     // Prevent duplicate React instances from monorepo packages
@@ -34,5 +40,18 @@ export default defineConfig({
         }
       }
     }
-  }
+  },
+  // @ts-ignore
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setupTests.ts'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', '.idea/**', '.git/**', '.cache/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/test/**', 'src/**/*.test.tsx', 'src/**/*.test.ts'],
+    },
+  },
 });

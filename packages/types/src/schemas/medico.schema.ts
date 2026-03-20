@@ -40,10 +40,10 @@ export const MedicoUpdateSchema = MedicoCreateSchema.omit({
 }).partial();
 
 export const MedicoListQuerySchema = z.object({
-  especialidadeId: z.string().optional(),
-  ativo: z.coerce.boolean().optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  especialidadeId: z.preprocess((val) => (val === 'null' || val === null || val === '' ? undefined : val), z.string().optional()),
+  ativo: z.preprocess((val) => (val === 'null' || val === null || val === '' ? undefined : val), z.coerce.boolean().optional()),
+  page: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.number().int().min(1).default(1)),
+  limit: z.preprocess((val) => (val === '' ? undefined : val), z.coerce.number().int().min(1).max(100).default(20)),
 });
 
 export const MedicoSlotQuerySchema = z.object({

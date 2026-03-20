@@ -70,13 +70,33 @@ class NotificacoesService {
     url?: string;
   }): Promise<void> {
     try {
+      let finalUrl = data.url;
+
+      // If URL is generic (starts with / but no role prefix), try to prefix it
+      if (
+        finalUrl && 
+        finalUrl.startsWith('/') && 
+        !['/admin', '/medico', '/paciente', '/recepcao', '/superadmin'].some(p => finalUrl!.startsWith(p))
+      ) {
+        const user = await prisma.utilizador.findUnique({
+          where: { id: data.utilizadorId },
+          select: { papel: true }
+        });
+
+        if (user) {
+          const papel = user.papel.toLowerCase();
+          const basePath = papel === 'recepcionista' ? 'recepcao' : papel;
+          finalUrl = `/${basePath}${finalUrl}`;
+        }
+      }
+
       await prisma.notificacao.create({
         data: {
           utilizadorId: data.utilizadorId,
           titulo: data.titulo,
           mensagem: data.mensagem,
           tipo: data.tipo,
-          url: data.url || null,
+          url: finalUrl || null,
         },
       });
     } catch (error) {

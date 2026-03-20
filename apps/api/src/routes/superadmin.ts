@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { requireRole } from '../middleware/requireRole';
 import { superAdminService } from '../services/superadmin.service';
-import { ClinicaListQuerySchema, Papel, PlanoSchema, ClinicaCreateSchema } from '@clinicaplus/types';
+import { subscricaoService } from '../services/subscricao.service';
+import { ClinicaListQuerySchema, Papel, PlanoSchema, ClinicaCreateSchema, Plano, EstadoSubscricao, RazaoMudancaPlano } from '@clinicaplus/types';
 import { z } from 'zod';
 
 const router = Router();
@@ -154,6 +155,96 @@ router.patch('/settings', async (req, res, next) => {
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
+  }
+});
+
+// ─── Subscription Management ──────────────────────────────────────────
+
+/**
+ * POST /api/superadmin/clinicas/:id/subscricao/upgrade
+ */
+router.post('/clinicas/:id/subscricao/upgrade', async (req, res, next) => {
+  try {
+    const { plano, validaAte, valorKz, referenciaInterna, notas } = req.body;
+    const sub = await subscricaoService.criarNovaSubscricao({
+      clinicaId: req.params.id,
+      plano: plano as Plano,
+      estado: EstadoSubscricao.ACTIVA,
+      ...(validaAte && { validaAte: new Date(validaAte) }),
+      ...(valorKz && { valorKz }),
+      ...(referenciaInterna && { referenciaInterna }),
+      razao: RazaoMudancaPlano.UPGRADE_MANUAL,
+      alteradoPor: req.user.id,
+      ...(notas && { notas }),
+    });
+    res.json({ success: true, data: sub });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/superadmin/clinicas/:id/subscricao/downgrade
+ */
+router.post('/clinicas/:id/subscricao/downgrade', async (req, res, next) => {
+  try {
+    const { plano, notas } = req.body;
+    const sub = await subscricaoService.criarNovaSubscricao({
+      clinicaId: req.params.id,
+      plano: plano as Plano,
+      estado: EstadoSubscricao.ACTIVA,
+      razao: RazaoMudancaPlano.DOWNGRADE_MANUAL,
+      alteradoPor: req.user.id,
+      ...(notas && { notas }),
+    });
+    res.json({ success: true, data: sub });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/superadmin/clinicas/:id/subscricao/reactivar
+ */
+router.post('/clinicas/:id/subscricao/reactivar', async (req, res, next) => {
+  try {
+    const clinica = await subscricaoService.getActual(req.params.id);
+    const sub = await subscricaoService.criarNovaSubscricao({
+      clinicaId: req.params.id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      plano: (clinica as any).plano,
+      estado: EstadoSubscricao.ACTIVA,
+      razao: RazaoMudancaPlano.REACTIVACAO,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      alteradoPor: (req.user as any).id,
+    });
+    res.json({ success: true, data: sub });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/superadmin/clinicas/:id/subscricao/suspender
+ */
+router.post('/clinicas/:id/subscricao/suspender', async (req, res, next) => {
+  try {
+    await subscricaoService.suspender(req.params.id);
+    res.json({ success: true, message: 'Subscrição suspensa com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/superadmin/subscricoes/a-expirar
+ */
+router.get('/subscricoes/a-expirar', async (req, res, next) => {
+  try {
+    const clinicas = await subscricaoService.getExpiringSoon();
+    res.json({ success: true, data: clinicas });
+  } catch (err) {
+    next(err);
   }
 });
 

@@ -4,8 +4,7 @@ const request = createTestApp();
 import { factories } from '../helpers/factories';
 
 describe('/api/exames', () => {
-  let ctx: any;
-  let prontuarioId: string;
+  let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
   let agendamentoId: string;
 
   beforeAll(async () => {
@@ -24,7 +23,7 @@ describe('/api/exames', () => {
         observacoes: 'Teste exame',
         origem: 'LOCAL'
       });
-      
+
     agendamentoId = resAg.body.data.id;
   });
 
@@ -33,10 +32,24 @@ describe('/api/exames', () => {
   });
 
   describe('POST /api/exames', () => {
-    it('creates an exame request', async () => {
-      // Actually we need a Prontuario first or we can attach to agendamento?
-      // exames.service says agendamentoId is optional, pacienteId is required
+    it('deve requerer autenticacao', async () => {
+      await request
+        .post('/api/exames')
+        .send(factories.createExameData('dummy'))
+        .expect(401);
+    });
 
+    it('deve criar um exame fisico (Médico)', async () => {
+      const res = await request
+        .post('/api/exames')
+        .set('Authorization', `Bearer ${ctx.medicoToken}`)
+        .send(factories.createExameData(ctx.paciente.id, agendamentoId, ctx.medico.id));
+
+      expect(res.status).toBe(201);
+      expect(res.body.nome).toBe('Exame Físico');
+    });
+
+    it('creates an exame request', async () => {
       const res = await request
         .post('/api/exames')
         .set('Authorization', `Bearer ${ctx.medicoToken}`)
@@ -53,16 +66,23 @@ describe('/api/exames', () => {
     });
   });
 
-  describe('GET /api/exames/paciente/:id', () => {
-    it('returns the list of exames for the patient', async () => {
+  describe('GET /api/exames', () => {
+    it('deve listar exames do paciente com filtros', async () => {
       const res = await request
-        .get(`/api/exames/paciente/${ctx.paciente.id}`)
-        .set('Authorization', `Bearer ${ctx.medicoToken}`);
+        .get(`/api/exames?pacienteId=${ctx.paciente.id}&status=REALIZADO`)
+        .set('Authorization', `Bearer ${ctx.medicoToken}`)
+        .expect(200);
 
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThan(0);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data[0].status).toBe('REALIZADO');
+    });
+
+    it('deve rejeitar sem pacienteId', async () => {
+      await request
+        .get('/api/exames')
+        .set('Authorization', `Bearer ${ctx.medicoToken}`)
+        .expect(400);
     });
   });
 });
-

@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { getNavItems, type NavItem } from '../../lib/navigation';
+import { SubscricaoStatusBanner } from '../PlanGate';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -35,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative print:block print:h-auto print:overflow-visible">
         <TopBar />
+        <SubscricaoStatusBanner />
         
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 bg-[#fafafa] pb-24 md:pb-10 print:block print:h-auto print:overflow-visible print:p-0 print:bg-none">
           <div className="max-w-page mx-auto">

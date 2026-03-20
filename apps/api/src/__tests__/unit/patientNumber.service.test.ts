@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generatePatientNumber } from '../../services/patientNumber.service';
 import { prisma } from '../../lib/prisma';

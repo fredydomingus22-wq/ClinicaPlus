@@ -5,6 +5,7 @@ import { logger } from '../lib/logger';
 import { getAvailableSlots } from './slots.service';
 import { generateInitialPassword } from '@clinicaplus/utils';
 import { notificationService } from './notification.service';
+import { subscricaoService } from './subscricao.service';
 import { MedicoHorarioSchema } from '@clinicaplus/types';
 import type {
   MedicoCreateInput,
@@ -19,10 +20,28 @@ import type { Medico, Especialidade } from '@prisma/client';
 
 type MedicoWithEspecialidade = Medico & { especialidade?: Especialidade | null };
 
+const DEFAULT_HORARIO_DIA = { ativo: false, inicio: '', fim: '', pausaInicio: '', pausaFim: '' };
+const DEFAULT_HORARIO = {
+  segunda: DEFAULT_HORARIO_DIA,
+  terca: DEFAULT_HORARIO_DIA,
+  quarta: DEFAULT_HORARIO_DIA,
+  quinta: DEFAULT_HORARIO_DIA,
+  sexta: DEFAULT_HORARIO_DIA,
+  sabado: DEFAULT_HORARIO_DIA,
+  domingo: DEFAULT_HORARIO_DIA,
+};
+
 /**
  * Maps a Prisma Medico to a MedicoDTO.
  */
 function toMedicoDTO(m: MedicoWithEspecialidade): MedicoDTO {
+  // Defensive merge: provide defaults for missing days or fields in the horario JSON
+  const rawHorario = (m.horario as unknown as Record<string, unknown>) || {};
+  const mergedHorario = {
+    ...DEFAULT_HORARIO,
+    ...rawHorario
+  };
+
   const dto: MedicoDTO = {
     id: m.id,
     clinicaId: m.clinicaId,
@@ -31,7 +50,7 @@ function toMedicoDTO(m: MedicoWithEspecialidade): MedicoDTO {
     especialidadeId: m.especialidadeId,
     ordem: m.ordem,
     telefoneDireto: m.telefoneDireto,
-    horario: MedicoHorarioSchema.parse(m.horario),
+    horario: MedicoHorarioSchema.parse(mergedHorario),
     duracaoConsulta: m.duracaoConsulta,
     preco: m.preco,
     ativo: m.ativo,
@@ -127,12 +146,13 @@ export const medicosService = {
     return getAvailableSlots(id, dataStr, clinicaId);
   },
 
-  /**
-   * Creates a MEDICO user account + Medico record in a single transaction.
-   * Expects either a utilizadorId of an existing Utilizador with MEDICO role,
-   * OR creates one using the provided email.
-   */
+/**
+ * Creates a MEDICO user account + Medico record in a single transaction.
+ * Expects either a utilizadorId of an existing Utilizador with MEDICO role,
+ * OR creates one using the provided email.
+ */
   async create(data: MedicoCreateInput, clinicaId: string): Promise<MedicoDTO> {
+    await subscricaoService.verificarLimite(clinicaId, 'medicos');
     let utilizadorId = data.utilizadorId;
 
     if (!utilizadorId) {

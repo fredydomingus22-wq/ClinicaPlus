@@ -6,7 +6,7 @@ dotenv.config();
 const configSchema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  REDIS_URL: z.string().min(1), // redis:// ou rediss:// (TLS) — Zod url() rejeita estes protocolos
   RESEND_API_KEY: z.string().min(1),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ALERT_EMAIL: z.string().email().optional(),

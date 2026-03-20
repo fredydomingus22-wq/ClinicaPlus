@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getAvailableSlots, isSlotAvailable } from '../../services/slots.service';
 import { prisma } from '../../lib/prisma';
@@ -73,7 +74,7 @@ describe('slots.service', () => {
       vi.mocked(prisma.medico.findUnique).mockResolvedValue(mockMedicoAtivo as any);
       vi.mocked(prisma.agendamento.findMany).mockResolvedValue([]);
 
-      const result = await getAvailableSlots('m1', '2026-06-10', 'c1');
+      await getAvailableSlots('m1', '2026-06-10', 'c1');
 
       // Given it's 10:00 Luanda time, and 1 hour notice, slots before 11:00 are locked.
       // 08:00 to 11:00 should be excluded if today. But let's test a future day first.

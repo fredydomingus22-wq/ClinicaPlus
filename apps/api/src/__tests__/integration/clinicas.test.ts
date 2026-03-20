@@ -4,7 +4,7 @@ const request = createTestApp();
 import { factories } from '../helpers/factories';
 
 describe('/api/clinicas', () => {
-  let ctx: any;
+  let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
 
   beforeAll(async () => {
     ctx = await factories.setupClinicaCompleta();

@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - img [ref=e11]
+      - generic [ref=e13]: ClinicaPlus
+    - heading "O Seu Sistema de Agendamentos Clínicos." [level=1] [ref=e14]:
+      - text: O Seu Sistema de
+      - text: Agendamentos Clínicos.
+    - paragraph [ref=e15]: Centralize e simplifique todas as marcações e interações com os seus pacientes num ambiente seguro e rápido.
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - heading "Bem-vindo" [level=2] [ref=e19]
+      - paragraph [ref=e20]: Acesso seguro ao portal da clínica.
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - text: Identificador da Clínica
+        - generic [ref=e23]:
+          - img [ref=e24]
+          - textbox "Identificador da Clínica" [ref=e30]:
+            - /placeholder: slug-da-clinica
+            - text: nutrimacho-ao
+      - generic [ref=e31]:
+        - text: E-mail
+        - generic [ref=e32]:
+          - img [ref=e33]
+          - textbox "E-mail" [ref=e36]:
+            - /placeholder: nome@clinica.ao
+            - text: contacto.naturamed@gmail.com
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Palavra-passe
+          - link "Esqueceu a palavra-passe?" [ref=e40] [cursor=pointer]:
+            - /url: /auth/forgot-password
+        - generic [ref=e41]:
+          - img [ref=e42]
+          - textbox "Palavra-passe" [ref=e45]:
+            - /placeholder: ••••••••
+            - text: Demo1234!
+          - button [ref=e46] [cursor=pointer]:
+            - img [ref=e47]
+      - generic [ref=e50]:
+        - button "A autenticar..." [disabled]
+    - generic [ref=e51]:
+      - paragraph [ref=e52]:
+        - text: É paciente?
+        - link "Crie a sua conta gratuita" [ref=e53] [cursor=pointer]:
+          - /url: /auth/registar-paciente
+      - paragraph [ref=e54]:
+        - text: Nova clínica?
+        - link "Registar clínica parceira" [ref=e55] [cursor=pointer]:
+          - /url: /auth/registar
+    - paragraph [ref=e56]: © 2026 ClinicaPlus. Sistema de Agendamentos.
+```

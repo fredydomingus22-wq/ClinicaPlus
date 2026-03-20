@@ -100,7 +100,7 @@ export const LoginPage = () => {
 
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
-            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+            <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
               <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
@@ -135,13 +135,14 @@ export const LoginPage = () => {
             {/* Input Workspace — hidden when tenant is auto-detected from subdomain */}
             {!tenantSlug && (
               <div className="space-y-1.5 group">
-                <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+                <label htmlFor="clinicaSlug" className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
                   Identificador da Clínica
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-3 h-5 w-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
                   <input
-                    className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                    id="clinicaSlug"
+                    className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                     placeholder="slug-da-clinica"
                     {...register('clinicaSlug')}
                     onChange={handleSlugChange}
@@ -153,13 +154,14 @@ export const LoginPage = () => {
 
             {/* Input Email */}
             <div className="space-y-1.5 group">
-              <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+              <label htmlFor="email" className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
                 E-mail
               </label>
               <div className="relative">
                 <User className="absolute left-3.5 top-3 h-5 w-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  id="email"
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   placeholder="nome@clinica.ao"
                   type="email"
                   {...register('email')}
@@ -171,7 +173,7 @@ export const LoginPage = () => {
             {/* Input Password */}
             <div className="space-y-1.5 group">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+                <label htmlFor="password" className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
                   Palavra-passe
                 </label>
                 <Link to="/auth/forgot-password" title="Esqueceu a palavra-passe?" className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors focus:outline-none focus:underline">
@@ -181,7 +183,8 @@ export const LoginPage = () => {
               <div className="relative">
                 <KeyRound className="absolute left-3.5 top-3 h-5 w-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
                 <input
-                  className={`flex h-11 w-full rounded-xl border bg-white px-3 py-2 pl-11 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  id="password"
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
@@ -189,7 +192,7 @@ export const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 h-5 w-5 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-teal-600 rounded-md transition-colors"
+                  className="absolute right-3 top-3 h-5 w-5 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-teal-600 transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -199,7 +202,7 @@ export const LoginPage = () => {
 
             {/* Root Errors */}
             {errors.root && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm font-medium border border-red-100 mt-2">
+              <div className="p-3 bg-red-50 text-red-700 text-sm font-medium border border-red-100 mt-2">
                 {errors.root.message}
               </div>
             )}
@@ -209,7 +212,7 @@ export const LoginPage = () => {
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
+                className="w-full h-12 bg-slate-900 hover:bg-teal-700 text-white font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-slate-900/10"
               >
                 {mutation.isPending ? 'A autenticar...' : 'Entrar na Plataforma'}
               </button>

@@ -5,10 +5,11 @@ import {
   MedicoListQuerySchema,
   MedicoSlotQuerySchema,
   MedicoSelfUpdateSchema,
-  Papel,
 } from '@clinicaplus/types';
 import { medicosService } from '../services/medicos.service';
 import { requireRole } from '../middleware/requireRole';
+import { Papel } from '@prisma/client';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -20,10 +21,18 @@ const router = Router();
  */
 router.get('/', async (req, res, next) => {
   try {
+    // Debug log for persistent 400 issues
+    logger.warn({ 
+      path: req.path, 
+      query: req.query, 
+      user: req.user?.id, 
+      clinica: req.clinica?.id 
+    }, '🔍 GET /api/medicos listing request');
+
     const query = MedicoListQuerySchema.parse(req.query);
-    const medicos = await medicosService.list(req.clinica.id, query);
-    return res.json({ success: true, data: medicos });
-  } catch (err) { return next(err); }
+    const result = await medicosService.list(req.clinica.id, query);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
 });
 
 /**

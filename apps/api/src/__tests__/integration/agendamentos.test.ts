@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
@@ -33,15 +33,16 @@ describe('/api/agendamentos', () => {
     expect(res.body.data).toBeInstanceOf(Array);
     
     // We expect at least one from the seeded data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const agenda = res.body.data.find((a: any) => a.paciente.id === ctx.paciente.id && a.medico.id === ctx.medico.id);
     expect(agenda).toBeDefined();
     expect(agenda.estado).toBe('PENDENTE');
   });
 
-  it('POST /api/agendamentos com slot disponÃ­vel -> 201 com estado PENDENTE', async () => {
+  it('POST /api/agendamentos com slot disponível -> 201 com estado PENDENTE', async () => {
     const res = await app.post('/api/agendamentos')
       .set(authHeader(ctx.adminToken))
-      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Dor no peito hÃ¡ 3 dias' });
+      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Dor no peito há 3 dias' });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -52,7 +53,7 @@ describe('/api/agendamentos', () => {
     // try exact same slot from previous test
     const res = await app.post('/api/agendamentos')
       .set(authHeader(ctx.adminToken))
-      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Segunda marcaÃ§Ã£o' });
+      .send({ pacienteId: ctx.paciente.id, medicoId: ctx.medico.id, dataHora: '2026-09-15T09:00:00.000Z', tipo: 'CONSULTA', motivoConsulta: 'Segunda marcação' });
 
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
@@ -88,6 +89,7 @@ describe('/api/agendamentos', () => {
     // Using previous appointment which is now CONFIRMADO
     // Let's retrieve it first to ensure we use the same id (we can just query it)
     const listRes = await app.get('/api/agendamentos').set(authHeader(ctx.adminToken));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const confirmados = listRes.body.data.items.filter((a: any) => a.estado === 'CONFIRMADO');
     const agId = confirmados[0].id;
 
@@ -102,6 +104,7 @@ describe('/api/agendamentos', () => {
   it('PATCH /api/agendamentos/:id/triagem -> 200 estado muda para EM_PROGRESSO', async () => {
     // Using the same confirmed appointment
     const listRes = await app.get('/api/agendamentos').set(authHeader(ctx.adminToken));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const agId = listRes.body.data.items.filter((a: any) => a.estado === 'CONFIRMADO')[0].id;
 
     const res = await app.patch(`/api/agendamentos/${agId}/triagem`)
@@ -114,7 +117,7 @@ describe('/api/agendamentos', () => {
     expect(res.body.data.triagem.imc).toBeCloseTo(22.86, 1); // verify trigger calculation exists
   });
 
-  it('GET /api/agendamentos/meus com token de PACIENTE -> lista sÃ³ os seus', async () => {
+  it('GET /api/agendamentos/meus com token de PACIENTE -> lista só os seus', async () => {
     const res = await app.get('/api/agendamentos/meus').set(authHeader(ctx.pacienteToken));
 
     expect(res.status).toBe(200);

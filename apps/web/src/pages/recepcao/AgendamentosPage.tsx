@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useListaAgendamentos, useUpdateEstadoAgendamento } from '../../hooks/useAgendamentos';
+import { agendamentosApi } from '../../api/agendamentos';
 import { useMedicos } from '../../hooks/useMedicos';
 import { 
   Button, 
@@ -40,6 +41,20 @@ export default function AgendamentosPage() {
     medicoId: medicoId || undefined,
     estado: (estado as EstadoAgendamento) || undefined,
   });
+
+  // Auto-open modal if ID is in URL
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id && data?.items) {
+      const found = data.items.find(a => a.id === id);
+      if (found) {
+        setSelectedAgendamento(found);
+      } else {
+        agendamentosApi.getOne(id).then(setSelectedAgendamento).catch(() => {});
+      }
+    }
+  }, [data?.items]);
 
   const updateEstado = useUpdateEstadoAgendamento();
 

@@ -48,7 +48,16 @@ export const schedulerService = {
       }
     });
 
-    logger.info('Reminder scheduler started (every 5 minutes)');
+    // Run every hour to expire WhatsApp conversations
+    cron.schedule('0 * * * *', async () => {
+      try {
+        await this.processarConversasExpiradas();
+      } catch (err) {
+        logger.error({ err }, 'Scheduler: Error in processarConversasExpiradas cycle');
+      }
+    });
+
+    logger.info('Scheduler started (Reminders 5m, WA Expiry 1h)');
   },
 
   /**
@@ -192,5 +201,35 @@ export const schedulerService = {
     } catch (err) {
       logger.error({ err, agendamentoId }, 'Failed to schedule reminders');
     }
+  },
+
+  /**
+   * Expira conversas de WhatsApp sem interacção há mais de 24 horas.
+   */
+  async processarConversasExpiradas(): Promise<void> {
+    const limite = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const conversasAExpirar = await prisma.waConversa.findMany({
+      where: {
+        estado: { in: ['AGUARDA_INPUT', 'EM_FLUXO_MARCACAO', 'AGUARDA_CONFIRMACAO'] },
+        OR: [
+          { ultimaMensagemEm: { lt: limite } },
+          { AND: [{ ultimaMensagemEm: null }, { criadoEm: { lt: limite } }] }
+        ]
+      },
+      select: { id: true }
+    });
+
+    if (conversasAExpirar.length === 0) return;
+
+    logger.info({ count: conversasAExpirar.length }, 'Expiring inactive WhatsApp conversations');
+
+    await prisma.waConversa.updateMany({
+      where: { id: { in: conversasAExpirar.map(c => c.id) } },
+      data: {
+        estado: 'EXPIRADA',
+        etapaFluxo: null
+      }
+    });
   }
 };

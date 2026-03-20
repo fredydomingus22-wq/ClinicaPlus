@@ -16,7 +16,7 @@ const sizeStyles = {
 export function Avatar({ src, initials, size = 'md', className = '' }: AvatarProps) {
   return (
     <div className={`
-      relative inline-flex items-center justify-center shrink-0 rounded-full bg-primary-100 text-primary-700 font-semibold overflow-hidden border border-primary-200
+      relative inline-flex items-center justify-center shrink-0 bg-primary-100 text-primary-700 font-semibold overflow-hidden border border-primary-200
       ${sizeStyles[size]}
       ${className}
     `}>

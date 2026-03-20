@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Global: 100 req/min per IP
 export const globalRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: 1000,
   message: {
     success: false,
     error: {
@@ -18,7 +18,7 @@ export const globalRateLimiter = rateLimit({
 // Auth: 10 req/min per IP (login, refresh, forgot/reset password)
 export const authRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 1000,
   message: {
     success: false,
     error: {

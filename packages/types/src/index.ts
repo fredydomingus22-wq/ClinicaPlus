@@ -12,5 +12,7 @@ export * from './schemas/dashboard.schema';
 export * from './schemas/notificacao.schema';
 export * from './schemas/billing.schema';
 export * from './schemas/clinical.schema';
+export * from './schemas/platform.schema';
 export * from './schemas/documento.schema';
+export * from './schemas/financial.schema';
 

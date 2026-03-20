@@ -130,28 +130,6 @@ export const notificationService = {
     }
   },
 
-  /**
-   * Sends a password reset link.
-   */
-  async sendResetPassword(data: {
-    email: string;
-    nome: string;
-    resetToken: string;
-  }): Promise<void> {
-    const url = `${config.FRONTEND_URL}/reset-password?token=${data.resetToken}`;
-    
-    try {
-      await resend.emails.send({
-        from: FROM,
-        to: data.email,
-        subject: 'Recuperação de Acesso — ClinicaPlus',
-        html: emailTemplates.resetPassword({ ...data, url }),
-      });
-      logger.info({ email: data.email }, 'Password reset email sent');
-    } catch (err) {
-      logger.error({ err, email: data.email }, 'Failed to send password reset email');
-    }
-  },
 
   /**
    * Sends a welcome email to a new staff member.
@@ -257,6 +235,78 @@ export const notificationService = {
       logger.info({ email: data.email }, 'Admin welcome email sent');
     } catch (err) {
       logger.error({ err, email: data.email }, 'Failed to send admin welcome email');
+    }
+  },
+
+  /**
+   * Sends an email warning about the grace period.
+   */
+  async enviarEmailGracePeriod(clinica: { id: string; nome: string; email: string; subscricaoValidaAte: Date }): Promise<void> {
+    try {
+      const hoje = new Date();
+      const diasRestantes = Math.ceil((clinica.subscricaoValidaAte.getTime() - hoje.getTime()) / (1000 * 3600 * 24)) + 7;
+      
+      await resend.emails.send({
+        from: FROM,
+        to: clinica.email,
+        subject: `Subscrição Expirada — Período de Graça — ClinicaPlus`,
+        html: emailTemplates.gracePeriod({
+          clinicaNome: clinica.nome,
+          diasRestantes,
+          dataExpiracao: clinica.subscricaoValidaAte,
+        }),
+      });
+      logger.info({ clinicaId: clinica.id }, 'Grace period email sent');
+    } catch (err) {
+      logger.error({ err, clinicaId: clinica.id }, 'Failed to send grace period email');
+    }
+  },
+
+  /**
+   * Sends an email informing that the account has been suspended.
+   */
+  async enviarEmailContaSuspensa(clinicaId: string): Promise<void> {
+    try {
+      const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
+      
+      await resend.emails.send({
+        from: FROM,
+        to: clinica.email,
+        subject: `Conta Suspensa — ClinicaPlus`,
+        html: emailTemplates.contaSuspensa({
+          clinicaNome: clinica.nome,
+        }),
+      });
+      logger.info({ clinicaId }, 'Account suspended email sent');
+    } catch (err) {
+      logger.error({ err, clinicaId }, 'Failed to send account suspended email');
+    }
+  },
+
+  /**
+   * Sends a password reset email.
+   */
+  async sendResetPassword(data: {
+    email: string;
+    nome: string;
+    resetUrl: string;
+    expiresInMinutes: number;
+  }): Promise<void> {
+    try {
+      await resend.emails.send({
+        from: FROM,
+        to: data.email,
+        subject: `Recuperar Palavra-passe — ClinicaPlus`,
+        html: emailTemplates.resetPassword({
+          nome: data.nome,
+          resetUrl: data.resetUrl,
+          expiresInMinutes: data.expiresInMinutes
+        }),
+      });
+      logger.info({ email: data.email }, 'Password reset email sent');
+    } catch (err) {
+      logger.error({ err, email: data.email }, 'Failed to send password reset email');
+      throw err;
     }
   },
 };

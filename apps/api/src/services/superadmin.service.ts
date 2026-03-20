@@ -26,6 +26,8 @@ function toClinicaDTO(c: ClinicaPayload | Prisma.ClinicaGetPayload<Record<string
     cidade: c.cidade || null,
     provincia: c.provincia || null,
     plano: c.plano as unknown as SharedPlano,
+    subscricaoEstado: (c as import('@prisma/client').Clinica).subscricaoEstado as ClinicaDTO['subscricaoEstado'],
+    subscricaoValidaAte: (c as import('@prisma/client').Clinica).subscricaoValidaAte?.toISOString() || null,
     ativo: c.ativo,
     criadoEm: c.criadoEm.toISOString(),
     atualizadoEm: c.atualizadoEm.toISOString(),
@@ -66,7 +68,7 @@ export const superAdminService = {
    * Lists all clinics across the system.
    * cross-tenant: bypasses normal clinic isolation.
    */
-  async listClinicas(query: ClinicaListQuery): Promise<{ items: ClinicaDTO[]; total: number; page: number; limit: number }> {
+  async listClinicas(query: ClinicaListQuery): Promise<PaginatedResult<ClinicaDTO>> {
     const { q, plano, ativo, page = 1, limit = 20 } = query;
 
     const where: Prisma.ClinicaWhereInput = {};
@@ -213,7 +215,7 @@ export const superAdminService = {
       titulo: 'Bem-vindo à ClinicaPlus',
       mensagem: `Olá ${admin.nome}, a sua conta administrativa para a clínica ${clinica.nome} está pronta. Recomendamos que explore as configurações e configure a sua equipa.`,
       tipo: 'SUCESSO',
-      url: '/configuracoes'
+      url: '/admin/configuracao'
     }).catch((err: Error) => logger.error({ err }, 'Async error: Admin initial notification'));
 
     // 4. Log the system action
@@ -246,7 +248,7 @@ export const superAdminService = {
     ativo: boolean;
     criadoEm: string;
     atualizadoEm: string;
-    clinicaId: string;
+    clinicaId: string | null;
     clinicaNome: string;
   }>> {
     const { q, papel, ativo, clinicaId, page = 1, limit = 20 } = query;
@@ -301,7 +303,7 @@ export const superAdminService = {
     email: string;
     papel: SharedPapel;
     ativo: boolean;
-    clinicaId: string;
+    clinicaId: string | null;
     criadoEm: string;
     clinicaNome: string;
   }> {

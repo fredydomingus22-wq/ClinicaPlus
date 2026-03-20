@@ -1,6 +1,9 @@
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { generatePatientNumber } from './patientNumber.service';
+import { permissaoService } from './permissao.service';
+import { auditLogService } from './auditLog.service';
+import { subscricaoService } from './subscricao.service';
 import type {
   PacienteCreateInput,
   PacienteUpdateInput,
@@ -102,6 +105,7 @@ export const pacientesService = {
    * Creates a new patient, automatically generating a sequential patient number.
    */
   async create(data: PacienteCreateInput, clinicaId: string): Promise<PacienteDTO> {
+    await subscricaoService.verificarLimite(clinicaId, 'pacientes');
     const numeroPaciente = await generatePatientNumber(clinicaId);
 
     const p = await prisma.paciente.create({
@@ -175,5 +179,28 @@ export const pacientesService = {
     });
 
     return toPacienteDTO(updated);
+  },
+
+  /**
+   * Remove um paciente. Requer permissão paciente:delete.
+   */
+  async delete(id: string, clinicaId: string, userId: string): Promise<void> {
+    await permissaoService.requirePermission(userId, 'paciente', 'delete');
+
+    const p = await prisma.paciente.findUnique({ where: { id } });
+    if (!p || p.clinicaId !== clinicaId) {
+      throw new AppError('Paciente não encontrado', 404, 'NOT_FOUND');
+    }
+
+    await prisma.paciente.delete({ where: { id } });
+
+    await auditLogService.log({
+      actorId: userId,
+      clinicaId,
+      accao: 'DELETE',
+      recurso: 'paciente',
+      recursoId: id,
+      antes: p,
+    });
   },
 };

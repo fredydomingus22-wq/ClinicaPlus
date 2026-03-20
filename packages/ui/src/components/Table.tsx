@@ -17,6 +17,8 @@ interface TableProps<T> {
   className?: string;
   /** Called when the user hovers over a row — useful for prefetching */
   onRowHover?: (item: T) => void;
+  /** Render a full-width row below the main row (Master-Detail) */
+  renderExpandedRow?: (item: T) => React.ReactNode;
 }
 
 export function Table<T>({ 
@@ -27,7 +29,8 @@ export function Table<T>({
   emptyMessage = 'Nenhum registo encontrado',
   emptyContent,
   className,
-  onRowHover
+  onRowHover,
+  renderExpandedRow
 }: TableProps<T>) {
   return (
     <div className={cn("overflow-x-auto border", className)} style={{ backgroundColor: 'var(--table-bg)', borderColor: 'var(--table-border)' }}>
@@ -55,7 +58,7 @@ export function Table<T>({
               <tr key={i} className="animate-pulse" style={{ backgroundColor: 'var(--table-bg)' }}>
                 {columns.map((_, j) => (
                   <td key={j} className="px-5 py-4">
-                    <div className="h-4 rounded-md w-full" style={{ backgroundColor: 'var(--table-header-bg)' }} />
+                    <div className="h-4 w-full" style={{ backgroundColor: 'var(--table-header-bg)' }} />
                   </td>
                 ))}
               </tr>
@@ -68,20 +71,28 @@ export function Table<T>({
             </tr>
           ) : (
             data.map((item) => (
-              <tr 
-                key={keyExtractor(item)} 
-                className="transition-colors duration-200"
-                style={{ backgroundColor: 'var(--table-bg)' }}
-                onMouseEnter={onRowHover ? () => onRowHover(item) : undefined}
-              >
-                {columns.map((col, idx) => (
-                  <td key={idx} className={cn("px-5 py-4 font-medium", col.className)} style={{ color: 'var(--table-text)' }}>
-                    {typeof col.accessor === 'function' 
-                      ? col.accessor(item) 
-                      : (item[col.accessor] as React.ReactNode)}
-                  </td>
-                ))}
-              </tr>
+              <React.Fragment key={keyExtractor(item)}>
+                <tr 
+                  className="transition-colors duration-200"
+                  style={{ backgroundColor: 'var(--table-bg)' }}
+                  onMouseEnter={onRowHover ? () => onRowHover(item) : undefined}
+                >
+                  {columns.map((col, idx) => (
+                    <td key={idx} className={cn("px-5 py-4 font-medium", col.className)} style={{ color: 'var(--table-text)' }}>
+                      {typeof col.accessor === 'function' 
+                        ? col.accessor(item) 
+                        : (item[col.accessor] as React.ReactNode)}
+                    </td>
+                  ))}
+                </tr>
+                {renderExpandedRow && (
+                  <tr>
+                    <td colSpan={columns.length} className="p-0 border-none">
+                      {renderExpandedRow(item)}
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))
           )}
         </tbody>

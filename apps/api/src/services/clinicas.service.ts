@@ -5,6 +5,9 @@ import { authService } from './auth.service';
 import type { ClinicaCreateInput, ClinicaUpdateInput, ClinicaDTO } from '@clinicaplus/types';
 import { Prisma } from '@prisma/client';
 import type { Clinica, ConfiguracaoClinica, ContactoClinica, Papel } from '@prisma/client';
+import { addDays, endOfDay } from 'date-fns';
+import { subscricaoService } from './subscricao.service';
+import { Plano, EstadoSubscricao, RazaoMudancaPlano } from '@clinicaplus/types';
 
 /**
  * Maps a Prisma Clinica record to a ClinicaDTO.
@@ -26,6 +29,8 @@ function toClinicaDTO(
     cidade: c.cidade,
     provincia: c.provincia,
     plano: c.plano as ClinicaDTO['plano'],
+    subscricaoEstado: c.subscricaoEstado as ClinicaDTO['subscricaoEstado'],
+    subscricaoValidaAte: c.subscricaoValidaAte ? c.subscricaoValidaAte.toISOString() : null,
     ativo: c.ativo,
     criadoEm: c.criadoEm.toISOString(),
     atualizadoEm: c.atualizadoEm.toISOString(),
@@ -130,6 +135,16 @@ export const clinicasService = {
           moedaSimbolo: 'Kz',
           fusoHorario: 'Africa/Luanda',
         },
+      });
+
+      // Create initial Trial subscription (Passo 2)
+      await subscricaoService.criarNovaSubscricao({
+        clinicaId: newClinica.id,
+        plano: Plano.BASICO,
+        estado: EstadoSubscricao.TRIAL,
+        validaAte: endOfDay(addDays(new Date(), 7)),
+        razao: RazaoMudancaPlano.UPGRADE_MANUAL, // Trial inicial
+        alteradoPor: 'sistema',
       });
 
       return newClinica;

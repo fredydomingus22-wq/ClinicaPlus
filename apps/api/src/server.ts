@@ -8,10 +8,13 @@ import { logger } from './lib/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { authenticate } from './middleware/authenticate';
 import { tenantMiddleware } from './middleware/tenant';
+import { apiKeyAuth } from './middleware/apiKeyAuth';
 import { auditLogger } from './middleware/auditLogger';
 import { globalRateLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
 import { schedulerService } from './services/scheduler.service';
+import { createServer } from 'http';
+import { setupSocket } from './lib/socket';
 import { prisma } from './lib/prisma';
 import { redis, redisSub } from './lib/redis';
 import { systemMetrics } from './lib/metrics';
@@ -32,6 +35,16 @@ import billingRouter from './routes/billing';
 import prontuariosRouter from './routes/prontuarios';
 import examesRouter from './routes/exames';
 import documentosRouter from './routes/documentos';
+import { faturasRouter } from './routes/faturas';
+import { pagamentosRouter } from './routes/pagamentos';
+import { relatoriosRouter } from './routes/relatorios';
+import apiKeysRouter from './routes/api-keys';
+import webhooksRouter from './routes/webhooks';
+import publicV1Router from './routes/public-v1';
+import auditLogsRouter from './routes/audit-logs';
+import utilizadoresRouter from './routes/utilizadores';
+import subscricoesRouter from './routes/subscricoes';
+import whatsappRouter from './routes/whatsapp';
 
 const app = express();
 
@@ -158,6 +171,7 @@ app.use('/api/clinicas', clinicasRouter);
 app.use('/api', authenticate);
 app.use('/api/superadmin', superadminRouter); 
 app.use('/api', tenantMiddleware);
+app.use('/api/subscricoes', subscricoesRouter);
 app.use('/api', auditLogger);
 
 // Domain routes
@@ -173,14 +187,27 @@ app.use('/api/billing', billingRouter);
 app.use('/api/prontuarios', prontuariosRouter);
 app.use('/api/exames', examesRouter);
 app.use('/api/documentos', documentosRouter);
+app.use('/api/faturas', faturasRouter);
+app.use('/api/pagamentos', pagamentosRouter);
+app.use('/api/relatorios', relatoriosRouter);
+app.use('/api/audit-logs', authenticate, tenantMiddleware, auditLogsRouter);
+app.use('/api/utilizadores', utilizadoresRouter);
+app.use('/api/api-keys', authenticate, tenantMiddleware, apiKeysRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/whatsapp', whatsappRouter);
+
+// Public API v1 (API Key Auth)
+app.use('/api/public/v1', apiKeyAuth, publicV1Router);
 
 // Global Error Handler
 app.use(errorHandler);
 
 const PORT = config.PORT || 3001;
+const httpServer = createServer(app);
+setupSocket(httpServer);
 
 if (require.main === module) {
-  app.listen(Number(PORT), '0.0.0.0', () => {
+  httpServer.listen(Number(PORT), '0.0.0.0', () => {
     logger.info(
       { 
         port: PORT, 

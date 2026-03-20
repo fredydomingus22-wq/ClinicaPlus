@@ -53,7 +53,7 @@ router.get('/me',
   requireRole([Papel.ADMIN, Papel.MEDICO, Papel.RECEPCIONISTA, Papel.PACIENTE]),
   async (req, res, next) => {
     try {
-      const clinica = await clinicasService.getMe(req.user.clinicaId);
+      const clinica = await clinicasService.getMe(req.user.clinicaId!);
       return res.json({ success: true, data: clinica });
     } catch (err) { return next(err); }
   }
@@ -69,7 +69,7 @@ router.patch('/me',
   async (req, res, next) => {
     try {
       const body = ClinicaUpdateSchema.parse(req.body);
-      const clinica = await clinicasService.update(req.user.clinicaId, body);
+      const clinica = await clinicasService.update(req.user.clinicaId!, body);
       return res.json({ success: true, data: clinica });
     } catch (err) { return next(err); }
   }
@@ -88,7 +88,7 @@ router.put('/me/contactos',
       if (!contactos || !Array.isArray(contactos)) {
         throw new AppError('A lista de contactos é obrigatória e deve ser um array.', 400, 'VALIDATION_ERROR');
       }
-      const clinica = await clinicasService.updateContactos(req.user.clinicaId, contactos);
+      const clinica = await clinicasService.updateContactos(req.user.clinicaId!, contactos);
       return res.json({ success: true, data: clinica, message: 'Contactos atualizados com sucesso' });
     } catch (err) { return next(err); }
   }

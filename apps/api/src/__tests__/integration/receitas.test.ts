@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestApp, authHeader } from '../helpers/request';
 import { factories } from '../helpers/factories';
 
@@ -40,12 +40,12 @@ describe('/api/receitas', () => {
       .set(authHeader(ctx.medicoToken))
       .send({
         agendamentoId: pendingAgendamentoId,
-        diagnostico: 'Dores de cabeÃ§a persistentes',
+        diagnostico: 'Dores de cabeça persistentes',
         medicamentos: [
           { nome: 'Paracetamol', dosagem: '500mg', frequencia: '1x/dia', duracao: '3 dias' }
         ],
         dataValidade: '2027-01-01',
-        observacoes: 'Tomar com Ã¡gua',
+        observacoes: 'Tomar com água',
       });
 
     expect(res.status).toBe(201);
@@ -78,7 +78,7 @@ describe('/api/receitas', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  it('POST /api/receitas para agendamento que jÃ¡ tem receita -> 409', async () => {
+  it('POST /api/receitas para agendamento que já tem receita -> 409', async () => {
     // Try to prescribe AGAIN to the first appointment
     const res = await app.post('/api/receitas')
       .set(authHeader(ctx.medicoToken))
@@ -95,7 +95,7 @@ describe('/api/receitas', () => {
     // Usually code: 'RECEITA_ALREADY_EXISTS' or similar, depending on the service rules
   });
 
-  it('GET /api/receitas/minhas com PACIENTE -> lista sÃ³ as suas receitas', async () => {
+  it('GET /api/receitas/minhas com PACIENTE -> lista só as suas receitas', async () => {
     const res = await app.get('/api/receitas/minhas')
       .set(authHeader(ctx.pacienteToken));
 
@@ -105,7 +105,7 @@ describe('/api/receitas', () => {
     expect(res.body.data.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('GET /api/receitas/:id de outra clÃ­nica -> 404', async () => {
+  it('GET /api/receitas/:id de outra clínica -> 404', async () => {
     // Context Other (Clinic B) trying to read a prescription from Clinic A
     // First, let's get the prescription ID
     const listRes = await app.get('/api/receitas/minhas').set(authHeader(ctx.pacienteToken));

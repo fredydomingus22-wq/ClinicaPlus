@@ -133,7 +133,10 @@ export const authService = {
     });
 
     // Don't throw error if email doesn't exist to prevent enumeration
-    if (!user || !user.ativo) return;
+    if (!user || !user.ativo) {
+      logger.info({ email, clinicaId }, 'Forgot password requested for non-existent or inactive user');
+      return;
+    }
 
     const token = jwt.sign(
       { sub: user.id, purpose: 'reset-password' },
@@ -141,8 +144,25 @@ export const authService = {
       { expiresIn: '15m' }
     );
 
-    // For development/testing: token logging
-    logger.info(`[FORGOT_PASSWORD] Token for ${email}: ${token}`);
+    const resetUrl = `${config.FRONTEND_URL}/reset-password?token=${token}`;
+
+    try {
+      // Import notificationService dynamically to avoid circular dependencies if any
+      const { notificationService } = await import('./notification.service');
+      await notificationService.sendResetPassword({
+        email: user.email,
+        nome: user.nome,
+        resetUrl,
+        expiresInMinutes: 15
+      });
+      logger.info({ email: user.email }, 'Reset password email sent');
+    } catch (err) {
+      logger.error({ err, email: user.email }, 'Failed to send reset password email');
+      // We still log the token in dev in case email fails or for quick testing
+      if (config.NODE_ENV === 'development') {
+        logger.info(`[FORGOT_PASSWORD] Token for ${email}: ${token}`);
+      }
+    }
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -194,13 +214,18 @@ export const authService = {
 
     // Check email uniqueness if changing
     if (data.email && data.email !== user.email) {
-      const existing = await prisma.utilizador.findUnique({
-        where: {
-          clinicaId_email: {
-            clinicaId: user.clinicaId,
-            email: data.email
-          }
-        }
+      const where: Prisma.UtilizadorWhereInput = {
+        email: data.email
+      };
+
+      if (user.clinicaId) {
+        where.clinicaId = user.clinicaId;
+      } else {
+        where.clinicaId = null;
+      }
+
+      const existing = await prisma.utilizador.findFirst({
+        where
       });
       if (existing) {
         throw new AppError('Este e-mail já está a ser utilizado nesta clínica.', 409, 'DUPLICATE_ENTRY');

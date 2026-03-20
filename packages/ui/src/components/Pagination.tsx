@@ -62,7 +62,7 @@ export function Pagination({
         <Button
           variant="secondary"
           size="sm"
-          className="h-8 w-8 p-0 rounded-lg border-neutral-200"
+          className="h-8 w-8 p-0 border-neutral-200"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >

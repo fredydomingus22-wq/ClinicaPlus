@@ -31,7 +31,6 @@ export function useAgendamentosHoje(medicoId?: string) {
     queryKey: agendamentosKeys.hoje(medicoId),
     queryFn:  () => agendamentosApi.getHoje(medicoId),
     staleTime: 0,
-    refetchInterval: 60_000, // Refresh every minute for reception
   });
 }
 

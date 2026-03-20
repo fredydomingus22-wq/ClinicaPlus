@@ -26,7 +26,7 @@ export function Tabs({ items, activeTab, onChange, className = '' }: TabsProps) 
               className={`
                 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] font-mono transition-colors shrink-0
                 ${isActive 
-                  ? 'text-[#1a1a1a] bg-[#f5f5f5] rounded-lg' 
+                  ? 'text-[#1a1a1a] bg-[#f5f5f5]' 
                   : 'text-[#737373] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}
               `}
             >
