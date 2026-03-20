@@ -134,7 +134,7 @@ export const apiKeysService = {
         nome,
         keyHash,
         prefixo: prefix,
-        escopos: ['all'] as unknown as EscopoApiKey[],
+        escopos: [] as any, // 'all' is not a valid enum value, using empty for internal keys
         criadoPor: 'sistema',
         expiresAt: null
       }

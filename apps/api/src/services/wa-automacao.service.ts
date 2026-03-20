@@ -34,9 +34,9 @@ export const waAutomacaoService = {
          const updated = await prisma.waAutomacao.findUnique({ where: { id: automacaoId } });
          // eslint-disable-next-line @typescript-eslint/no-explicit-any
          if (updated) (automacao as any).n8nWorkflowId = updated.n8nWorkflowId;
-       } catch (err) {
-         logger.error({ err, automacaoId }, 'Falha automática de provisionamento ao activar');
-         throw new AppError('Não foi possível criar o workflow no n8n. Verifica a ligação com o n8n.', 500);
+       } catch (err: any) {
+         logger.error({ err: err.message, stack: err.stack, automacaoId }, 'Falha automática de provisionamento ao activar');
+         throw new AppError(`Não foi possível criar o workflow no n8n: ${err.message}`, 500);
        }
     }
 
@@ -161,50 +161,25 @@ export const waAutomacaoService = {
     return automacao;
   },
 
-  async obterTemplates(): Promise<{ id: string; tipo: WaTipoAutomacao }[]> {
-    return Object.keys(TEMPLATES).map(tipo => ({
-      id: tipo,
-      tipo: tipo as WaTipoAutomacao,
-    }));
-  },
-
-  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, waInstanciaId: string): Promise<WaAutomacao | null> {
-    const instancia = await prisma.waInstancia.findFirst({
-      where: { id: waInstanciaId, clinicaId }
-    });
-
-    if (!instancia) {
-      throw new AppError('Instância do WhatsApp não encontrada.', 404);
-    }
-
-    // Usando a chave composta se existir, senão buscamos pelo ID primeiro.
-    // O erro do lint sugere que waInstanciaId_tipo pode não estar a ser reconhecido como único.
-    // Vamos garantir que o findUnique funcione ou usar findFirst.
-    let automacao = await prisma.waAutomacao.findFirst({
-      where: { waInstanciaId, tipo }
-    });
-
-    if (!automacao) {
-      automacao = await prisma.waAutomacao.create({
-        data: {
-          clinicaId,
+  async sincronizar(clinicaId: string, waInstanciaId: string): Promise<void> {
+    const tipos = Object.values(WaTipoAutomacao);
+    
+    for (const tipo of tipos) {
+      await prisma.waAutomacao.upsert({
+        where: {
+          waInstanciaId_tipo: {
+            waInstanciaId,
+            tipo
+          }
+        },
+        create: {
           tipo,
+          clinicaId,
           waInstanciaId,
-          ativo: false,
           configuracao: {}
-        }
+        },
+        update: {}
       });
     }
-
-    // Tentamos provisionar logo no n8n
-    try {
-      if (!automacao.n8nWorkflowId) {
-        await this.provisionarWorkflow(automacao.id, clinicaId);
-      }
-    } catch (err) {
-      logger.error({ err, automacaoId: automacao.id }, 'Falha ao provisionar workflow no n8n');
-    }
-
-    return prisma.waAutomacao.findUnique({ where: { id: automacao.id } });
   }
 };
