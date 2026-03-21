@@ -21,6 +21,7 @@ const router = Router();
 
 // Listar todas as instâncias da clínica
 router.get('/instancias', 
+  authenticate,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
     try {
@@ -31,6 +32,7 @@ router.get('/instancias',
 });
 
 router.post('/instancias', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -43,6 +45,7 @@ router.post('/instancias',
 });
 
 router.get('/instancias/:id/qrcode', 
+  authenticate,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -54,6 +57,7 @@ router.get('/instancias/:id/qrcode',
 });
 
 router.get('/instancias/:id/estado', 
+  authenticate,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -74,6 +78,7 @@ router.get('/instancias/:id/estado',
 });
 
 router.delete('/instancias/:id', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -87,6 +92,7 @@ router.delete('/instancias/:id',
 
 // --- GESTÃO DE AUTOMAÇÕES (ADMIN, Plano PRO+) ---
 router.get('/automacoes', 
+  authenticate,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -98,6 +104,7 @@ router.get('/automacoes',
 });
 
 router.get('/templates', 
+  authenticate,
   requirePlan(Plano.PRO), 
   async (_req, res, next) => {
     try {
@@ -107,6 +114,7 @@ router.get('/templates',
 });
 
 router.post('/automacoes', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -125,6 +133,7 @@ router.post('/automacoes',
 });
 
 router.patch('/automacoes/:id', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -137,6 +146,7 @@ router.patch('/automacoes/:id',
 });
 
 router.post('/automacoes/:id/activar', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -150,6 +160,7 @@ router.post('/automacoes/:id/activar',
 });
 
 router.post('/automacoes/:id/desactivar', 
+  authenticate,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -176,6 +187,7 @@ router.post('/webhook', verificarHmacEvolution, async (req, res) => {
 
 // --- ACTIVIDADE E RELATÓRIOS (ADMIN) ---
 router.get('/actividade', 
+  authenticate,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
   try {
@@ -186,6 +198,7 @@ router.get('/actividade',
 });
 
 router.get('/metricas', 
+  authenticate,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
   try {

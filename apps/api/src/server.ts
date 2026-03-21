@@ -182,7 +182,11 @@ app.get('/metrics', (req, res): void => {
 app.use('/api/auth', authRouter);
 app.use('/api/clinicas', clinicasRouter);
 
-// Protected Routes Chain
+// Routes with alternative/internal auth (API Keys, HMAC)
+app.use('/api/whatsapp', whatsappRouter);
+app.use('/api/public/v1', apiKeyAuth, publicV1Router);
+
+// Protected Routes Chain (JWT)
 app.use('/api', authenticate);
 app.use('/api/superadmin', superadminRouter); 
 app.use('/api', tenantMiddleware);
@@ -209,10 +213,6 @@ app.use('/api/audit-logs', authenticate, tenantMiddleware, auditLogsRouter);
 app.use('/api/utilizadores', utilizadoresRouter);
 app.use('/api/api-keys', authenticate, tenantMiddleware, apiKeysRouter);
 app.use('/api/webhooks', webhooksRouter);
-app.use('/api/whatsapp', whatsappRouter);
-
-// Public API v1 (API Key Auth)
-app.use('/api/public/v1', apiKeyAuth, publicV1Router);
 
 // Global Error Handler
 app.use(errorHandler);
