@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "dotenv -e .env -- vitest",
-    "db:fix-webhooks": "ts-node src/scripts/fix_evolution_webhooks.ts"
+    "db:fix-webhooks": "ts-node src/scripts/fix_evolution_webhooks.ts",
+    "db:reprovision-all": "ts-node src/reprovision_all.ts"
   },
   "dependencies": {
     "@clinicaplus/events": "workspace:*",
