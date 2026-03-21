@@ -529,7 +529,7 @@ model WaInstancia {
 
 model WaAutomacao {
   id             String          @id @default(cuid())
-  instanciaId    String
+  instanciaId    String          @map("waInstanciaId")
   instancia      WaInstancia     @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
   
   tipo           WaTipoAutomacao
