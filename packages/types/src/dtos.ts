@@ -266,3 +266,16 @@ export interface GlobalSettingsDTO {
   atualizadoEm: string;
 }
 
+export interface WaAutomacaoDTO {
+  id: string;
+  clinicaId: string;
+  waInstanciaId: string;
+  tipo: string;
+  ativo: boolean;
+  configuracao: any;
+  n8nWorkflowId: string | null;
+  n8nWebhookUrl: string | null;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+

@@ -8,6 +8,26 @@ import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 import { TEMPLATES } from '../lib/n8n-templates/index';
 
+import { WaAutomacaoDTO } from '@clinicaplus/types';
+
+/**
+ * Mapeia um modelo WaAutomacao do Prisma para WaAutomacaoDTO.
+ */
+function toWaAutomacaoDTO(a: WaAutomacao): WaAutomacaoDTO {
+  return {
+    id: a.id,
+    clinicaId: a.clinicaId,
+    waInstanciaId: a.instanciaId, // Mapeamento crucial aqui
+    tipo: a.tipo,
+    ativo: a.ativo,
+    configuracao: a.configuracao,
+    n8nWorkflowId: a.n8nWorkflowId,
+    n8nWebhookUrl: a.n8nWebhookUrl,
+    criadoEm: a.criadoEm.toISOString(),
+    atualizadoEm: a.atualizadoEm.toISOString(),
+  };
+}
+
 /**
  * Serviço para gestão de automações do WhatsApp.
  */
@@ -141,18 +161,18 @@ export const waAutomacaoService = {
     });
   },
 
-  async listar(clinicaId: string, instanciaId?: string): Promise<WaAutomacao[]> {
-    return prisma.waAutomacao.findMany({
+  async listar(clinicaId: string, instanciaId?: string): Promise<WaAutomacaoDTO[]> {
+    const automacoes = await prisma.waAutomacao.findMany({
       where: { 
         clinicaId,
         ...(instanciaId && { instanciaId })
       },
       orderBy: { tipo: 'asc' },
     });
+    return automacoes.map(toWaAutomacaoDTO);
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async configurar(automacaoId: string, configuracao: any, clinicaId: string): Promise<WaAutomacao> {
+  async configurar(automacaoId: string, configuracao: Record<string, unknown>, clinicaId: string): Promise<WaAutomacaoDTO> {
     const automacao = await prisma.waAutomacao.update({
       where: { id: automacaoId, clinicaId },
       data: {
@@ -175,7 +195,8 @@ export const waAutomacaoService = {
       logger.error({ err, automacaoId }, 'Falha ao re-provisionar após configuração');
     });
 
-    return prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacaoId } });
+    const final = await prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacaoId } });
+    return toWaAutomacaoDTO(final);
   },
 
   async sincronizar(clinicaId: string, instanciaId: string): Promise<void> {
@@ -207,7 +228,7 @@ export const waAutomacaoService = {
     }));
   },
 
-  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, instanciaId: string): Promise<WaAutomacao> {
+  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, instanciaId: string): Promise<WaAutomacaoDTO> {
     // Verificar se já existe
     const existente = await prisma.waAutomacao.findUnique({
       where: {
@@ -216,7 +237,7 @@ export const waAutomacaoService = {
     });
 
     if (existente) {
-      return existente;
+      return toWaAutomacaoDTO(existente);
     }
 
     const instancia = await prisma.waInstancia.findFirst({
@@ -249,7 +270,8 @@ export const waAutomacaoService = {
       logger.error({ err, automacaoId: automacao.id }, 'Falha ao provisionar workflow no n8n');
     }
 
-    return prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacao.id } });
+    const final = await prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacao.id } });
+    return toWaAutomacaoDTO(final);
   },
 
   /**
