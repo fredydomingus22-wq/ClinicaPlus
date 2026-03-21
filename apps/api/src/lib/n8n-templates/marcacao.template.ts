@@ -83,10 +83,10 @@ export function templateMarcacao(vars: TemplateVars): object {
           mode: 'rules',
           rules: {
             rules: [
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo ?? "INICIO" }}', rightValue: 'ESCOLHA_ESPECIALIDADE', operator: { type: 'string', operation: 'equals' } }], combinator: 'and' }, renameOutput: true, outputKey: 'especialidade' },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo ?? "INICIO" }}', rightValue: 'ESCOLHA_MEDICO', operator: { type: 'string', operation: 'equals' } }], combinator: 'and' }, renameOutput: true, outputKey: 'medico' },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo ?? "INICIO" }}', rightValue: 'ESCOLHA_HORARIO', operator: { type: 'string', operation: 'equals' } }], combinator: 'and' }, renameOutput: true, outputKey: 'horario' },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo ?? "INICIO" }}', rightValue: 'AGUARDA_CONFIRMACAO', operator: { type: 'string', operation: 'equals' } }], combinator: 'and' }, renameOutput: true, outputKey: 'confirmar' },
+              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_ESPECIALIDADE', operator: { type: 'string', operation: 'equals' } }] } },
+              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_MEDICO', operator: { type: 'string', operation: 'equals' } }] } },
+              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_HORARIO', operator: { type: 'string', operation: 'equals' } }] } },
+              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'AGUARDA_CONFIRMACAO', operator: { type: 'string', operation: 'equals' } }] } },
             ],
           },
           fallbackOutput: 'extra',
