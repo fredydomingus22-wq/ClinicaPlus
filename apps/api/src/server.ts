@@ -1,5 +1,6 @@
 import './types/express';
 import express from 'express';
+import crypto from 'crypto';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -149,8 +150,22 @@ app.get('/health', async (_req, res) => {
 // 4. Metrics endpoint (internal only)
 app.get('/metrics', (req, res): void => {
   const token = req.headers['x-metrics-token'];
+  const expectedToken = config.METRICS_TOKEN;
   
-  if (token !== config.METRICS_TOKEN) {
+  if (!token || typeof token !== 'string' || !expectedToken) {
+    res.status(403).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  try {
+    const tokenBuffer = Buffer.from(token);
+    const expectedBuffer = Buffer.from(expectedToken);
+
+    if (tokenBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(tokenBuffer, expectedBuffer)) {
+      res.status(403).json({ error: 'Unauthorized' });
+      return;
+    }
+  } catch {
     res.status(403).json({ error: 'Unauthorized' });
     return;
   }

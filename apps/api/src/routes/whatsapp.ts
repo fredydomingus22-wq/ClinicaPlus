@@ -112,13 +112,14 @@ router.post('/automacoes',
   async (req, res, next) => {
     try {
       const clinicaId = req.clinica.id as string;
-      const { tipo, instanciaId } = req.body;
+      const { tipo, instanciaId, waInstanciaId } = req.body;
+      const resolvedInstanciaId = instanciaId || waInstanciaId;
       
-      if (!instanciaId) {
+      if (!resolvedInstanciaId) {
         return res.status(400).json({ message: 'instanciaId é obrigatório' });
       }
 
-      const automacao = await waAutomacaoService.adicionar(clinicaId, tipo, instanciaId);
+      const automacao = await waAutomacaoService.adicionar(clinicaId, tipo, resolvedInstanciaId);
       return res.status(201).json(automacao);
     } catch (error) { return next(error); }
 });
@@ -164,7 +165,8 @@ router.post('/automacoes/:id/desactivar',
 // --- WEBHOOK DA EVOLUTION API (HMAC) ---
 router.post('/webhook', verificarHmacEvolution, async (req, res) => {
   try {
-    await waWebhookService.processarEvento(req.body);
+    const { event, instance, data } = req.body;
+    await waWebhookService.handle(instance, event, data);
     res.status(200).send('OK');
   } catch (err: unknown) {
     logger.error({ err }, 'Erro no processamento do webhook do WhatsApp');

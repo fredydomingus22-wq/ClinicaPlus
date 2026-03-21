@@ -1,16 +1,16 @@
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
+import { redis } from '../lib/redis';
 import { WaInstancia, WaEstadoConversa, WaDirecao } from '@prisma/client';
 
 import { waConversaService } from './wa-conversa.service';
 import { waInstanciaService } from './wa-instancia.service';
 import { waAutomacaoService } from './wa-automacao.service';
 
-interface EvolutionWebhookPayload {
-  event: string;
-  instance: string;
+// Webhook interfaces (defined in common types usually, but here for context if needed)
+interface MessageUpsertData {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+  [key: string]: any;
 }
 
 interface QrCodeUpdatedData {
@@ -42,15 +42,16 @@ interface MessageUpsertData {
 /**
  * Serviço para processamento de webhooks da Evolution API.
  */
+const CACHE_PREFIX = 'wa:instance:';
+const CACHE_TTL = 3600; // 1 hora
+
 export const waWebhookService = {
   /**
    * Ponto de entrada para todos os eventos da Evolution API.
    */
-  async processarEvento(payload: EvolutionWebhookPayload): Promise<void> {
-    const { event, instance, data } = payload;
-    logger.info({ event, instance }, 'Webhook recebido');
+  async handle(instance: string, event: string, data: unknown): Promise<void> {
+    logger.debug({ instance, event }, 'Processando Webhook Evolution API');
 
-    // 2. Encaminhar para handlers baseados no nome da instância
     switch (event) {
       case 'qrcode.updated':
         await this.handleQrCodeUpdated(instance, data as QrCodeUpdatedData);
@@ -59,17 +60,41 @@ export const waWebhookService = {
         await this.handleConnectionUpdate(instance, data as ConnectionUpdateData);
         break;
       case 'messages.upsert': {
-        // Mensagens precisam do objecto Instância para contexto de clínica/paciente
-        const instanciaAtiva = await prisma.waInstancia.findUnique({
-          where: { evolutionName: instance },
-        });
-        if (instanciaAtiva) {
-          await this.handleMessageUpsert(instanciaAtiva, data as MessageUpsertData);
+        // 1. Tentar obter instância (com cache Redis)
+        const cacheKey = `${CACHE_PREFIX}${instance}`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let instancia: any = null;
+
+        try {
+          const cached = await redis.get(cacheKey);
+          if (cached) {
+            instancia = JSON.parse(cached);
+          }
+        } catch (err) {
+          logger.error({ instance, err }, 'Erro ao ler cache do Redis');
+        }
+
+        if (!instancia) {
+          instancia = await prisma.waInstancia.findUnique({
+            where: { evolutionName: instance },
+          });
+
+          if (instancia) {
+            try {
+              await redis.set(cacheKey, JSON.stringify(instancia), 'EX', CACHE_TTL);
+            } catch (err) {
+              logger.error({ instance, err }, 'Erro ao gravar no Redis');
+            }
+          }
+        }
+
+        if (instancia) {
+          await this.handleMessageUpsert(instancia, data as MessageUpsertData);
         }
         break;
       }
       default:
-        logger.debug({ event }, 'Evento ignorado');
+        break;
     }
   },
 

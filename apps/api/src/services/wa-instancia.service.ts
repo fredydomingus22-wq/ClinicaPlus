@@ -5,9 +5,22 @@ import { config } from '../lib/config';
 import { WaEstadoInstancia, Plano, WaInstancia } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { auditLogService } from './auditLog.service';
+import { redis } from '../lib/redis';
 import crypto from 'crypto';
 
+const CACHE_PREFIX = 'wa:instance:';
+
 export const waInstanciaService = {
+  /**
+   * Limpa o cache da instância no Redis
+   */
+  async clearCache(evolutionName: string): Promise<void> {
+    try {
+      await redis.del(`${CACHE_PREFIX}${evolutionName}`);
+    } catch (err) {
+      logger.error({ evolutionName, err }, 'Erro ao limpar cache da instância');
+    }
+  },
   /**
    * Busca todas as instâncias de uma clínica
    */
@@ -109,6 +122,8 @@ export const waInstanciaService = {
         },
       });
 
+      await this.clearCache(instancia.evolutionName);
+
       await publishEvent(`clinica:${clinicaId}`, 'whatsapp:qrcode', {
         instanciaId: instancia.id,
         qrCode: base64,
@@ -163,6 +178,8 @@ export const waInstanciaService = {
       },
     });
 
+    await this.clearCache(evolutionName);
+
     await publishEvent(`clinica:${instancia.clinicaId}`, 'whatsapp:qrcode', {
       instanciaId: instancia.id,
       qrCodeBase64: qrBase64,
@@ -204,6 +221,7 @@ export const waInstanciaService = {
           ...(numeroTelefone && { numeroTelefone }),
         },
       });
+      await this.clearCache(evolutionName);
     }
 
     await publishEvent(`clinica:${instancia.clinicaId}`, 'whatsapp:estado', {
@@ -253,7 +271,7 @@ export const waInstanciaService = {
 
       if (novoEstado !== instancia.estado || keepQr !== instancia.qrCodeBase64) {
         logger.info({ id, old: instancia.estado, new: novoEstado }, 'Persistindo novo estado sincronizado');
-        return await prisma.waInstancia.update({
+        const updated = await prisma.waInstancia.update({
           where: { id: instancia.id },
           data: {
             estado: novoEstado,
@@ -262,6 +280,8 @@ export const waInstanciaService = {
             atualizadoEm: new Date()
           },
         });
+        await this.clearCache(instancia.evolutionName);
+        return updated;
       }
 
       return instancia;
@@ -293,5 +313,7 @@ export const waInstanciaService = {
     await prisma.waInstancia.delete({
       where: { id: instancia.id },
     });
+
+    await this.clearCache(instancia.evolutionName);
   }
 };

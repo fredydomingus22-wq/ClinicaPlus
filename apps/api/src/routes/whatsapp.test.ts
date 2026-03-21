@@ -77,7 +77,7 @@ vi.mock('../services/wa-conversa.service', () => ({
 
 vi.mock('../services/wa-webhook.service', () => ({
   waWebhookService: {
-    processarEvento: vi.fn()
+    handle: vi.fn()
   }
 }));
 

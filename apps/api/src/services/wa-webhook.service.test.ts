@@ -52,7 +52,7 @@ describe('waWebhookService', () => {
         data: { qrcode: { base64: 'base64-string' } }
       };
 
-      await waWebhookService.processarEvento(payload);
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(waInstanciaService.processarQrCode).toHaveBeenCalledWith(clinicaId, 'base64-string');
     });
@@ -66,7 +66,7 @@ describe('waWebhookService', () => {
         data: { state: 'open', number: '244900000000:1@s.whatsapp.net' }
       };
 
-      await waWebhookService.processarEvento(payload);
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(waInstanciaService.processarConexao).toHaveBeenCalledWith(clinicaId, 'open', '244900000000');
     });
@@ -86,7 +86,7 @@ describe('waWebhookService', () => {
         }
       };
 
-      await waWebhookService.processarEvento(payload);
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(mockPrisma.waConversa.upsert).not.toHaveBeenCalled();
       expect(waConversaService.processarMensagem).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('waWebhookService', () => {
         }
       };
 
-      await waWebhookService.processarEvento(payload);
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(mockPrisma.waConversa.upsert).not.toHaveBeenCalled();
       expect(waConversaService.processarMensagem).not.toHaveBeenCalled();
@@ -148,7 +148,7 @@ describe('waWebhookService', () => {
         }
       };
 
-      await waWebhookService.processarEvento(payload);
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(mockPrisma.waMensagem.create).toHaveBeenCalledWith({
         data: {

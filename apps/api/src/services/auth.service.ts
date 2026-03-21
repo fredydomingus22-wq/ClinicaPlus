@@ -279,7 +279,7 @@ export const authService = {
       throw new AppError('Este e-mail já está registado.', 409, 'DUPLICATE_ENTRY');
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(data.password, 12);
     const numeroPaciente = await generatePatientNumber(clinica.id);
 
     const newUser = await prisma.$transaction(async (tx) => {

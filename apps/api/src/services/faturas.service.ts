@@ -107,7 +107,7 @@ export const faturasService = {
       clinicaId,
     });
 
-    return fatura as unknown as FaturaDTO; // Simplificação para não mapear todos os campos manualmente agora
+    return toFaturaDTO(fatura);
   },
 
   async emitir(id: string, clinicaId: string, criadoPor: string): Promise<FaturaDTO> {
@@ -155,7 +155,7 @@ export const faturasService = {
     // Trigger Webhooks
     webhooksService.trigger(EventoWebhook.FATURA_EMITIDA, faturaEmitida, clinicaId);
 
-    return faturaEmitida as unknown as FaturaDTO;
+    return toFaturaDTO(faturaEmitida);
   },
 
   async anular(id: string, clinicaId: string, motivo: string, criadoPor: string): Promise<FaturaDTO> {
@@ -196,7 +196,7 @@ export const faturasService = {
       clinicaId,
     });
 
-    return faturaAnulada as unknown as FaturaDTO;
+    return toFaturaDTO(faturaAnulada);
   },
 
   async registarPagamento(faturaId: string, data: PagamentoCreateInput, clinicaId: string, criadoPor: string): Promise<PagamentoDTO> {
@@ -323,7 +323,7 @@ export const faturasService = {
     ]);
 
     return {
-      items: faturas as unknown as FaturaDTO[],
+      items: faturas.map(toFaturaDTO),
       total,
       page,
       limit,
@@ -351,7 +351,7 @@ export const faturasService = {
       throw new AppError('Fatura não encontrada', 404);
     }
 
-    return fatura as unknown as FaturaDTO;
+    return toFaturaDTO(fatura);
   },
 
   async submeterSeguro(pagamentoId: string, clinicaId: string): Promise<void> {
@@ -417,3 +417,64 @@ export const faturasService = {
     });
   },
 };
+
+/**
+ * Mapeia um objecto do Prisma para um DTO de Fatura seguro.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toFaturaDTO(fatura: any): FaturaDTO {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dto: any = {
+    id: fatura.id,
+    clinicaId: fatura.clinicaId,
+    numeroFatura: fatura.numeroFatura,
+    agendamentoId: fatura.agendamentoId || null,
+    pacienteId: fatura.pacienteId,
+    medicoId: fatura.medicoId || null,
+    tipo: fatura.tipo,
+    estado: fatura.estado,
+    subtotal: fatura.subtotal,
+    desconto: fatura.desconto,
+    total: fatura.total,
+    notas: fatura.notas || null,
+    dataEmissao: fatura.dataEmissao?.toISOString() || null,
+    dataVencimento: fatura.dataVencimento?.toISOString() || null,
+    criadoEm: fatura.criadoEm.toISOString(),
+    atualizadoEm: fatura.atualizadoEm.toISOString(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    itens: fatura.itens?.map((i: any) => ({
+      id: i.id,
+      descricao: i.descricao,
+      quantidade: i.quantidade,
+      precoUnit: i.precoUnit,
+      desconto: i.desconto,
+      total: i.total
+    })) || [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pagamentos: fatura.pagamentos?.map((p: any) => ({
+      id: p.id,
+      metodo: p.metodo,
+      valor: p.valor,
+      referencia: p.referencia || null,
+      criadoEm: p.criadoEm.toISOString()
+    })) || []
+  };
+
+  if (fatura.paciente) {
+    dto.paciente = {
+      id: fatura.paciente.id,
+      nome: fatura.paciente.nome,
+      numeroPaciente: fatura.paciente.numeroPaciente,
+      endereco: fatura.paciente.endereco || null
+    };
+  }
+
+  if (fatura.medico) {
+    dto.medico = {
+      id: fatura.medico.id,
+      nome: fatura.medico.nome
+    };
+  }
+
+  return dto as FaturaDTO;
+}

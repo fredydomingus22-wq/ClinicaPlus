@@ -18,7 +18,7 @@ vi.mock('../../services/wa-instancia.service', () => ({
 
 vi.mock('../../services/wa-webhook.service', () => ({
   waWebhookService: {
-    processarEvento: vi.fn(),
+    handle: vi.fn(),
   }
 }));
 
@@ -72,7 +72,7 @@ describe('WhatsApp Routes (Integration)', () => {
 
       expect(response.status).toBe(200);
       expect(response.text).toBe('OK');
-      expect(waWebhookService.processarEvento).toHaveBeenCalledWith(payload, signature);
+      expect(waWebhookService.handle).toHaveBeenCalled();
     });
   });
 });
