@@ -2,6 +2,7 @@ import { Prisma, WaConversa, WaInstancia, WaEstadoConversa } from '@prisma/clien
 import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
 import { publishEvent } from '../lib/eventBus';
+import { generatePatientNumber } from './patientNumber.service';
 
 /** Schema de configuração da automação MARCACAO_CONSULTA */
 interface ConfigMarcacao {
@@ -88,11 +89,11 @@ export const waConversaService = {
    * Inicia o fluxo de marcação.
    * Chamado pelo n8n via POST /fluxo/inicio ou internamente.
    */
-  async etapaInicio(numero: string, clinicaId: string, instanceName: string, pushName: string): Promise<void> {
+  async etapaInicio(numero: string, clinicaId: string, instanceName: string, _pushName: string): Promise<void> {
     const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
     const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
 
-    // Verificar horário de funcionamento do bot (MODULE-whatsapp.md §3)
+    // Verificar horário de funcionamento do bot
     const automacaoMarcacao = await prisma.waAutomacao.findFirst({
       where: { instanciaId: instancia.id, tipo: 'MARCACAO_CONSULTA', ativo: true }
     });
@@ -102,53 +103,71 @@ export const waConversaService = {
         const msgFora = cfg.msgForaHorario
           ?.replace('{inicio}', cfg.horarioInicio)
           .replace('{fim}', cfg.horarioFim)
-          ?? `Bot disponível das ${cfg.horarioInicio} às ${cfg.horarioFim}. Até logo!`;
+          ?? `Olá! De momento o nosso atendimento automático está encerrado. Atendemos das ${cfg.horarioInicio} às ${cfg.horarioFim}.`;
         await evolutionApi.enviarTexto(instanceName, numero, msgFora);
         return;
       }
     }
 
-    const especialidades = await prisma.especialidade.findMany({
-      where: { clinicaId, ativo: true },
-      orderBy: { nome: 'asc' }
-    });
+    const msg = `Olá! Seja muito bem-vindo(a) à *${clinica.nome}*! 🏥\n\n`
+      + `Sou o seu assistente virtual e este é o nosso canal exclusivo para **marcações de consultas automáticas**.\n\n`
+      + `Para começarmos, **como se chama?** (Por favor, escreva o seu nome completo).`;
 
-    if (especialidades.length === 0) {
-      await evolutionApi.enviarTexto(
-        instanceName,
-        numero,
-        'De momento não temos especialidades disponíveis para agendamento online. Por favor, contacte-nos directamente.'
-      );
-      return;
-    }
-
-    const primeiroNome = pushName ? pushName.trim().split(' ')[0] : '';
-    const saudacao = `Olá${primeiroNome ? `, *${primeiroNome}*` : ''}! 👋\n\n`
-      + `Sou o assistente virtual da *${clinica.nome}* e estou aqui para facilitar o seu agendamento.\n\n`
-      + `Este canal é **exclusivo para marcações automáticas**, disponível para si 24h por dia. 🏥\n\n`
-      + `Como podemos ajudar hoje?\n`
-      + `Escolha uma Especialidade para começar:\n`
-      + `\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
-      + `Responda com o *número* da opção desejada.`;
-
-    await evolutionApi.enviarTexto(instanceName, numero, saudacao);
+    await evolutionApi.enviarTexto(instanceName, numero, msg);
 
     await prisma.waConversa.upsert({
       where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
       create: { 
         instanciaId: instancia.id, 
         numeroWhatsapp: numero, 
-        estado: WaEstadoConversa.EM_FLUXO_MARCACAO, 
-        etapaFluxo: 'ESPECIALIDADE', 
-        contexto: {},
-        clinicaId
+        clinicaId,
+        estado: WaEstadoConversa.EM_FLUXO_MARCACAO,
+        etapaFluxo: 'NOME',
+        contexto: {}
       },
-      update: { 
-        estado: WaEstadoConversa.EM_FLUXO_MARCACAO, 
-        etapaFluxo: 'ESPECIALIDADE', 
-        contexto: {}, 
-        ultimaMensagemEm: new Date() 
+      update: {
+        estado: WaEstadoConversa.EM_FLUXO_MARCACAO,
+        etapaFluxo: 'NOME',
+        contexto: {}
       }
+    });
+  },
+
+  async etapaNome(conversa: WaConversaComInstancia, nome: string): Promise<void> {
+    if (nome.trim().length < 3) {
+      await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, 'Por favor, escreva o seu nome completo para podermos realizar o agendamento.');
+      return;
+    }
+
+    await prisma.waConversa.update({
+      where: { id: conversa.id },
+      data: { contexto: { nomePaciente: nome.trim() } as Prisma.JsonObject }
+    });
+
+    return this.exibirEspecialidades(conversa);
+  },
+
+  async exibirEspecialidades(conversa: WaConversaComInstancia): Promise<void> {
+    const especialidades = await prisma.especialidade.findMany({
+      where: { clinicaId: conversa.instancia.clinicaId, ativo: true },
+      orderBy: { nome: 'asc' }
+    });
+
+    if (especialidades.length === 0) {
+      await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, 'Não temos especialidades disponíveis no momento. Por favor, contacte-nos directamente.');
+      return;
+    }
+
+    const nome = (conversa.contexto as any)?.nomePaciente || '';
+    const msg = `Obrigado, *${nome.split(' ')[0]}*! 👋\n\n`
+      + `Por favor, escolha a **Especialidade**:\n\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
+      + `Responda com o *número* da opção.`;
+
+    await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, msg);
+
+    await prisma.waConversa.update({
+      where: { id: conversa.id },
+      data: { etapaFluxo: 'ESPECIALIDADE' }
     });
   },
 
@@ -173,6 +192,8 @@ export const waConversaService = {
     const conversaComInstancia = conversa as WaConversaComInstancia;
 
     switch (conversa.etapaFluxo) {
+      case 'NOME':
+        return this.etapaNome(conversaComInstancia, resposta);
       case 'ESPECIALIDADE':
         return this.etapaEspecialidade(conversaComInstancia, resposta);
       case 'MEDICO':
@@ -334,9 +355,9 @@ export const waConversaService = {
     if (input === '1' || inputLower === 'sim' || inputLower === 's' || inputLower === 'confirmar') {
       const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
       const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId } });
-      const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, '');
+      const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, (conversa.contexto as any)?.nomePaciente || '');
 
-      await prisma.agendamento.create({
+      const agendamento = await prisma.agendamento.create({
         data: {
           clinicaId: conversa.instancia.clinicaId,
           pacienteId,
@@ -349,12 +370,15 @@ export const waConversaService = {
         }
       });
 
+      const ref = agendamento.id.slice(-6).toUpperCase();
+
       await evolutionApi.enviarTexto(
         conversa.instancia.evolutionName,
         conversa.numeroWhatsapp,
         `✅ *Agendamento Confirmado!*\n\n` +
+        `O seu código de marcação é: *REF-${ref}*\n\n` +
         `Tudo pronto! O seu lugar está reservado. Aguardamos por si na *${clinica?.nome || 'nossa Clínica'}*.\n\n` +
-        `Receberá um lembrete automático antes da consulta. Até breve! 🏥`
+        `Pode apresentar este código na recepção ao chegar. Até breve! 🏥`
       );
 
       await publishEvent(`clinica:${conversa.instancia.clinicaId}`, 'whatsapp:marcacao', {
@@ -402,7 +426,7 @@ export const waConversaService = {
 /**
  * Obtém um paciente existente ou cria um novo baseado no número do WhatsApp.
  */
-export async function obterOuCriarPaciente(numero: string, clinicaId: string, nomeWhatsapp: string): Promise<string> {
+export async function obterOuCriarPaciente(numero: string, clinicaId: string, nomeCompleto: string): Promise<string> {
   const telefone = `+${numero}`;
   let paciente = await prisma.paciente.findFirst({ where: { clinicaId, telefone } });
 
@@ -410,8 +434,8 @@ export async function obterOuCriarPaciente(numero: string, clinicaId: string, no
     paciente = await prisma.paciente.create({
       data: {
         clinicaId,
-        numeroPaciente: `WA-${numero}`,
-        nome: nomeWhatsapp || `Paciente WA ${numero.slice(-4)}`,
+        numeroPaciente: await generatePatientNumber(clinicaId),
+        nome: nomeCompleto || `Paciente WA ${numero.slice(-4)}`,
         telefone,
         origem: 'WHATSAPP',
         dataNascimento: new Date(1900, 0, 1),

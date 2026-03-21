@@ -84,11 +84,12 @@ export function templateMarcacao(vars: TemplateVars): object {
           value1: '={{ $json.data?.etapaFluxo || "INICIO" }}',
           rules: {
             rules: [
-              { value2: 'INICIO' },
+              { value2: 'NOME' },
               { value2: 'ESPECIALIDADE' },
               { value2: 'MEDICO' },
               { value2: 'HORARIO' },
               { value2: 'CONFIRMAR' },
+              { value2: 'INICIO' },
             ],
           },
         },
@@ -97,7 +98,7 @@ export function templateMarcacao(vars: TemplateVars): object {
         id: 'node-inicio',
         name: 'Etapa: Início',
         type: 'n8n-nodes-base.httpRequest',
-        position: [1120, 0],
+        position: [1120, -100],
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
@@ -116,6 +117,28 @@ export function templateMarcacao(vars: TemplateVars): object {
         },
       },
       {
+        id: 'node-nome',
+        name: 'Etapa: Nome',
+        type: 'n8n-nodes-base.httpRequest',
+        position: [1120, 0],
+        typeVersion: 4.1,
+        parameters: {
+          method: 'POST',
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/resposta`,
+          authentication: 'none',
+          sendHeaders: true,
+          headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
+          sendBody: true,
+          bodyParameters: {
+            parameters: [
+              { name: 'numero', value: `={{ $('Receber Mensagem').item.json.body.data.key.remoteJid.replace('@s.whatsapp.net','') }}` },
+              { name: 'instanceName', value: vars.instanceName },
+              { name: 'resposta', value: `={{ $('Receber Mensagem').item.json.body.data.message?.conversation ?? $('Receber Mensagem').item.json.body.data.message?.extendedTextMessage?.text ?? '' }}` },
+            ],
+          },
+        },
+      },
+      {
         id: 'node-especialidade',
         name: 'Etapa: Especialidade',
         type: 'n8n-nodes-base.httpRequest',
@@ -123,7 +146,7 @@ export function templateMarcacao(vars: TemplateVars): object {
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/especialidade`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/resposta`,
           authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
@@ -145,7 +168,7 @@ export function templateMarcacao(vars: TemplateVars): object {
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/medico`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/resposta`,
           authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
@@ -167,7 +190,7 @@ export function templateMarcacao(vars: TemplateVars): object {
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/horario`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/resposta`,
           authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
@@ -189,7 +212,7 @@ export function templateMarcacao(vars: TemplateVars): object {
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/confirmar`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/resposta`,
           authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },
@@ -222,14 +245,16 @@ export function templateMarcacao(vars: TemplateVars): object {
       'Buscar Estado Conversa': { main: [[{ node: 'Qual a etapa?', type: 'main', index: 0 }]] },
       'Qual a etapa?': {
         main: [
-          [{ node: 'Etapa: Início', type: 'main', index: 0 }],
+          [{ node: 'Etapa: Nome', type: 'main', index: 0 }],
           [{ node: 'Etapa: Especialidade', type: 'main', index: 0 }],
           [{ node: 'Etapa: Médico', type: 'main', index: 0 }],
           [{ node: 'Etapa: Horário', type: 'main', index: 0 }],
           [{ node: 'Etapa: Confirmar', type: 'main', index: 0 }],
+          [{ node: 'Etapa: Início', type: 'main', index: 0 }],
         ],
       },
       'Etapa: Início': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
+      'Etapa: Nome': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
       'Etapa: Especialidade': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
       'Etapa: Médico': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
       'Etapa: Horário': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
