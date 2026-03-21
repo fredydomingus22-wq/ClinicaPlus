@@ -78,15 +78,16 @@ export function templateMarcacao(vars: TemplateVars): object {
         name: 'Qual a etapa?',
         type: 'n8n-nodes-base.switch',
         position: [900, 200],
-        typeVersion: 3,
+        typeVersion: 2,
         parameters: {
+          dataType: 'string',
           value1: '={{ $json.data?.etapaFluxo || "INICIO" }}',
           rules: {
             rules: [
-              { value2: 'ESCOLHA_ESPECIALIDADE', operation: 'equals' },
-              { value2: 'ESCOLHA_MEDICO', operation: 'equals' },
-              { value2: 'ESCOLHA_HORARIO', operation: 'equals' },
-              { value2: 'AGUARDA_CONFIRMACAO', operation: 'equals' },
+              { value2: 'ESCOLHA_ESPECIALIDADE' },
+              { value2: 'ESCOLHA_MEDICO' },
+              { value2: 'ESCOLHA_HORARIO' },
+              { value2: 'AGUARDA_CONFIRMACAO' },
             ],
           },
         },
