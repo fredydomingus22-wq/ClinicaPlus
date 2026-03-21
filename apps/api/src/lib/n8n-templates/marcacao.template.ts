@@ -84,10 +84,11 @@ export function templateMarcacao(vars: TemplateVars): object {
           value1: '={{ $json.data?.etapaFluxo || "INICIO" }}',
           rules: {
             rules: [
-              { value2: 'ESCOLHA_ESPECIALIDADE' },
-              { value2: 'ESCOLHA_MEDICO' },
-              { value2: 'ESCOLHA_HORARIO' },
-              { value2: 'AGUARDA_CONFIRMACAO' },
+              { value2: 'INICIO' },
+              { value2: 'ESPECIALIDADE' },
+              { value2: 'MEDICO' },
+              { value2: 'HORARIO' },
+              { value2: 'CONFIRMAR' },
             ],
           },
         },
@@ -221,11 +222,11 @@ export function templateMarcacao(vars: TemplateVars): object {
       'Buscar Estado Conversa': { main: [[{ node: 'Qual a etapa?', type: 'main', index: 0 }]] },
       'Qual a etapa?': {
         main: [
+          [{ node: 'Etapa: Início', type: 'main', index: 0 }],
           [{ node: 'Etapa: Especialidade', type: 'main', index: 0 }],
           [{ node: 'Etapa: Médico', type: 'main', index: 0 }],
           [{ node: 'Etapa: Horário', type: 'main', index: 0 }],
           [{ node: 'Etapa: Confirmar', type: 'main', index: 0 }],
-          [{ node: 'Etapa: Início', type: 'main', index: 0 }],
         ],
       },
       'Etapa: Início': { main: [[{ node: 'Responder 200', type: 'main', index: 0 }]] },
