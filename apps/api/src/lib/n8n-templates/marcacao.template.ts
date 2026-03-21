@@ -78,18 +78,17 @@ export function templateMarcacao(vars: TemplateVars): object {
         name: 'Qual a etapa?',
         type: 'n8n-nodes-base.switch',
         position: [900, 200],
-        typeVersion: 1,
+        typeVersion: 3,
         parameters: {
-          mode: 'rules',
+          value1: '={{ $json.data?.etapaFluxo || "INICIO" }}',
           rules: {
             rules: [
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_ESPECIALIDADE', operator: { type: 'string', operation: 'equals' } }] } },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_MEDICO', operator: { type: 'string', operation: 'equals' } }] } },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'ESCOLHA_HORARIO', operator: { type: 'string', operation: 'equals' } }] } },
-              { conditions: { conditions: [{ leftValue: '={{ $json.data?.etapaFluxo }}', rightValue: 'AGUARDA_CONFIRMACAO', operator: { type: 'string', operation: 'equals' } }] } },
+              { value2: 'ESCOLHA_ESPECIALIDADE', operation: 'equals' },
+              { value2: 'ESCOLHA_MEDICO', operation: 'equals' },
+              { value2: 'ESCOLHA_HORARIO', operation: 'equals' },
+              { value2: 'AGUARDA_CONFIRMACAO', operation: 'equals' },
             ],
           },
-          fallbackOutput: 'extra',
         },
       },
       {
