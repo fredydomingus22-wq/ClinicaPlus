@@ -10,6 +10,7 @@ import { verificarHmacEvolution } from '../middleware/verificarHmacEvolution';
 import { Plano } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { authenticate } from '../middleware/authenticate';
+import { tenantMiddleware } from '../middleware/tenant';
 import { apiKeyAuth, requireScope } from '../middleware/apiKeyAuth';
 import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
@@ -22,6 +23,7 @@ const router = Router();
 // Listar todas as instâncias da clínica
 router.get('/instancias', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
     try {
@@ -33,6 +35,7 @@ router.get('/instancias',
 
 router.post('/instancias', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -46,6 +49,7 @@ router.post('/instancias',
 
 router.get('/instancias/:id/qrcode', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -58,6 +62,7 @@ router.get('/instancias/:id/qrcode',
 
 router.get('/instancias/:id/estado', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -79,6 +84,7 @@ router.get('/instancias/:id/estado',
 
 router.delete('/instancias/:id', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -93,6 +99,7 @@ router.delete('/instancias/:id',
 // --- GESTÃO DE AUTOMAÇÕES (ADMIN, Plano PRO+) ---
 router.get('/automacoes', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   async (req, res, next) => {
     try {
@@ -105,6 +112,7 @@ router.get('/automacoes',
 
 router.get('/templates', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   async (_req, res, next) => {
     try {
@@ -115,6 +123,7 @@ router.get('/templates',
 
 router.post('/automacoes', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -134,6 +143,7 @@ router.post('/automacoes',
 
 router.patch('/automacoes/:id', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -147,6 +157,7 @@ router.patch('/automacoes/:id',
 
 router.post('/automacoes/:id/activar', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -161,6 +172,7 @@ router.post('/automacoes/:id/activar',
 
 router.post('/automacoes/:id/desactivar', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO), 
   requirePermission('whatsapp', 'manage'), 
   async (req, res, next) => {
@@ -188,6 +200,7 @@ router.post('/webhook', verificarHmacEvolution, async (req, res) => {
 // --- ACTIVIDADE E RELATÓRIOS (ADMIN) ---
 router.get('/actividade', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
   try {
@@ -199,6 +212,7 @@ router.get('/actividade',
 
 router.get('/metricas', 
   authenticate,
+  tenantMiddleware,
   requirePlan(Plano.PRO),
   async (req, res, next) => {
   try {
@@ -208,7 +222,7 @@ router.get('/metricas',
   } catch (error) { return next(error); }
 });
 
-router.get('/conversas', authenticate, async (req, res, next) => {
+router.get('/conversas', authenticate, tenantMiddleware, async (req, res, next) => {
   try {
       const clinicaId = req.clinica.id as string;
       const conversas = await waConversaService.listarActivas(clinicaId);
