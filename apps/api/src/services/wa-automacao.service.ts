@@ -63,11 +63,30 @@ export const waAutomacaoService = {
 
     try {
       if (automacao.n8nWorkflowId) {
+        logger.info({ 
+          workflowId: automacao.n8nWorkflowId, 
+          n8nBaseUrl: config.N8N_BASE_URL 
+        }, 'A activar workflow no n8n');
+        
         await n8nApi.activar(automacao.n8nWorkflowId);
       }
-    } catch (error) {
-      logger.error({ error, automacaoId }, 'Erro ao criar workflow no n8n');
-      throw new Error('Falha na comunicação com o n8n.', { cause: error });
+    } catch (error: any) {
+      const status = error.statusCode || 502;
+      const message = error.message || 'Falha na comunicação com o n8n';
+      
+      logger.error({ 
+        err: error, 
+        automacaoId, 
+        workflowId: automacao.n8nWorkflowId,
+        n8nBaseUrl: config.N8N_BASE_URL 
+      }, 'Erro ao activar workflow no n8n');
+      
+      throw new AppError(
+        `N8N Error: ${message}`,
+        status,
+        'N8N_ACTIVATION_ERROR',
+        { workflowId: automacao.n8nWorkflowId }
+      );
     }
 
     await prisma.waAutomacao.update({
