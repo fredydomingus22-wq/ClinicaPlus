@@ -21,11 +21,11 @@ export const apiKeysService = {
     // 2. Verificar limite de keys do plano
     await subscricaoService.verificarLimite(clinicaId, 'apikeys');
 
-    // 3. Gerar token: cp_live_ + 64 chars hex (32 bytes)
+    // 3. Gerar token: cp_live. + 64 chars hex (32 bytes)
     const secret = crypto.randomBytes(32).toString('hex');
-    const token = `cp_live_${secret}`;
-    const keyHash = crypto.createHash('sha256').update(token).digest('hex');
-    const prefixo = token.slice(0, 12); // "cp_live_..."
+    const token = `cp_live.${secret}`;
+    const keyHash = crypto.createHash('sha256').update(secret).digest('hex');
+    const prefixo = token.slice(0, 12); // "cp_live...."
 
     // 4. Guardar no DB
     const apiKey = await prisma.apiKey.create({
@@ -122,10 +122,10 @@ export const apiKeysService = {
       });
     }
 
-    // 2. Gerar novo token
+    // 2. Gerar novo token: cp_internal.{secret}
     const secret = crypto.randomBytes(32).toString('hex');
-    const token = `cp_internal_${secret}`;
-    const keyHash = crypto.createHash('sha256').update(token).digest('hex');
+    const token = `cp_internal.${secret}`;
+    const keyHash = crypto.createHash('sha256').update(secret).digest('hex');
     const prefix = token.slice(0, 16);
 
     await prisma.apiKey.create({
@@ -134,7 +134,12 @@ export const apiKeysService = {
         nome,
         keyHash,
         prefixo: prefix,
-        escopos: [], // Empty array is valid for EscopoApiKey[]
+        escopos: [
+          EscopoApiKey.READ_AGENDAMENTOS, 
+          EscopoApiKey.WRITE_AGENDAMENTOS,
+          EscopoApiKey.READ_PACIENTES,
+          EscopoApiKey.WRITE_PACIENTES
+        ],
         criadoPor: 'sistema',
         expiresAt: null
       }
