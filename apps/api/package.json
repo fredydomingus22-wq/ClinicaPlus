@@ -13,7 +13,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "dotenv -e .env -- vitest"
+    "test": "dotenv -e .env -- vitest",
+    "db:fix-webhooks": "ts-node src/scripts/fix_evolution_webhooks.ts"
   },
   "dependencies": {
     "@clinicaplus/events": "workspace:*",
