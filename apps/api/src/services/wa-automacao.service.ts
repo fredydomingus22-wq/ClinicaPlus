@@ -1,4 +1,4 @@
-import { WaAutomacao, WaTipoAutomacao } from '@prisma/client';
+import { WaAutomacao, WaTipoAutomacao, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { n8nApi, TemplateVars } from '../lib/n8nApi';
 import { AppError } from '../lib/AppError';
@@ -172,7 +172,7 @@ export const waAutomacaoService = {
     return automacoes.map(toWaAutomacaoDTO);
   },
 
-  async configurar(automacaoId: string, configuracao: Record<string, unknown>, clinicaId: string): Promise<WaAutomacaoDTO> {
+  async configurar(automacaoId: string, configuracao: Prisma.InputJsonValue, clinicaId: string): Promise<WaAutomacaoDTO> {
     const automacao = await prisma.waAutomacao.update({
       where: { id: automacaoId, clinicaId },
       data: {
