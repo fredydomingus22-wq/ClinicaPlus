@@ -540,7 +540,7 @@ model WaAutomacao {
   
   configuracao   Json            @default("{}")
   criadoEm       DateTime        @default(now())
-  actualizadoEm  DateTime        @updatedAt
+  atualizadoEm   DateTime        @updatedAt
   clinicaId      String
 
   @@unique([instanciaId, tipo])

@@ -141,11 +141,11 @@ export const waAutomacaoService = {
     });
   },
 
-  async listar(clinicaId: string, waInstanciaId?: string): Promise<WaAutomacao[]> {
+  async listar(clinicaId: string, instanciaId?: string): Promise<WaAutomacao[]> {
     return prisma.waAutomacao.findMany({
       where: { 
         clinicaId,
-        ...(waInstanciaId && { waInstanciaId })
+        ...(instanciaId && { instanciaId })
       },
       orderBy: { tipo: 'asc' },
     });
@@ -157,7 +157,7 @@ export const waAutomacaoService = {
       where: { id: automacaoId, clinicaId },
       data: {
         configuracao,
-        actualizadoEm: new Date()
+        atualizadoEm: new Date()
       },
     });
 

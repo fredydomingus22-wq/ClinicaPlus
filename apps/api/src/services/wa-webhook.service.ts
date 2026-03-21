@@ -9,22 +9,6 @@ import { waAutomacaoService } from './wa-automacao.service';
 
 // Webhook interfaces (defined in common types usually, but here for context if needed)
 interface MessageUpsertData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-}
-
-interface QrCodeUpdatedData {
-  qrcode: {
-    base64: string;
-  };
-}
-
-interface ConnectionUpdateData {
-  state: string;
-  number?: string;
-}
-
-interface MessageUpsertData {
   key: {
     remoteJid: string;
     fromMe: boolean;
@@ -37,6 +21,17 @@ interface MessageUpsertData {
     };
   };
   pushName?: string;
+}
+
+interface QrCodeUpdatedData {
+  qrcode: {
+    base64: string;
+  };
+}
+
+interface ConnectionUpdateData {
+  state: string;
+  number?: string;
 }
 
 /**
