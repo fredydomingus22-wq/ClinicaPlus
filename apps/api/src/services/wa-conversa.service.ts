@@ -74,7 +74,7 @@ export const waConversaService = {
       }
       
       const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId }, select: { nome: true } });
-      const saudacao = `Olá! Bem-vindo à *${clinica?.nome || 'nossa Clínica'}*. 🏥\n\nComo podemos ajudar?\n1. Marcar Consulta 📅\n2. Falar com Atendente 🧑‍💻\n\nResponda com o número da opção desejada.`;
+      const saudacao = `Olá! Seja muito bem-vindo(a) à *${clinica?.nome || 'nossa Clínica'}*! 🏥\n\nSou o seu assistente virtual. Como podemos ajudar hoje?\n\n1. Agendar Consulta 📅 (Rápido e Automático)\n2. Falar com um Atendente 🧑‍💻\n\nPor favor, responda com o **número** da opção desejada.`;
       await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, saudacao);
       return;
     }
@@ -122,10 +122,14 @@ export const waConversaService = {
       return;
     }
 
-    const saudacao = `Olá${pushName ? `, ${pushName.split(' ')[0]}` : ''}! 👋\n`
-      + `Bem-vindo(a) à *${clinica.nome}*.\n\n`
-      + `Escolha a Especialidade:\n\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
-      + `Responda com o número da opção.`;
+    const primeiroNome = pushName ? pushName.trim().split(' ')[0] : '';
+    const saudacao = `Olá${primeiroNome ? `, *${primeiroNome}*` : ''}! 👋\n\n`
+      + `Sou o assistente virtual da *${clinica.nome}* e estou aqui para facilitar o seu agendamento.\n\n`
+      + `Este canal é **exclusivo para marcações automáticas**, disponível para si 24h por dia. 🏥\n\n`
+      + `Como podemos ajudar hoje?\n`
+      + `Escolha uma Especialidade para começar:\n`
+      + `\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
+      + `Responda com o *número* da opção desejada.`;
 
     await evolutionApi.enviarTexto(instanceName, numero, saudacao);
 
@@ -296,11 +300,13 @@ export const waConversaService = {
     const dataHora = new Date(slotISO);
     const label = dataHora.toLocaleString('pt-AO', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' });
 
-    const resumo = `*Confirmar Agendamento* 🗓️\n\n` +
-      `Médico: ${ctx.medicoNome}\n` +
-      `Data/Hora: ${label}\n\n` +
-      `1. Confirmar ✅\n` +
-      `2. Cancelar ❌`;
+    const resumo = `*Quase lá! Por favor, confirme os dados:* 🗓️\n\n` +
+      `📍 *Especialidade:* ${ctx.especialidadeNome}\n` +
+      `👨‍⚕️ *Médico:* ${ctx.medicoNome}\n` +
+      `📅 *Data/Hora:* ${label}\n\n` +
+      `Escolha uma opção:\n` +
+      `1. Confirmar Agendamento ✅\n` +
+      `2. Cancelar / Começar de novo ❌`;
 
     await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, resumo);
 
@@ -327,6 +333,7 @@ export const waConversaService = {
 
     if (input === '1' || inputLower === 'sim' || inputLower === 's' || inputLower === 'confirmar') {
       const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
+      const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId } });
       const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, '');
 
       await prisma.agendamento.create({
@@ -345,7 +352,9 @@ export const waConversaService = {
       await evolutionApi.enviarTexto(
         conversa.instancia.evolutionName,
         conversa.numeroWhatsapp,
-        '✅ *Agendamento Confirmado!*\n\nAguardamos por si. Receberá um lembrete antes da consulta.'
+        `✅ *Agendamento Confirmado!*\n\n` +
+        `Tudo pronto! O seu lugar está reservado. Aguardamos por si na *${clinica?.nome || 'nossa Clínica'}*.\n\n` +
+        `Receberá um lembrete automático antes da consulta. Até breve! 🏥`
       );
 
       await publishEvent(`clinica:${conversa.instancia.clinicaId}`, 'whatsapp:marcacao', {
