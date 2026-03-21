@@ -70,9 +70,10 @@ export const waAutomacaoService = {
         
         await n8nApi.activar(automacao.n8nWorkflowId);
       }
-    } catch (error: any) {
-      const status = error.statusCode || 502;
-      const message = error.message || 'Falha na comunicação com o n8n';
+    } catch (error: unknown) {
+      const err = error as { statusCode?: number; response?: { status?: number }; message?: string };
+      const status = err.statusCode || err.response?.status || 502;
+      const message = err.message || 'Falha na comunicação com o n8n';
       
       logger.error({ 
         err: error, 
