@@ -38,7 +38,8 @@ const getInstanciaBase = (): WaInstancia => ({
   numeroTelefone: '244900000000',
   qrCodeBase64: null,
   criadoEm: new Date(),
-  atualizadoEm: new Date()
+  atualizadoEm: new Date(),
+  qrExpiresAt: null
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

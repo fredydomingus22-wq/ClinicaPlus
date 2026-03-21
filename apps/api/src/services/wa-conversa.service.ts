@@ -3,6 +3,37 @@ import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
 import { publishEvent } from '../lib/eventBus';
 
+/** Schema de configuração da automação MARCACAO_CONSULTA */
+interface ConfigMarcacao {
+  horarioInicio:   string;  // "08:00"
+  horarioFim:      string;  // "18:00"
+  diasAtivos:      number[]; // [1,2,3,4,5] = seg-sex
+  msgBoasVindas?:  string;
+  msgForaHorario?: string;
+  msgErroGenerico?: string;
+}
+
+/**
+ * Verifica se o momento actual está dentro do horário configurado.
+ * Usa timezone Africa/Luanda.
+ */
+function estaNoHorario(cfg: ConfigMarcacao): boolean {
+  const agora = new Date();
+  const diaSemana = agora.getDay();
+
+  if (!cfg.diasAtivos || !cfg.diasAtivos.includes(diaSemana)) return false;
+
+  const [hInicio, mInicio] = cfg.horarioInicio.split(':').map(Number);
+  const [hFim, mFim] = cfg.horarioFim.split(':').map(Number);
+
+  const luandaAgora = new Date(agora.toLocaleString('en-US', { timeZone: 'Africa/Luanda' }));
+  const minutosAgora = luandaAgora.getHours() * 60 + luandaAgora.getMinutes();
+  const minutosInicio = hInicio! * 60 + mInicio!;
+  const minutosFim = hFim! * 60 + mFim!;
+
+  return minutosAgora >= minutosInicio && minutosAgora < minutosFim;
+}
+
 export interface ContextoMarcacao {
   especialidadeId?: string;
   especialidadeNome?: string;
@@ -34,12 +65,12 @@ export const waConversaService = {
 
     // Reset de contexto se comando de reinício
     if (inputLower === 'oi' || inputLower === 'menu') {
-      return this.etapaInicio(conversa);
+      return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName, '');
     }
 
     if (conversa.estado === WaEstadoConversa.AGUARDA_INPUT) {
       if (input === '1' || inputLower === 'marcar' || inputLower === 'vaga') {
-        return this.etapaInicio(conversa);
+        return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName, '');
       }
       
       const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId }, select: { nome: true } });
@@ -49,50 +80,109 @@ export const waConversaService = {
     }
 
     if (conversa.estado === WaEstadoConversa.EM_FLUXO_MARCACAO) {
-      switch (conversa.etapaFluxo) {
-        case 'ESPECIALIDADE':
-          return this.handleEscolhaEspecialidade(conversa, input);
-        case 'MEDICO':
-          return this.handleEscolhaMedico(conversa, input);
-        case 'HORARIO':
-          return this.handleEscolhaHorario(conversa, input);
-        case 'CONFIRMAR':
-          return this.handleConfirmacao(conversa, input);
-        default:
-          return this.etapaInicio(conversa);
-      }
+      return this.processarResposta(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName, texto);
     }
   },
 
-  async etapaInicio(conversa: WaConversaComInstancia): Promise<void> {
+  /**
+   * Inicia o fluxo de marcação.
+   * Chamado pelo n8n via POST /fluxo/inicio ou internamente.
+   */
+  async etapaInicio(numero: string, clinicaId: string, instanceName: string, pushName: string): Promise<void> {
+    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
+
+    // Verificar horário de funcionamento do bot (MODULE-whatsapp.md §3)
+    const automacaoMarcacao = await prisma.waAutomacao.findFirst({
+      where: { instanciaId: instancia.id, tipo: 'MARCACAO_CONSULTA', ativo: true }
+    });
+    if (automacaoMarcacao) {
+      const cfg = automacaoMarcacao.configuracao as unknown as ConfigMarcacao;
+      if (cfg.horarioInicio && cfg.horarioFim && !estaNoHorario(cfg)) {
+        const msgFora = cfg.msgForaHorario
+          ?.replace('{inicio}', cfg.horarioInicio)
+          .replace('{fim}', cfg.horarioFim)
+          ?? `Bot disponível das ${cfg.horarioInicio} às ${cfg.horarioFim}. Até logo!`;
+        await evolutionApi.enviarTexto(instanceName, numero, msgFora);
+        return;
+      }
+    }
+
     const especialidades = await prisma.especialidade.findMany({
-      where: { clinicaId: conversa.instancia.clinicaId, ativo: true },
+      where: { clinicaId, ativo: true },
       orderBy: { nome: 'asc' }
     });
 
     if (especialidades.length === 0) {
       await evolutionApi.enviarTexto(
-        conversa.instancia.evolutionName,
-        conversa.numeroWhatsapp,
+        instanceName,
+        numero,
         'De momento não temos especialidades disponíveis para agendamento online. Por favor, contacte-nos directamente.'
       );
       return;
     }
 
-    const msg = `Escolha a Especialidade:\n\n${formatarMensagemLista(especialidades.map(e => e.nome))}`;
-    await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, msg);
+    const saudacao = `Olá${pushName ? `, ${pushName.split(' ')[0]}` : ''}! 👋\n`
+      + `Bem-vindo(a) à *${clinica.nome}*.\n\n`
+      + `Escolha a Especialidade:\n\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
+      + `Responda com o número da opção.`;
 
-    await prisma.waConversa.update({
-      where: { id: conversa.id },
-      data: {
-        estado: WaEstadoConversa.EM_FLUXO_MARCACAO,
-        etapaFluxo: 'ESPECIALIDADE',
-        contexto: {} // Reset para objecto vazio em vez de JsonNull para facilitar o spread
+    await evolutionApi.enviarTexto(instanceName, numero, saudacao);
+
+    await prisma.waConversa.upsert({
+      where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
+      create: { 
+        instanciaId: instancia.id, 
+        numeroWhatsapp: numero, 
+        estado: WaEstadoConversa.EM_FLUXO_MARCACAO, 
+        etapaFluxo: 'ESPECIALIDADE', 
+        contexto: {},
+        clinicaId
+      },
+      update: { 
+        estado: WaEstadoConversa.EM_FLUXO_MARCACAO, 
+        etapaFluxo: 'ESPECIALIDADE', 
+        contexto: {}, 
+        ultimaMensagemEm: new Date() 
       }
     });
   },
 
-  async handleEscolhaEspecialidade(conversa: WaConversaComInstancia, input: string): Promise<void> {
+  /**
+   * Encaminha para a etapa correcta do fluxo baseada no estado actual.
+   * Chamado pelo n8n via POST /fluxo/resposta.
+   */
+  async processarResposta(numero: string, clinicaId: string, instanceName: string, resposta: string): Promise<void> {
+    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const conversa = await prisma.waConversa.findUnique({
+      where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
+      include: { instancia: true }
+    });
+
+    if (!conversa || conversa.estado !== WaEstadoConversa.EM_FLUXO_MARCACAO) {
+      if (resposta.toLowerCase().includes('marcar')) {
+        return this.etapaInicio(numero, clinicaId, instanceName, '');
+      }
+      return;
+    }
+
+    const conversaComInstancia = conversa as WaConversaComInstancia;
+
+    switch (conversa.etapaFluxo) {
+      case 'ESPECIALIDADE':
+        return this.etapaEspecialidade(conversaComInstancia, resposta);
+      case 'MEDICO':
+        return this.etapaMedico(conversaComInstancia, resposta);
+      case 'HORARIO':
+        return this.etapaHorario(conversaComInstancia, resposta);
+      case 'CONFIRMAR':
+        return this.etapaConfirmar(conversaComInstancia, resposta);
+      default:
+        return this.etapaInicio(numero, clinicaId, instanceName, '');
+    }
+  },
+
+  async etapaEspecialidade(conversa: WaConversaComInstancia, input: string): Promise<void> {
     const especialidades = await prisma.especialidade.findMany({
       where: { clinicaId: conversa.instancia.clinicaId, ativo: true },
       orderBy: { nome: 'asc' }
@@ -118,7 +208,6 @@ export const waConversaService = {
       return;
     }
 
-    // Se só houver 1 médico, salta para horário
     if (medicos.length === 1) {
       return this.exibirHorarios(conversa, medicos[0]!, especialidade.id);
     }
@@ -138,7 +227,7 @@ export const waConversaService = {
     });
   },
 
-  async handleEscolhaMedico(conversa: WaConversaComInstancia, input: string): Promise<void> {
+  async etapaMedico(conversa: WaConversaComInstancia, input: string): Promise<void> {
     const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
     const medicos = await prisma.medico.findMany({
       where: { especialidadeId: ctx.especialidadeId!, ativo: true },
@@ -154,7 +243,6 @@ export const waConversaService = {
   },
 
   async exibirHorarios(conversa: WaConversaComInstancia, medico: { id: string, nome: string }, especialidadeId: string): Promise<void> {
-    // MVP: Próximos 5 slots (simulação baseada na lógica atual)
     const hoje = new Date();
     const slots: Date[] = [];
     const d = new Date(hoje);
@@ -194,7 +282,7 @@ export const waConversaService = {
     });
   },
 
-  async handleEscolhaHorario(conversa: WaConversaComInstancia, input: string): Promise<void> {
+  async etapaHorario(conversa: WaConversaComInstancia, input: string): Promise<void> {
     const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
     const slots = ctx.slotsTemporarios || [];
     const index = parseInt(input) - 1;
@@ -225,7 +313,7 @@ export const waConversaService = {
     });
   },
 
-  async handleConfirmacao(conversa: WaConversaComInstancia, input: string): Promise<void> {
+  async etapaConfirmar(conversa: WaConversaComInstancia, input: string): Promise<void> {
     const inputLower = input.toLowerCase();
     
     if (inputLower === '2' || inputLower === 'não' || inputLower === 'nao' || inputLower === 'cancelar') {
@@ -239,7 +327,6 @@ export const waConversaService = {
 
     if (input === '1' || inputLower === 'sim' || inputLower === 's' || inputLower === 'confirmar') {
       const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
-      
       const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, '');
 
       await prisma.agendamento.create({
@@ -277,8 +364,16 @@ export const waConversaService = {
   },
 
   /**
-   * Lista todas as conversas ativas de uma clínica.
+   * Obtém uma conversa pelo número WhatsApp — usado pelo n8n (GET /fluxo/conversa).
    */
+  async obterConversa(numero: string, clinicaId: string): Promise<unknown> {
+    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    return prisma.waConversa.findUnique({
+      where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
+      include: { paciente: true },
+    });
+  },
+
   async listarActivas(clinicaId: string): Promise<WaConversa[]> {
     return prisma.waConversa.findMany({
       where: {

@@ -28,7 +28,7 @@ export function SubscricaoPage() {
     );
   }
 
-  if (!clinica || !subscricaoActual) return null;
+  if (!clinica) return null;
 
   const getStatusVariant = (estado: EstadoSubscricao) => {
     switch (estado) {
@@ -104,10 +104,10 @@ export function SubscricaoPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { label: 'Médicos', info: subscricaoActual.limites.medicos },
-            { label: 'Consultas (Mês)', info: subscricaoActual.limites.consultas },
-            { label: 'Pacientes', info: subscricaoActual.limites.pacientes },
-            { label: 'API Keys', info: subscricaoActual.limites.apiKeys },
+            { label: 'Médicos', info: subscricaoActual?.limites?.medicos || { actual: 0, maximo: 0 } },
+            { label: 'Consultas (Mês)', info: subscricaoActual?.limites?.consultas || { actual: 0, maximo: 0 } },
+            { label: 'Pacientes', info: subscricaoActual?.limites?.pacientes || { actual: 0, maximo: 0 } },
+            { label: 'API Keys', info: subscricaoActual?.limites?.apiKeys || { actual: 0, maximo: 0 } },
           ].map((item) => (
             <Card key={item.label} className="p-5 space-y-4 border-neutral-200/60 shadow-sm hover:border-primary-200 transition-colors">
               <div className="flex justify-between items-end">

@@ -1,144 +1,120 @@
-# Reference — Máquina de Estados da Conversa
+# Reference — Máquina de Estados da Conversa WhatsApp
 
-## Diagrama completo
+## Diagrama de estados
 
 ```
-                    ┌─────────────────────────────────────┐
-                    │           AGUARDA_INPUT              │
-                    │   (estado inicial / após reset)      │
-                    └──────────────┬──────────────────────┘
-                                   │ qualquer mensagem
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │         EM_FLUXO_MARCACAO            │
-                    │                                      │
-                    │  etapaFluxo:                         │
-                    │  ESCOLHA_ESPECIALIDADE               │
-                    │       → ESCOLHA_MEDICO               │
-                    │       → ESCOLHA_HORARIO              │
-                    └──────────────┬──────────────────────┘
-                                   │ slot escolhido
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │       AGUARDA_CONFIRMACAO            │
-                    │   "Confirmas? 1-Sim  2-Não"          │
-                    └──────┬───────────────────┬──────────┘
-                           │ SIM               │ NÃO
-                           ▼                   ▼
-                    ┌────────────┐     ┌───────────────┐
-                    │ CONCLUIDA  │     │   CONCLUIDA   │
-                    │ (agendado) │     │ (cancelado)   │
-                    └────────────┘     └───────────────┘
-
-                    ┌─────────────────────────────────────┐
-                    │             EXPIRADA                 │
-                    │  (job horário: sem resposta > 24h)  │
-                    └──────────────┬──────────────────────┘
-                                   │ nova mensagem
-                                   ▼ (reset para INICIO)
-                              AGUARDA_INPUT
+                       qualquer mensagem
+AGUARDA_INPUT  ──────────────────────────────► etapaInicio()
+    ▲                                               │
+    │ EXPIRADA + nova msg                           │ envia lista especialidades
+    │                                               ▼
+EXPIRADA       ◄── job (24h sem resposta) ── ESCOLHA_ESPECIALIDADE
+                                                    │
+                                    input válido    │    input inválido (máx 3x)
+                                                    │         → repetir etapa
+                                                    ▼
+                                          ESCOLHA_MEDICO
+                                                    │
+                                                    ▼
+                                         ESCOLHA_HORARIO
+                                                    │
+                                                    ▼
+                                       AGUARDA_CONFIRMACAO
+                                          │         │
+                                    SIM   │         │ NÃO
+                                          ▼         ▼
+                                       CONCLUIDA (agendado / cancelado)
 ```
 
-## Contexto acumulado durante o fluxo
+## Etapas e transições válidas
+
+| etapaFluxo actual | Mensagem recebida | Próxima etapa | Acção |
+|-------------------|-------------------|---------------|-------|
+| null / qualquer | "marcar" ou "oi" | ESCOLHA_ESPECIALIDADE | etapaInicio() |
+| ESCOLHA_ESPECIALIDADE | número 1-N | ESCOLHA_MEDICO | etapaEspecialidade() |
+| ESCOLHA_ESPECIALIDADE | inválido | ESCOLHA_ESPECIALIDADE | contador erros++ |
+| ESCOLHA_MEDICO | número 1-N | ESCOLHA_HORARIO | etapaMedico() |
+| ESCOLHA_MEDICO | inválido | ESCOLHA_MEDICO | contador erros++ |
+| ESCOLHA_HORARIO | número 1-N | AGUARDA_CONFIRMACAO | etapaHorario() |
+| ESCOLHA_HORARIO | inválido | ESCOLHA_HORARIO | contador erros++ |
+| AGUARDA_CONFIRMACAO | 1 / s / sim | — | etapaConfirmar() → criar agendamento → CONCLUIDA |
+| AGUARDA_CONFIRMACAO | 2 / n / não | — | etapaConfirmar() → cancelar → CONCLUIDA |
+| AGUARDA_CONFIRMACAO | inválido | AGUARDA_CONFIRMACAO | enviar "Responde 1 ou 2" |
+| 3 erros consecutivos | qualquer | CONCLUIDA | enviar mensagem de desistência |
+
+## Comandos especiais (qualquer etapa)
+
+```typescript
+const COMANDOS_RESET = ['oi', 'olá', 'ola', 'marcar', 'iniciar', 'comecar', 'começar', '0'];
+
+function isComandoReset(texto: string): boolean {
+  return COMANDOS_RESET.includes(texto.toLowerCase().trim());
+}
+// Se isComandoReset(texto) → chamar etapaInicio() independentemente da etapa actual
+```
+
+## Contexto acumulado (shape completo)
 
 ```typescript
 interface ContextoMarcacao {
-  // Preenchido em ESCOLHA_ESPECIALIDADE
-  especialidade?: string;
-  especialidadesDisponiveis?: string[];
-  errosEspecialidade?: number;  // contador de erros
+  // Preenchido em etapaEspecialidade
+  especialidade?:         string;
+  medicosDisponiveis?:    string[];  // array de medicoIds
+  errosEspecialidade?:    number;
 
-  // Preenchido em ESCOLHA_MEDICO
-  medicoId?:   string;
-  medicoNome?: string;
-  medicosDisponiveis?: Array<{ id: string; nome: string }>;
-  errosMedico?: number;
+  // Preenchido em etapaMedico
+  medicoId?:              string;
+  medicoNome?:            string;
+  slotsDisponiveis?:      string[];  // ISO 8601 UTC strings
+  errosMedico?:           number;
 
-  // Preenchido em ESCOLHA_HORARIO
-  slot?:      string;  // ISO 8601 UTC
-  slotLabel?: string;  // "Segunda, 14 Abril às 14h" — formatado pt-AO
-  slotsDisponiveis?: string[];
-  errosHorario?: number;
+  // Preenchido em etapaHorario
+  slot?:                  string;   // ISO 8601 UTC
+  slotLabel?:             string;   // "Segunda, 14 de Abril às 14:00"
+  errosHorario?:          number;
 
-  // Preenchido no início (se paciente já conhecido)
-  pacienteId?:   string;
-  pacienteNome?: string;
+  // Preenchido em etapaConfirmar (se paciente novo)
+  pacienteId?:            string;
 }
 ```
 
-## Tratamento de erros e reintentos
+## Formatação de mensagens pt-AO
 
 ```typescript
-// Máximo de tentativas por etapa antes de desistir
-const MAX_ERROS = 3;
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';  // pt-BR é o mais próximo de pt-AO disponível
 
-async function tratarRespostaInvalida(
-  conversa: WaConversa,
-  instanceName: string,
-  opcoes: string[],
-  tituloEtapa: string,
-) {
-  const ctx = conversa.contexto as ContextoMarcacao;
-  const campoErros = `erros${capitalize(tituloEtapa)}` as keyof ContextoMarcacao;
-  const erros = (ctx[campoErros] as number ?? 0) + 1;
+function formatSlotPtAO(isoString: string): string {
+  const d = new Date(isoString);
+  // "Segunda-feira, 14 de Abril às 14:00"
+  return format(d, "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR });
+}
 
-  if (erros >= MAX_ERROS) {
-    await evolutionApi.enviarTexto(
-      instanceName,
-      conversa.numeroWhatsapp,
-      'Não consegui perceber a tua resposta 😕\nEscreve *oi* para recomeçar.'
-    );
-    await prisma.waConversa.update({
-      where: { id: conversa.id },
-      data: { estado: 'CONCLUIDA', etapaFluxo: null },
-    });
-    return;
-  }
-
-  const lista = opcoes.map((o, i) => `${i + 1}. ${o}`).join('\n');
-  await evolutionApi.enviarTexto(
-    instanceName,
-    conversa.numeroWhatsapp,
-    `❌ Opção inválida. Responde com um número de 1 a ${opcoes.length}:\n\n${lista}`
-  );
-
-  await prisma.waConversa.update({
-    where: { id: conversa.id },
-    data: { contexto: { ...ctx, [campoErros]: erros } },
-  });
+function formatKz(valor: number): string {
+  return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' })
+    .format(valor)
+    .replace('AOA', 'Kz');
 }
 ```
 
-## Criação automática de paciente se número desconhecido
+## Verificação de horário configurado
 
 ```typescript
-// Em etapaConfirmar — antes de criar o agendamento
-async function obterOuCriarPaciente(
-  numero: string,
-  clinicaId: string,
-  nomeWhatsapp: string,  // pushName da Evolution API
-): Promise<string> {
-  // Normalizar número: "244923456789" → "+244923456789" para lookup
-  const telefone = `+${numero}`;
+function estaNoHorario(cfg: ConfigMarcacao): boolean {
+  const agora = new Date();
+  const diaSemana = agora.getDay();  // 0=dom, 1=seg, ..., 6=sab
 
-  let paciente = await prisma.paciente.findFirst({
-    where: { clinicaId, telefone },
-    select: { id: true },
-  });
+  if (!cfg.diasAtivos.includes(diaSemana)) return false;
 
-  if (!paciente) {
-    // Criar paciente com dados mínimos — clínica pode completar depois
-    paciente = await prisma.paciente.create({
-      data: {
-        clinicaId,
-        nome:     nomeWhatsapp || `Paciente WA ${numero.slice(-4)}`,
-        telefone,
-        origem:   'WHATSAPP',  // novo campo para rastrear origem
-      },
-      select: { id: true },
-    });
-  }
+  const [hInicio, mInicio] = cfg.horarioInicio.split(':').map(Number);
+  const [hFim, mFim]       = cfg.horarioFim.split(':').map(Number);
 
-  return paciente.id;
+  // Usar timezone Africa/Luanda
+  const luandaAgora = new Date(agora.toLocaleString('en-US', { timeZone: 'Africa/Luanda' }));
+  const minutosAgora = luandaAgora.getHours() * 60 + luandaAgora.getMinutes();
+  const minutosInicio = hInicio * 60 + mInicio;
+  const minutosFim    = hFim * 60 + mFim;
+
+  return minutosAgora >= minutosInicio && minutosAgora < minutosFim;
 }
 ```

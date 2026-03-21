@@ -31,7 +31,8 @@ describe('waAutomacaoService', () => {
     vi.clearAllMocks();
   });
 
-  const getMockData = (tipo: WaTipoAutomacao = WaTipoAutomacao.LEMBRETE_24H) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getMockData = (tipo: WaTipoAutomacao = WaTipoAutomacao.LEMBRETE_24H): any => ({
     id: 'aut-1',
     tipo,
     configuracao: {},

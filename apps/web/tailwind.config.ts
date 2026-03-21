@@ -203,6 +203,7 @@ const config: Config = {
         "zoom-out": "zoom-out 0.2s ease-out",
         "slide-in-from-top": "slide-in-from-top 0.2s ease-out",
         "slide-in-from-bottom": "slide-in-from-bottom 0.2s ease-out",
+        "pulse-slow": "skeleton-pulse 2s ease-in-out infinite",
       },
     },
   },

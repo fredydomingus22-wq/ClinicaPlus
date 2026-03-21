@@ -6,6 +6,11 @@ export interface WaInstancia {
   estado: 'DESCONECTADO' | 'AGUARDA_QR' | 'CONECTADO' | 'ERRO';
   numeroTelefone?: string;
   qrCodeBase64?: string;
+  qrExpiresAt?: string;
+  atualizadoEm?: string;
+  erroMensagem?: string;
+  marcacoesHoje?: number;
+  lembretesEnviados?: number;
 }
 
 export interface WaAutomacao {

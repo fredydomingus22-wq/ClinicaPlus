@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EstadoFatura, FaturaDTO } from '@clinicaplus/types';
 import { useFaturas } from '../../hooks/useFaturas';
+import { useClinicaMe } from '../../hooks/useClinicas';
+import { useEffect } from 'react';
 import { 
   Button, 
   Card, 
@@ -12,6 +14,7 @@ import {
 import { Plus, Search, Eye, FileText, Download } from 'lucide-react';
 import { formatKwanza } from '@clinicaplus/utils';
 import { FaturaStatusBadge } from '../../components/financeiro/FaturaStatusBadge';
+import { FaturaPrint } from '../../components/print/FaturaPrint';
 import { PlanGate, UpgradeInline } from '../../components/PlanGate';
 import { useExportReceita } from '../../hooks/useRelatorios';
 
@@ -26,18 +29,37 @@ export default function FaturasPage() {
   const [tab, setTab] = useState<EstadoFatura>(EstadoFatura.EMITIDA);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [faturaToPrint, setFaturaToPrint] = useState<FaturaDTO | null>(null);
 
   const { data, isLoading, error } = useFaturas({
     estado: tab,
     page,
     limit: 15
   });
+  
+  const { data: clinica } = useClinicaMe();
 
   const exportMutation = useExportReceita();
 
   const handleExport = () => {
     exportMutation.mutate({});
   };
+
+  const handlePrint = (f: FaturaDTO) => {
+    setFaturaToPrint(f);
+  };
+
+  useEffect(() => {
+    if (!faturaToPrint) return;
+
+    // Pequeno delay para garantir que o componente de print renderizou
+    const timer = setTimeout(() => {
+      window.print();
+      setFaturaToPrint(null);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [faturaToPrint]);
 
   const columns = [
     {
@@ -52,8 +74,10 @@ export default function FaturasPage() {
       header: 'Paciente',
       accessor: (f: FaturaDTO) => (
         <div>
-          <p className="font-semibold text-neutral-900">{f.pacienteId}</p> {/* TODO: Resolve patient name if possible */}
-          <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Paciente</p>
+          <p className="font-semibold text-neutral-900">{f.paciente?.nome || '---'}</p>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-widest">
+            {f.paciente?.numeroPaciente || 'Paciente'}
+          </p>
         </div>
       )
     },
@@ -87,7 +111,13 @@ export default function FaturasPage() {
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" title="Imprimir" disabled={f.estado === EstadoFatura.RASCUNHO}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            title="Imprimir" 
+            disabled={f.estado === EstadoFatura.RASCUNHO}
+            onClick={() => handlePrint(f)}
+          >
             <FileText className="h-4 w-4" />
           </Button>
         </div>
@@ -192,6 +222,11 @@ export default function FaturasPage() {
           </div>
         </div>
       </Card>
+
+      {/* Hidden Print Component */}
+      {faturaToPrint && clinica && (
+        <FaturaPrint fatura={faturaToPrint} clinica={clinica} />
+      )}
     </div>
   );
 }

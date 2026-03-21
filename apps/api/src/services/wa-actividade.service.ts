@@ -5,7 +5,7 @@ export const waActividadeService = {
   /**
    * Retorna um log unificado da actividade recente do WhatsApp.
    */
-  async listarRecente(clinicaId: string) {
+  async listarRecente(clinicaId: string): Promise<unknown[]> {
     // 1. Buscar mensagens enviadas recentemente (Lembretes/Notificações)
     const mensagens = await prisma.waMensagem.findMany({
       where: { 
@@ -50,7 +50,7 @@ export const waActividadeService = {
   /**
    * Retorna métricas agregadas para a dashboard
    */
-  async obterMetricas(clinicaId: string) {
+  async obterMetricas(clinicaId: string): Promise<Record<string, number>> {
     const [totalMensagens, totalAgendamentos, conversasActivas] = await Promise.all([
       prisma.waMensagem.count({ where: { conversa: { clinicaId }, direcao: WaDirecao.SAIDA } }),
       prisma.agendamento.count({ where: { clinicaId, canal: 'WHATSAPP' } }),

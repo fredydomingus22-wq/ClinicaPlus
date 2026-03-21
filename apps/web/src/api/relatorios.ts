@@ -4,6 +4,8 @@ export interface RelatorioReceitaData {
   totais: {
     consultas: number;
     receita: number;
+    receitaPrevista: number;
+    rascunhos: number;
     segurosPendentes: number;
     mediaConsulta: number;
   };

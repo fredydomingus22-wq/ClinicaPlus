@@ -239,5 +239,11 @@ export function templateMarcacao(vars: TemplateVars): object {
       saveManualExecutions: true,
       callerPolicy: 'workflowsFromSameOwner',
     },
+    tags: [
+      { name: slug },
+      { name: 'whatsapp' },
+      { name: 'marcacao' },
+      { name: 'clinicaplus' },
+    ],
   };
 }

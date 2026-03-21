@@ -140,7 +140,7 @@ export const waWebhookService = {
     // 3. Encaminhar para n8n se houver automações activas
     const automacoes = await prisma.waAutomacao.findMany({
       where: { 
-        waInstanciaId: instancia.id,
+        instanciaId: instancia.id,
         ativo: true,
         n8nWebhookUrl: { not: null }
       }

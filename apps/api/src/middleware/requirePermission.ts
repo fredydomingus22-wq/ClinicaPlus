@@ -5,8 +5,7 @@ import { AppError } from '../lib/AppError';
 /**
  * Middleware para restringir acesso baseado em permissões granulares.
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function requirePermission(recurso: string, accao: string) {
+export function requirePermission(recurso: string, accao: string): (req: Request, _res: Response, next: NextFunction) => Promise<void> {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {

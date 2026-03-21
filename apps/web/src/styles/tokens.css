@@ -207,7 +207,7 @@
   --radius-xl: 0px;
   --radius-2xl: 0px;
   --radius-3xl: 0px;
-  --radius-full: 0px; /* avatares mantêm round se necessário via className */
+  --radius-full: 9999px; /* Mantido para círculos reais (spinners, avatares) */
 
   /* ═══════════════════════════════════════════════════════════════════
      SOMBRAS

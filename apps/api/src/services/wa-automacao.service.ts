@@ -155,7 +155,10 @@ export const waAutomacaoService = {
   async configurar(automacaoId: string, configuracao: any, clinicaId: string): Promise<WaAutomacao> {
     const automacao = await prisma.waAutomacao.update({
       where: { id: automacaoId, clinicaId },
-      data: { configuracao },
+      data: {
+        configuracao,
+        actualizadoEm: new Date()
+      },
     });
 
     await auditLogService.log({
@@ -175,21 +178,21 @@ export const waAutomacaoService = {
     return prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacaoId } });
   },
 
-  async sincronizar(clinicaId: string, waInstanciaId: string): Promise<void> {
+  async sincronizar(clinicaId: string, instanciaId: string): Promise<void> {
     const tipos = Object.values(WaTipoAutomacao);
     
     for (const tipo of tipos) {
       await prisma.waAutomacao.upsert({
         where: {
-          waInstanciaId_tipo: {
-            waInstanciaId,
+          instanciaId_tipo: {
+            instanciaId,
             tipo
           }
         },
         create: {
           tipo,
           clinicaId,
-          waInstanciaId,
+          instanciaId,
           configuracao: {}
         },
         update: {}
@@ -204,41 +207,49 @@ export const waAutomacaoService = {
     }));
   },
 
-  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, waInstanciaId: string): Promise<WaAutomacao | null> {
+  async adicionar(clinicaId: string, tipo: WaTipoAutomacao, instanciaId: string): Promise<WaAutomacao> {
+    // Verificar se já existe
+    const existente = await prisma.waAutomacao.findUnique({
+      where: {
+        instanciaId_tipo: { instanciaId, tipo }
+      }
+    });
+
+    if (existente) {
+      return existente;
+    }
+
     const instancia = await prisma.waInstancia.findFirst({
-      where: { id: waInstanciaId, clinicaId }
+      where: { id: instanciaId, clinicaId }
     });
 
     if (!instancia) {
       throw new AppError('Instância do WhatsApp não encontrada.', 404);
     }
 
-    let automacao = await prisma.waAutomacao.findFirst({
-      where: { waInstanciaId, tipo }
+    let automacao = await prisma.waAutomacao.create({
+      data: {
+        clinicaId,
+        tipo,
+        instanciaId,
+        ativo: false,
+        configuracao: {},
+      }
     });
-
-    if (!automacao) {
-      automacao = await prisma.waAutomacao.create({
-        data: {
-          clinicaId,
-          tipo,
-          waInstanciaId,
-          ativo: false,
-          configuracao: {}
-        }
-      });
-    }
 
     // Tentamos provisionar logo no n8n
     try {
       if (!automacao.n8nWorkflowId) {
         await this.provisionarWorkflow(automacao.id, clinicaId);
+        // Recarregar objecto com o novo ID
+        const updated = await prisma.waAutomacao.findUnique({ where: { id: automacao.id } });
+        if (updated) automacao = updated; // Update automacao object with new n8nWorkflowId
       }
     } catch (err) {
       logger.error({ err, automacaoId: automacao.id }, 'Falha ao provisionar workflow no n8n');
     }
 
-    return prisma.waAutomacao.findUnique({ where: { id: automacao.id } });
+    return prisma.waAutomacao.findUniqueOrThrow({ where: { id: automacao.id } });
   },
 
   /**

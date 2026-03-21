@@ -18,14 +18,19 @@ function createRedisClient(): Redis {
   return new Redis(
     config.REDIS_URL,
     buildRedisOptions({
-      maxRetriesPerRequest: 1,
+      maxRetriesPerRequest: null,
       retryStrategy: (times: number) => {
-        if (isDev && times > 1) return null;
-        return Math.min(times * 200, 2000);
+        // Aumentar para 20 tentativas em dev para aguentar instabilidade (aprox. 1 minuto de tentativas)
+        if (isDev && times > 20) {
+          logger.warn("Redis: Limite de tentativas excedido após 20 vezes.");
+          return null;
+        }
+        const delay = Math.min(times * 500, 5000);
+        return delay;
       },
       lazyConnect: false,
       enableReadyCheck: true,
-      connectTimeout: 5000,
+      connectTimeout: 10000,
     })
   );
 }

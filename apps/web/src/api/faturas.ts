@@ -4,7 +4,8 @@ import type {
   FaturaCreateInput, 
   PaginatedResult,
   EstadoFatura,
-  PagamentoCreateSchema
+  PagamentoCreateSchema,
+  PagamentoDTO
 } from '@clinicaplus/types';
 import { z } from 'zod';
 
@@ -16,24 +17,24 @@ export const faturasApi = {
       .then(r => r.data),
 
   getOne: (id: string) =>
-    apiClient.get<FaturaDTO>(`/faturas/${id}`)
-      .then(r => r.data),
+    apiClient.get<{ data: FaturaDTO }>(`/faturas/${id}`)
+      .then(r => r.data.data),
 
   create: (data: FaturaCreateInput) =>
-    apiClient.post<FaturaDTO>('/faturas', data)
-      .then(r => r.data),
+    apiClient.post<{ data: FaturaDTO }>('/faturas', data)
+      .then(r => r.data.data),
 
   emitir: (id: string) =>
-    apiClient.patch<FaturaDTO>(`/faturas/${id}/emitir`)
-      .then(r => r.data),
+    apiClient.patch<{ data: FaturaDTO }>(`/faturas/${id}/emitir`)
+      .then(r => r.data.data),
 
   anular: (id: string, motivo: string) =>
-    apiClient.patch<FaturaDTO>(`/faturas/${id}/anular`, { motivo })
-      .then(r => r.data),
+    apiClient.patch<{ data: FaturaDTO }>(`/faturas/${id}/anular`, { motivo })
+      .then(r => r.data.data),
 
   registarPagamento: (data: PagamentoInput) =>
-    apiClient.post(`/faturas/${data.faturaId}/pagamentos`, data)
-      .then(r => r.data),
+    apiClient.post<{ data: PagamentoDTO }>(`/faturas/${data.faturaId}/pagamentos`, data)
+      .then(r => r.data.data),
 
   submeterSeguro: (pagamentoId: string) =>
     apiClient.patch(`/faturas/pagamentos/${pagamentoId}/submeter-seguro`)

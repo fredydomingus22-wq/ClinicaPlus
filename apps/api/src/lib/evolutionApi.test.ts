@@ -96,13 +96,13 @@ describe('evolutionApi', () => {
   });
 
   describe('estadoConexao', () => {
-    it('deve retornar estado "open" quando conectado', async () => {
-      mockedAxios.get.mockResolvedValueOnce({ data: { state: 'open' } });
+    it('deve retornar estado "open" when connected', async () => {
+      mockedAxios.get.mockResolvedValueOnce({ data: { instance: { state: 'open' } } });
 
       const result = await evolutionApi.estadoConexao('cp-test');
 
       expect(mockedAxios.get).toHaveBeenCalledWith('/instance/connectionState/cp-test');
-      expect(result.state).toBe('open');
+      expect(result.instance.state).toBe('open');
     });
   });
 });

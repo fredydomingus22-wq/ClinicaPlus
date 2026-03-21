@@ -64,7 +64,7 @@ export function templateConfirmacao(vars: TemplateVars): object {
         typeVersion: 4.1,
         parameters: {
           method: 'POST',
-          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/confirmar-cancelar`,
+          url: `${vars.apiBaseUrl}/api/whatsapp/fluxo/confirmar`,
           authentication: 'none',
           sendHeaders: true,
           headerParameters: { parameters: [{ name: 'x-api-key', value: vars.apiKey }] },

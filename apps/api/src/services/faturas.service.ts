@@ -18,7 +18,6 @@ import { webhooksService } from './webhooks.service';
 import { permissaoService } from './permissao.service';
 import { z } from 'zod';
 
-type FaturaCreateInput = z.infer<typeof FaturaCreateSchema>;
 type PagamentoCreateInput = z.infer<typeof PagamentoCreateSchema>;
 
 // Opcional: Extrair para FaturaNumberService se ficar mais complexo
@@ -50,7 +49,11 @@ async function generateFaturaNumber(clinicaId: string): Promise<string> {
 }
 
 export const faturasService = {
-  async create(data: FaturaCreateInput, clinicaId: string, criadoPor: string): Promise<FaturaDTO> {
+  async create(data: z.infer<typeof FaturaCreateSchema>, clinicaId: string, criadoPor: string): Promise<FaturaDTO> {
+    // 1. Verificar quota de agendamentos no plano
+    const { planEnforcementService } = await import('./planEnforcement.service');
+    await planEnforcementService.check(clinicaId, 'consultas');
+
     const numeroFatura = await generateFaturaNumber(clinicaId);
 
     let subtotal = 0;
@@ -269,7 +272,12 @@ export const faturasService = {
     const dto = result as unknown as PagamentoDTO;
 
     // Trigger Webhooks se a fatura ficou paga
-    if ((result as { faturaEstado?: string }).faturaEstado === EstadoFatura.PAGA) {
+    const faturaActualizada = await prisma.fatura.findUnique({
+      where: { id: faturaId },
+      select: { estado: true }
+    });
+
+    if (faturaActualizada?.estado === EstadoFatura.PAGA) {
        webhooksService.trigger(EventoWebhook.FATURA_PAGA, { faturaId }, clinicaId);
     }
 
@@ -303,9 +311,13 @@ export const faturasService = {
         take: limit,
         orderBy: { dataEmissao: 'desc' },
         include: {
-            paciente: {
-                select: { id: true, nome: true, numeroPaciente: true }
-            }
+          paciente: {
+            select: { id: true, nome: true, numeroPaciente: true, endereco: true }
+          },
+          medico: {
+            select: { id: true, nome: true }
+          },
+          itens: true,
         }
       }),
     ]);

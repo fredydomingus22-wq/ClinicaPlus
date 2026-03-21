@@ -53,10 +53,11 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
-      await waInstanciaService.criar('clinica-1');
+      await waInstanciaService.criar('clinica-1', 'user-1');
 
       expect(mockEvolutionApi.criarInstancia).toHaveBeenCalledWith(
         'cp-clinica-1-prod',
@@ -84,7 +85,7 @@ describe('waInstanciaService', () => {
       } as Clinica);
       mockPrisma.waInstancia.findUnique.mockResolvedValue(null);
 
-      await waInstanciaService.criar('clinica-1');
+      await waInstanciaService.criar('clinica-1', 'user-1');
 
       expect(mockPrisma.waInstancia.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -125,10 +126,11 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
-      await expect(waInstanciaService.criar('clinica-1')).rejects.toThrow();
+      await expect(waInstanciaService.criar('clinica-1', 'user-1')).rejects.toThrow();
     });
 
     it('deve falhar se plano não é PRO ou ENTERPRISE', async () => {
@@ -151,7 +153,7 @@ describe('waInstanciaService', () => {
       } as Clinica);
       mockPrisma.waInstancia.findUnique.mockResolvedValue(null);
 
-      await expect(waInstanciaService.criar('clinica-1')).rejects.toThrow();
+      await expect(waInstanciaService.criar('clinica-1', 'user-1')).rejects.toThrow();
     });
 
     it('deve configurar webhook URL correcta na Evolution API', async () => {
@@ -174,7 +176,7 @@ describe('waInstanciaService', () => {
       } as Clinica);
       mockPrisma.waInstancia.findUnique.mockResolvedValue(null);
 
-      await waInstanciaService.criar('clinica-1');
+      await waInstanciaService.criar('clinica-1', 'user-1');
 
       expect(mockEvolutionApi.criarInstancia).toHaveBeenCalledWith(
         'cp-clinica-1-prod',
@@ -194,7 +196,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.processarQrCode('clinica-1', 'base64-test');
@@ -217,7 +220,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.processarQrCode('clinica-1', 'base64-test');
@@ -241,7 +245,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.processarConexao('clinica-1', 'open');
@@ -264,7 +269,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.processarConexao('clinica-1', 'close');
@@ -287,7 +293,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
       
       await waInstanciaService.processarConexao('clinica-1', 'open');
@@ -307,7 +314,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.processarConexao('clinica-1', 'open');
@@ -331,7 +339,8 @@ describe('waInstanciaService', () => {
         numeroTelefone: null,
         qrCodeBase64: null,
         criadoEm: new Date(),
-        atualizadoEm: new Date()
+        atualizadoEm: new Date(),
+        qrExpiresAt: null
       } as WaInstancia);
 
       await waInstanciaService.desligar('clinica-1', 'user-1');

@@ -510,14 +510,15 @@ model Documento {
 
 model WaInstancia {
   id             String            @id @default(cuid())
-  clinicaId      String            
+  clinicaId      String            @unique
   evolutionName  String            @unique
-  evolutionToken String?
+  evolutionToken String
   estado         WaEstadoInstancia @default(DESCONECTADO)
   numeroTelefone String?
   qrCodeBase64   String?
+  qrExpiresAt    DateTime?
   criadoEm       DateTime          @default(now())
-  atualizadoEm   DateTime          @updatedAt
+  atualizadoEm  DateTime          @updatedAt
   conversas      WaConversa[]
   automacoes     WaAutomacao[]
   clinica        Clinica           @relation(fields: [clinicaId], references: [id])
@@ -528,42 +529,44 @@ model WaInstancia {
 
 model WaAutomacao {
   id             String          @id @default(cuid())
+  instanciaId    String
+  instancia      WaInstancia     @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+  
   tipo           WaTipoAutomacao
   ativo          Boolean         @default(false)
   n8nWorkflowId  String?
   n8nWebhookPath String?
-  configuracao   Json?
-  criadoEm       DateTime        @default(now())
-  atualizadoEm   DateTime        @updatedAt
-  clinicaId      String
   n8nWebhookUrl  String?
-  waInstanciaId  String
+  
+  configuracao   Json            @default("{}")
+  criadoEm       DateTime        @default(now())
+  actualizadoEm  DateTime        @updatedAt
+  clinicaId      String
 
-  instancia      WaInstancia     @relation(fields: [waInstanciaId], references: [id], onDelete: Cascade)
-
-  @@unique([waInstanciaId, tipo])
-  @@index([clinicaId])
+  @@unique([instanciaId, tipo])
+  @@index([instanciaId])
   @@map("wa_automacoes")
 }
 
 model WaConversa {
   id               String           @id @default(cuid())
   instanciaId      String
+  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id])
   numeroWhatsapp   String
   pacienteId       String?
+  paciente         Paciente?        @relation(fields: [pacienteId], references: [id])
   estado           WaEstadoConversa @default(AGUARDA_INPUT)
   etapaFluxo       String?
   contexto         Json?
   ultimaMensagemEm DateTime?
   criadoEm         DateTime         @default(now())
   clinicaId        String
-  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id])
-  paciente         Paciente?        @relation(fields: [pacienteId], references: [id])
   mensagens        WaMensagem[]
 
   @@unique([instanciaId, numeroWhatsapp])
   @@index([instanciaId, estado])
   @@index([pacienteId])
+  @@index([ultimaMensagemEm])
   @@map("wa_conversas")
 }
 

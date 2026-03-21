@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useFatura, useEmitirFatura, useAnularFatura, useRegistarPagamento, useSubmeterSeguro, useRegistarRespostaSeguro } from '../../hooks/useFaturas';
-import { usePaciente } from '../../hooks/usePacientes';
+import { useClinicaMe } from '../../hooks/useClinicas';
 import { 
   Button, 
   Card, 
@@ -31,6 +31,7 @@ import {
 import { formatKwanza } from '@clinicaplus/utils';
 import { EstadoFatura, MetodoPagamento, PagamentoCreateSchema, type PagamentoCreateInput, type ItemFaturaDTO, EstadoSeguro, TipoFatura } from '@clinicaplus/types';
 import { FaturaStatusBadge } from '../../components/financeiro/FaturaStatusBadge';
+import { FaturaPrint } from '../../components/print/FaturaPrint';
 import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-hot-toast';
@@ -38,13 +39,17 @@ import { toast } from 'react-hot-toast';
 export default function FaturaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const { data: fatura, isLoading, error } = useFatura(id!);
-  const { data: paciente } = usePaciente(fatura?.pacienteId || '');
+  const { data: clinica } = useClinicaMe();
   
   const emitirMutation = useEmitirFatura();
   const anularMutation = useAnularFatura();
   
   const submeterSeguro = useSubmeterSeguro();
   const registarResposta = useRegistarRespostaSeguro();
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const insurancePayment = useMemo(() => {
     return fatura?.pagamentos?.find(p => p.metodo === MetodoPagamento.SEGURO);
@@ -117,7 +122,7 @@ export default function FaturaDetalhe() {
         </div>
         
         <div className="flex gap-2">
-           <Button variant="secondary" title="Imprimir" disabled={fatura.estado === EstadoFatura.RASCUNHO}>
+           <Button variant="secondary" title="Imprimir" onClick={handlePrint} disabled={fatura.estado === EstadoFatura.RASCUNHO}>
             <Printer className="h-4 w-4 mr-2" /> Imprimir
           </Button>
           {fatura.estado === EstadoFatura.RASCUNHO && (
@@ -147,8 +152,8 @@ export default function FaturaDetalhe() {
                 <User className="h-3 w-3" /> Paciente
               </h3>
               <div>
-                <p className="font-bold text-neutral-900">{paciente?.nome || 'Processando...'}</p>
-                <p className="text-xs text-neutral-500">{paciente?.numeroPaciente || fatura.pacienteId}</p>
+                <p className="font-bold text-neutral-900">{fatura.paciente?.nome || '---'}</p>
+                <p className="text-xs text-neutral-500">{fatura.paciente?.numeroPaciente || fatura.pacienteId}</p>
               </div>
             </div>
             <div className="space-y-4">
@@ -423,6 +428,11 @@ export default function FaturaDetalhe() {
           </div>
         </div>
       </Modal>
+
+      {/* Hidden Print Component - Only render when dat is ready to prevent crash */}
+      {fatura && clinica && (
+        <FaturaPrint fatura={fatura} clinica={clinica} />
+      )}
     </div>
   );
 }

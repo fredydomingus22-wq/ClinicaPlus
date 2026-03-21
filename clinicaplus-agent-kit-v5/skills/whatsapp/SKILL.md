@@ -1,128 +1,152 @@
 ---
 name: whatsapp
 description: >
-  Usa esta skill ao tocar em qualquer código do módulo WhatsApp: instâncias
-  Evolution API, automações n8n, webhook handler, máquina de estados de conversa,
-  templates de workflow, jobs de expiração, ou UI do painel de automações.
-  Inclui padrões TDD específicos para testar código que depende de Evolution API e n8n.
+  Usa esta skill SEMPRE que tocares em qualquer ficheiro do módulo WhatsApp:
+  services wa-*, lib/evolutionApi, lib/n8nApi, n8n-templates/*, routes/whatsapp,
+  jobs wa-lembrete ou wa-expirar-conversas, componentes WaConexaoCard/WaAutomacaoCard/
+  WhatsappPage, ou qualquer endpoint /api/whatsapp/*. Inclui TDD: testes são
+  obrigatórios ANTES do código de produção.
 references:
-  - reference/evolution-api-patterns.md
-  - reference/n8n-workflow-templates.md
+  - reference/db-schema.md
+  - reference/evolution-api.md
+  - reference/n8n-templates.md
   - reference/conversa-state-machine.md
-  - reference/tdd-whatsapp.md
-  - reference/ui-automacoes.md
+  - reference/tdd-specs.md
+  - reference/ui-painel.md
 related_skills:
-  - SKILL-tdd: ciclo TDD obrigatório — lê antes de implementar qualquer service
-  - SKILL-redis-bullmq: jobs de lembrete e expiração usam BullMQ
-  - SKILL-websocket: notificações em tempo real (QR code, estado, actividade)
-  - SKILL-rbac: requirePermission('whatsapp', 'manage') nas rotas
-  - kit/skills/subscricoes/SKILL.md: requirePlan('PRO') obrigatório
+  - tdd/SKILL.md: ciclo RED→GREEN→REFACTOR — obrigatório para todos os services
+  - SKILL-redis-bullmq.md: jobs de lembrete e expiração de conversas
+  - SKILL-websocket.md: notificações QR, estado, actividade em tempo real
+  - SKILL-rbac.md: requirePermission('whatsapp', 'manage') nas rotas de escrita
+  - subscricoes/SKILL.md: requirePlan('PRO') em todas as rotas de gestão
 ---
 
 ## Quando usar esta skill
 
-- Implementar ou alterar `wa-instancia.service.ts`, `wa-automacao.service.ts`,
-  `wa-conversa.service.ts`, `wa-webhook.service.ts`
+- Implementar `wa-instancia.service.ts`, `wa-automacao.service.ts`, `wa-conversa.service.ts`
+- Implementar `wa-webhook.service.ts` (handler do webhook Evolution API)
 - Criar ou editar templates n8n em `lib/n8n-templates/`
 - Qualquer rota em `routes/whatsapp.ts`
-- Componentes `WaConexaoCard`, `WaAutomacaoCard`, `WhatsappPage`
-- Jobs `wa-expirar-conversas` e `wa-lembrete-*`
+- Componentes `WhatsappPage`, `WaConexaoCard`, `WaAutomacaoCard`, `WaActividadeRecente`
+- Jobs `wa-lembrete.job.ts` e `wa-expirar-conversas.job.ts`
 
 ## Quando NÃO usar
 
-- Configurar o n8n ou Evolution API directamente (são infra — ver deployment docs)
-- Testar ou debugar workflows n8n directamente (usar n8n MCP server)
+- Configurar a Evolution API ou o n8n directamente (são infra — ver DEPLOYMENT.md)
+- Usar o n8n MCP para inspecção (não é código — é ferramenta de desenvolvimento)
+- Alterar o agendamentosService sem ser para adicionar suporte a canal=WHATSAPP
 
 ## Sub-skills disponíveis
 
 | Ficheiro | Quando ler |
 |----------|-----------|
-| `reference/evolution-api-patterns.md` | Implementar qualquer chamada à Evolution API |
-| `reference/n8n-workflow-templates.md` | Criar ou alterar templates de workflow n8n |
+| `reference/db-schema.md` | Antes de qualquer query ou migration relacionada com wa_* |
+| `reference/evolution-api.md` | Implementar qualquer chamada à Evolution API |
+| `reference/n8n-templates.md` | Criar ou alterar templates de workflow n8n |
 | `reference/conversa-state-machine.md` | Implementar etapas do fluxo de conversa |
-| `reference/tdd-whatsapp.md` | Especificação completa de testes por service |
-| `reference/ui-automacoes.md` | Implementar componentes React do painel WA |
+| `reference/tdd-specs.md` | Especificação completa de todos os testes (~50 casos) |
+| `reference/ui-painel.md` | Implementar componentes React do painel WhatsApp |
 
 ## Regras absolutas
 
-**CORRECTO ✅**
+**CORRECTO ✅ — clinicaId da API key, nunca do body**
 ```typescript
-// clinicaId extraído da API key — nunca do body
 router.post('/fluxo/inicio', apiKeyAuth, async (req, res) => {
-  const clinicaId = req.user.clinicaId;  // vem do middleware apiKeyAuth
-  const { numero, instanceName } = req.body;
-  // ...
+  const clinicaId = req.user.clinicaId;  // extraído do middleware apiKeyAuth
+  const { numero, instanceName, pushName } = req.body;
 });
 ```
 
-**ERRADO ❌**
+**ERRADO ❌ — IDOR: paciente pode forjar clinicaId**
 ```typescript
-// NUNCA — IDOR: paciente pode forjar clinicaId
 router.post('/fluxo/inicio', apiKeyAuth, async (req, res) => {
-  const { clinicaId, numero, instanceName } = req.body;
+  const { clinicaId, numero, instanceName } = req.body;  // NUNCA
 });
 ```
 
 ---
 
-**CORRECTO ✅**
+**CORRECTO ✅ — HMAC verificado antes de qualquer processamento**
 ```typescript
-// Verificar HMAC antes de qualquer processamento do webhook
 router.post('/webhook', verificarHmacEvolution, receberWebhook);
 ```
 
-**ERRADO ❌**
+**ERRADO ❌ — webhook sem verificação de origem**
 ```typescript
-// NUNCA processar webhook sem verificar origem
-router.post('/webhook', receberWebhook);
+router.post('/webhook', receberWebhook);  // NUNCA
 ```
 
 ---
 
-**CORRECTO ✅**
+**CORRECTO ✅ — número normalizado**
 ```typescript
-// Normalizar número WhatsApp antes de guardar
-const numero = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');
-// Guardar como "244923456789" — sem prefixo de protocolo
+const numero = data.key.remoteJid
+  .replace('@s.whatsapp.net', '')
+  .replace('@c.us', '');
+// Guarda: "244923456789"
 ```
 
-**ERRADO ❌**
+**ERRADO ❌ — JID completo na DB**
 ```typescript
-// NUNCA guardar o JID completo na DB
-const numero = data.key.remoteJid;  // "244923456789@s.whatsapp.net"
+const numero = data.key.remoteJid;  // "244923456789@s.whatsapp.net" — NUNCA
 ```
 
 ---
 
-**CORRECTO ✅**
+**CORRECTO ✅ — desactivação resiliente ao n8n em baixo**
 ```typescript
-// Desactivação robusta — não bloquear se n8n estiver em baixo
 if (automacao.n8nWorkflowId) {
-  await n8nApi.desactivar(automacao.n8nWorkflowId).catch(() => {});
+  await n8nApi.desactivar(automacao.n8nWorkflowId).catch(err => {
+    logger.warn(`n8n desactivar falhou: ${err.message}`);
+  });
 }
 await prisma.waAutomacao.update({ where: { id }, data: { ativo: false } });
 ```
 
-**ERRADO ❌**
+**ERRADO ❌ — falha se n8n em baixo, DB não actualizada**
 ```typescript
-// Deixar a desactivação falhar se n8n estiver em baixo
 await n8nApi.desactivar(automacao.n8nWorkflowId);  // sem catch
+await prisma.waAutomacao.update(...);
 ```
 
-## Checklist antes de submeter
+---
 
-- [ ] HMAC verificado no webhook handler
-- [ ] `clinicaId` extraído da API key (não do body) nos endpoints `/fluxo/*`
-- [ ] Número WhatsApp normalizado (sem `@s.whatsapp.net`) antes de guardar
-- [ ] `requirePlan('PRO')` em todas as rotas de gestão da instância e automações
+**CORRECTO ✅ — publishEvent APÓS commit Prisma**
+```typescript
+const agendamento = await agendamentosService.create({ ... });
+// ↑ Prisma confirmou ANTES de emitir
+await publishEvent(`clinica:${clinicaId}`, 'whatsapp:marcacao', { ... });
+```
+
+**ERRADO ❌ — emitir antes de confirmar**
+```typescript
+await publishEvent(...);  // pode emitir mesmo se create falhar
+await agendamentosService.create({ ... });
+```
+
+## Checklist antes de submeter (WhatsApp)
+
+- [ ] HMAC verificado no route `/webhook` via `verificarHmacEvolution`
+- [ ] `clinicaId` extraído de `req.user.clinicaId` (API key) nos endpoints `/fluxo/*`
+- [ ] Número WhatsApp normalizado (sem `@s.whatsapp.net`) antes de persistir
+- [ ] `requirePlan('PRO')` em todas as rotas de gestão (/instancias, /automacoes)
 - [ ] `requirePermission('whatsapp', 'manage')` nas rotas de escrita
-- [ ] Desactivação de workflow n8n com `.catch(() => {})` — não bloquear
-- [ ] Testes escritos antes do código (TDD — ver SKILL-tdd)
-- [ ] Mocks de `evolutionApi` e `n8nApi` em todos os unit tests
-- [ ] `pnpm test --run --filter=api` a verde
+- [ ] `n8nApi.desactivar` com `.catch(() => {})` — nunca bloquear a desactivação
+- [ ] `publishEvent` chamado APÓS commit do Prisma
+- [ ] Testes TDD escritos ANTES do código (ver `reference/tdd-specs.md`)
+- [ ] `pnpm test --run --filter=api -- wa-` todos verdes
+- [ ] Coverage `src/services/wa-*` ≥ 85%
+- [ ] `pnpm typecheck` zero erros em todos os packages
 
 ## Ver também
 
-- `docs/11-modules/MODULE-whatsapp.md` — documentação completa
+- `docs/11-modules/MODULE-whatsapp.md` — spec completa (schema, services, endpoints)
 - `docs/01-adr/ADR-012-whatsapp-evolution-n8n.md` — decisões arquitecturais
-- `docs/10-runbooks/RUNBOOK-whatsapp.md` — diagnóstico de problemas
+- `docs/10-runbooks/RUNBOOK-whatsapp.md` — diagnóstico de problemas em produção
+
+## Actualização v2 — novas references adicionadas
+
+| Ficheiro | Quando ler |
+|----------|-----------|
+| `reference/planos-limites.md` | Implementar enforcement por plano, limites de instâncias, notificações de desconexão |
+| `reference/ui-painel.md` | Implementar todos os componentes React: WaConexaoCard, WaAutomacaoCard, WaActividadeRecente, useWhatsapp hook |

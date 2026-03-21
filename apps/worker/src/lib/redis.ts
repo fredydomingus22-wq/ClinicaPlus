@@ -23,10 +23,14 @@ function createClient() {
   const opts = buildRedisOptions({
     maxRetriesPerRequest: null,
     retryStrategy: (t: number) => {
-      if (isDev && t > 1) return null; // Fail fast in dev
-      return Math.min(t * 200, 2000);
+      // Aumentar para 20 tentativas em dev para aguentar instabilidade (aprox. 1 minuto de tentativas)
+      if (isDev && t > 20) {
+        logger.warn('Redis: Limite de tentativas excedido após 20 vezes.');
+        return null;
+      }
+      return Math.min(t * 500, 5000);
     },
-    connectTimeout: 5000,
+    connectTimeout: 10000,
   });
   // Cast to unknown first to avoid the TS constructor overload tuple bug 
   return new (Redis as unknown as new (url: string, options: RedisOptions) => Redis)(REDIS_URL, opts);

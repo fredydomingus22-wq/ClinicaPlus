@@ -12,7 +12,7 @@ export function Skeleton({ className = '', variant = 'rect' }: SkeletonProps) {
   const variantClasses = {
     text: 'h-3 w-full rounded',
     rect: 'h-20 w-full',
-    circle: 'h-10 w-10',
+    circle: 'h-10 w-10 rounded-full',
   };
 
   return (

@@ -1,400 +1,326 @@
-# Task: Sprint 08 — Módulo WhatsApp com Evolution API & n8n (TDD)
+# Task: Sprint 08 — Módulo WhatsApp (Evolution API + n8n) com TDD
 
-## METODOLOGIA: TEST-DRIVEN DEVELOPMENT
-Cada passo segue o ciclo RED → GREEN → REFACTOR.
-Nunca escreves código de produção sem um teste a falhar primeiro.
-Se te apanhares a escrever código sem ter escrito o teste primeiro — PARA e volta atrás.
-
----
-
-## LEITURA OBRIGATÓRIA — antes de qualquer código ou teste
-
-1. `docs/CLAUDE.md`                                         → regras absolutas
-2. `docs/CLAUDE-v2.md`                                      → regras v2
-3. `docs/01-adr/ADR-012-whatsapp-evolution-n8n.md`          → decisão arquitectural
-4. `docs/11-modules/MODULE-whatsapp.md`                     → spec completa (schema, services, endpoints)
-5. `kit/skills/tdd/SKILL.md`                                → ciclo TDD obrigatório
-6. `kit/skills/tdd/reference/ciclo-red-green-refactor.md`   → como executar o ciclo
-7. `kit/skills/tdd/reference/mocks-externos.md`             → mocks para evolutionApi e n8nApi
-8. `kit/skills/tdd/reference/cobertura-e-thresholds.md`     → thresholds obrigatórios
-9. `kit/skills/whatsapp/SKILL.md`                           → regras e checklist do módulo
-10. `kit/skills/whatsapp/reference/tdd-whatsapp.md`         → spec completa de todos os testes
-11. `kit/skills/whatsapp/reference/conversa-state-machine.md` → máquina de estados
-12. `kit/skills/whatsapp/reference/n8n-workflow-templates.md` → como construir templates
-13. `kit/skills/whatsapp/reference/ui-automacoes.md`        → componentes React
-14. `kit/skills/subscricoes/SKILL.md`                       → requirePlan('PRO') obrigatório
-15. `kit/skills/SKILL-redis-bullmq.md`                      → jobs de lembrete e expiração
-16. `kit/skills/SKILL-websocket.md`                         → eventos em tempo real
-
-Confirma que leste os 16 ficheiros. Não avanças sem confirmar.
+## METODOLOGIA OBRIGATÓRIA: TEST-DRIVEN DEVELOPMENT
+Ciclo: RED (teste falha) → GREEN (mínimo código) → REFACTOR (limpar)
+NUNCA escreves código de produção sem um teste a falhar primeiro.
 
 ---
 
-## PASSO 0 — Setup de testes (sem código de produção)
+## LEITURA OBRIGATÓRIA — confirma que leste todos antes de avançar
 
-### 0a. Instalar dependências de teste
+1. `docs/CLAUDE.md`                                          → regras absolutas do projecto
+2. `docs/01-adr/ADR-012-whatsapp-evolution-n8n.md`           → decisões arquitecturais
+3. `docs/11-modules/MODULE-whatsapp.md`                      → spec completa (schema, services, endpoints, jobs, UI)
+4. `kit/skills/whatsapp/SKILL.md`                            → regras e checklist
+5. `kit/skills/whatsapp/reference/conversa-state-machine.md` → máquina de estados e etapas
+6. `kit/skills/whatsapp/reference/tdd-specs.md`              → ~50 casos de teste a implementar
+7. `kit/skills/tdd/SKILL.md`                                 → ciclo TDD obrigatório
+8. `kit/skills/tdd/reference/mocks-externos.md`              → mocks evolutionApi, n8nApi, Prisma
+9. `kit/skills/SKILL-redis-bullmq.md`                        → jobs de lembrete
+10. `kit/skills/SKILL-websocket.md`                          → publishEvent para notificações
 
+Confirma que leste todos com: "Li os 10 ficheiros. A avançar para Passo 0."
+
+---
+
+## PASSO 0 — Setup TDD (sem código de produção)
+
+### 0a. Dependências de teste
 ```bash
 pnpm add -D vitest @vitest/coverage-v8 --filter=api   # se ainda não existir
+pnpm add -D @testing-library/react @testing-library/user-event --filter=web
 ```
 
 ### 0b. Criar ficheiros de mock
-
-Cria estes 3 ficheiros (são helpers de teste — não são código de produção):
-
+Cria exactamente estes 3 ficheiros usando os padrões de `kit/skills/tdd/reference/mocks-externos.md`:
 ```
 apps/api/src/test/mocks/evolutionApi.mock.ts
 apps/api/src/test/mocks/n8nApi.mock.ts
-apps/api/src/test/mocks/prisma.mock.ts  (verificar se já existe — não recriar)
+apps/api/src/test/mocks/prisma.mock.ts   ← verificar se já existe antes de criar
 ```
 
-Usa exactamente os padrões de `kit/skills/tdd/reference/mocks-externos.md`.
+### 0c. vitest.config.ts
+Verificar se `apps/api/vitest.config.ts` tem thresholds para `src/services/wa-*` (≥ 85% lines).
+Se não, adicionar.
 
-### 0c. Verificar vitest.config.ts
-
-Confirma que `apps/api/vitest.config.ts` tem os thresholds de coverage para `src/services/wa-*`.
-Se não existir, criar com a configuração de `kit/skills/tdd/reference/cobertura-e-thresholds.md`.
-
-**Checkpoint 0:**
+### Checkpoint 0
 ```bash
-pnpm test --run --filter=api   # deve correr 0 testes — sem erros de setup
+pnpm test --run --filter=api   # deve correr 0 testes sem erros de setup
 ```
+Se houver erros de configuração, resolve-os ANTES de avançar.
 
 ---
 
-## PASSO 1 — Migration e Schema (zero risco de regressão)
+## PASSO 1 — Migration e Schema (risco zero)
 
-### 1a. Prisma schema
+### 1a. Schema Prisma
+Adiciona ao `prisma/schema.prisma` exactamente os modelos de `MODULE-whatsapp.md §1`:
+- `enum WaEstadoInstancia` (4 valores)
+- `enum WaTipoAutomacao` (5 valores)
+- `enum WaEstadoConversa` (5 valores)
+- `enum WaDirecao` (2 valores)
+- `model WaInstancia` com TODOS os campos e índices especificados
+- `model WaAutomacao` com `@@unique([instanciaId, tipo])`
+- `model WaConversa` com `@@unique([instanciaId, numeroWhatsapp])` e `@@index([ultimaMensagemEm])`
+- `model WaMensagem`
 
-Adiciona ao `prisma/schema.prisma` os modelos de `docs/11-modules/MODULE-whatsapp.md` §1:
-- enum `WaEstadoInstancia`
-- enum `WaTipoAutomacao`
-- enum `WaEstadoConversa`
-- enum `WaDirecao`
-- model `WaInstancia`
-- model `WaAutomacao`
-- model `WaConversa`
-- model `WaMensagem`
+Adiciona ao model `Paciente` existente: `origem String? @default("DIRECTO")`
+Adiciona ao model `Agendamento` existente: `canal String? @default("PRESENCIAL")`
 
-Adiciona campo `origem String? @default("DIRECTO")` ao model `Paciente` existente.
-Adiciona campo `canal String? @default("PRESENCIAL")` ao model `Agendamento` existente.
-
-### 1b. Migration
-
+### 1b. Aplicar migration
 ```bash
 pnpm prisma migrate dev --name whatsapp_module
 pnpm prisma generate
 ```
 
-**Checkpoint 1:**
+### Checkpoint 1
 ```bash
 pnpm typecheck --filter=api   # zero erros
 ```
+PARA se houver erros TypeScript no schema. Não avançar com erros.
 
 ---
 
-## PASSO 2 — TDD: evolutionApi.ts
+## PASSO 2 — TDD: lib/evolutionApi.ts
 
-### RED: escreve os testes primeiro
-
+### RED — escreve os testes PRIMEIRO
 Cria `apps/api/src/lib/evolutionApi.test.ts`:
-
 ```typescript
-// Testes a implementar (RED — vão falhar porque evolutionApi.ts ainda não existe):
-describe('evolutionApi.criarInstancia', () => {
-  it('deve fazer POST /instance/create com parâmetros correctos', ...)
-  it('deve incluir webhook URL e eventos correctos', ...)
-  it('deve lançar erro se Evolution API retornar 4xx', ...)
-});
-describe('evolutionApi.enviarTexto', () => {
-  it('deve fazer POST /message/sendText/{instanceName}', ...)
-  it('deve incluir delay de 1200ms', ...)
-});
-describe('evolutionApi.estadoConexao', () => {
-  it('deve retornar estado "open" quando conectado', ...)
-  it('deve retornar estado "close" quando desconectado', ...)
-});
+// Usa vi.mock('axios') para mockar chamadas HTTP
+// Implementa TODOS os testes de "evolutionApi" de tdd-specs.md:
+// - criarInstancia: POST correcto, webhook URL, erro 4xx
+// - enviarTexto: path correcto, delay: 1200 presente
+// - estadoConexao: retorna state correcto
 ```
+Confirma que FALHAM: `pnpm test --run --filter=api -- evolutionApi`
 
-Usa `vi.mock('axios')` para mockar as chamadas HTTP.
-
-Confirma que os testes falham com `pnpm test --run --filter=api`.
-
-### GREEN: implementa o mínimo
-
-Cria `apps/api/src/lib/evolutionApi.ts` exactamente como em
-`docs/11-modules/MODULE-whatsapp.md` §4.
-
-Confirma: `pnpm test --run --filter=api` — todos os testes do evolutionApi a VERDE.
+### GREEN — implementa o mínimo
+Cria `apps/api/src/lib/evolutionApi.ts` exactamente como em `MODULE-whatsapp.md §4`.
+Confirma que PASSAM: `pnpm test --run --filter=api -- evolutionApi`
 
 ### REFACTOR
-- Extrair `makeEvoUrl(path)` helper
-- Adicionar JSDoc aos métodos públicos
+- Extrair `makeEvoRequest()` helper para reduzir repetição
+- Zero mudança no comportamento — testes continuam verdes
 
 ---
 
-## PASSO 3 — TDD: n8nApi.ts + templates
+## PASSO 3 — TDD: lib/n8nApi.ts + templates
 
-### RED: testes primeiro
-
-Cria `apps/api/src/lib/n8nApi.test.ts`:
-
+### RED — testes primeiro
+Cria `apps/api/src/lib/n8nApi.test.ts` e `apps/api/src/lib/n8n-templates/marcacao.template.test.ts`:
 ```typescript
-describe('n8nApi.criarWorkflow', () => {
-  it('deve fazer POST /api/v1/workflows com template correcto', ...)
-  it('deve activar o workflow imediatamente após criar', ...)
-  it('deve retornar workflowId e webhookPath', ...)
-  it('deve usar template MARCACAO_CONSULTA para tipo correcto', ...)
-  it('deve usar template LEMBRETE_24H para tipo correcto', ...)
-});
-describe('n8nApi.desactivar', () => {
-  it('deve fazer POST /api/v1/workflows/:id/deactivate', ...)
-});
+// n8nApi: criarWorkflow chama POST + activate, retorna workflowId e webhookPath
+// templateMarcacao: contém webhookPath correcto, URL dos endpoints /fluxo/*, API key nos headers
 ```
+Confirma que FALHAM.
 
-Cria `apps/api/src/lib/n8n-templates/marcacao.template.test.ts`:
-
-```typescript
-describe('templateMarcacao', () => {
-  it('deve incluir webhookPath com slug da clínica', ...)
-  it('deve incluir URL correcta para cada endpoint /fluxo/*', ...)
-  it('deve incluir API key nos headers de cada nó HTTP', ...)
-  it('deve incluir nó de resposta 200 ao webhook', ...)
-  it('deve filtrar mensagens fromMe=true', ...)
-});
-```
-
-Confirma que falham.
-
-### GREEN: implementa
-
-Cria `apps/api/src/lib/n8nApi.ts` — `docs/11-modules/MODULE-whatsapp.md` §5.
-Cria `apps/api/src/lib/n8n-templates/index.ts`.
-Copia `kit/skills/whatsapp/resources/marcacao.template.ts` para o projecto.
-Cria os restantes templates: `lembrete-24h`, `lembrete-2h`, `confirmacao`, `boas-vindas`
-seguindo os padrões de `kit/skills/whatsapp/reference/n8n-workflow-templates.md`.
-
-Confirma: todos os testes de n8nApi e templates a VERDE.
+### GREEN — implementa
+Cria `apps/api/src/lib/n8nApi.ts` como em `MODULE-whatsapp.md §5`.
+Cria `apps/api/src/lib/n8n-templates/index.ts` (registo TEMPLATES[tipo]).
+Cria `apps/api/src/lib/n8n-templates/marcacao.template.ts` (ver arquivo na skill).
+Cria os restantes 4 templates: `lembrete-24h`, `lembrete-2h`, `confirmacao`, `boas-vindas`
+  — seguindo o padrão de marcacao.template.ts mas com lógica simplificada.
+Confirma que PASSAM.
 
 ---
 
 ## PASSO 4 — TDD: wa-instancia.service.ts
 
-### RED: escreve todos os testes do describe
+### RED — todos os testes da secção "wa-instancia.service.ts" de tdd-specs.md
+Cria `apps/api/src/services/wa-instancia.service.test.ts` com TODOS os casos.
+Confirma que FALHAM.
 
-Cria `apps/api/src/services/wa-instancia.service.test.ts` com TODOS os casos
-de `kit/skills/whatsapp/reference/tdd-whatsapp.md` secção "wa-instancia.service.ts".
+### GREEN — implementa método a método
+Cria `apps/api/src/services/wa-instancia.service.ts` como em `MODULE-whatsapp.md §6`.
+Implementa método a método, verificando que os testes ficam verdes antes de avançar:
+  1. `criar()` → testes verdes → próximo
+  2. `processarQrCode()` → testes verdes → próximo
+  3. `processarConexao()` → testes verdes → próximo
+  4. `desligar()` → testes verdes
 
-Não implementes nada ainda. Confirma que todos falham.
-
-### GREEN: implementa o service
-
-Cria `apps/api/src/services/wa-instancia.service.ts` com:
-- `criar(clinicaId, userId)` — cria instância na Evolution API + regista no DB
-- `processarQrCode(clinicaId, qrBase64)` — actualiza DB + emite WebSocket
-- `processarConexao(clinicaId, state)` — actualiza estado + emite WebSocket
-- `desligar(clinicaId, userId)` — logout na Evolution API + actualiza DB
-
-Implementa método a método — após cada método, verifica que os seus testes ficam a verde
-antes de avançar para o próximo.
-
-### REFACTOR
-- Extrair `getInstanciaOrThrow(clinicaId)` helper interno
-- Verificar que coverage de `wa-instancia.service.ts` ≥ 85%
-
-**Checkpoint 4:**
+### Checkpoint 4
 ```bash
 pnpm test --run --filter=api -- wa-instancia
 pnpm test --run --coverage --filter=api -- wa-instancia
+# wa-instancia.service: ≥ 85% lines
 ```
 
 ---
 
 ## PASSO 5 — TDD: wa-automacao.service.ts
 
-### RED → GREEN → REFACTOR
+Segue exactamente o mesmo ciclo do Passo 4.
+Testes: secção "wa-automacao.service.ts" de tdd-specs.md.
+Implementação: `MODULE-whatsapp.md §6 wa-automacao.service.ts`.
 
-Segue o mesmo ciclo do Passo 4.
-Spec de testes: `kit/skills/whatsapp/reference/tdd-whatsapp.md` secção "wa-automacao.service.ts".
+ATENÇÃO ao teste crítico:
+"deve marcar ativo=false mesmo se n8n estiver em baixo"
+→ A implementação DEVE ter `.catch(err => { logger.warn(...) })` no `n8nApi.desactivar()`
 
-Implementa:
-- `activar(automacaoId, clinicaId, userId)` — cria workflow n8n + actualiza DB + auditoria
-- `desactivar(automacaoId, clinicaId, userId)` — desactiva workflow + actualiza DB
-
-**Atenção ao teste crítico:** "deve marcar automacao.ativo=false mesmo se n8n estiver em baixo"
-→ `n8nApi.desactivar` deve ter `.catch(() => {})` — o DB é actualizado mesmo assim.
-
----
-
-## PASSO 6 — TDD: wa-conversa.service.ts (a parte mais complexa)
-
-### RED — escreve TODOS os testes das 5 etapas
-
-Cria `apps/api/src/services/wa-conversa.service.test.ts` com TODOS os casos
-de `kit/skills/whatsapp/reference/tdd-whatsapp.md` secção "wa-conversa.service.ts".
-
-São ~20 testes. Escreve-os todos antes de implementar qualquer código.
-
-Confirma: todos falham (RED).
-
-### GREEN — implementa etapa por etapa
-
-Implementa cada método, verificando que os seus testes ficam verdes antes de avançar:
-
-1. `etapaInicio` → testes verdes → avança
-2. `etapaEspecialidade` → testes verdes → avança
-3. `etapaMedico` → testes verdes → avança
-4. `etapaHorario` → testes verdes → avança
-5. `etapaConfirmar` → testes verdes
-
-Lê `kit/skills/whatsapp/reference/conversa-state-machine.md` antes de implementar
-o tratamento de erros e reintentos.
-
-### REFACTOR
-- Extrair `obterOuCriarPaciente()` como função pura testável
-- Extrair `tratarRespostaInvalida()` como função pura testável
-- Extrair `formatarMensagemLista()` helper
-
-**Checkpoint 6:**
+### Checkpoint 5
 ```bash
-pnpm test --run --filter=api -- wa-conversa
-# Deve ter ≥ 20 testes a verde
-pnpm test --run --coverage --filter=api -- wa-conversa
-# coverage wa-conversa.service.ts ≥ 85%
+pnpm test --run --filter=api -- wa-automacao
+# ≥ 85% lines
 ```
 
 ---
 
-## PASSO 7 — TDD: wa-webhook.service.ts
+## PASSO 6 — TDD: wa-conversa.service.ts (mais complexo)
 
-### RED → GREEN → REFACTOR
+### RED — escreve TODOS os ~25 testes antes de qualquer implementação
+Cria `apps/api/src/services/wa-conversa.service.test.ts` com TODOS os casos
+de tdd-specs.md secção "wa-conversa.service.ts".
+Confirma que TODOS FALHAM antes de avançar.
 
-Spec de testes: secção "wa-webhook.service.ts" em `tdd-whatsapp.md`.
+### GREEN — implementa etapa a etapa
+Cria `apps/api/src/services/wa-conversa.service.ts`.
+Implementa cada método, com testes verdes antes de passar ao seguinte:
+  1. `obter()`
+  2. `etapaInicio()` — lê `conversa-state-machine.md` antes
+  3. `etapaEspecialidade()` — incluindo `tratarInputInvalido()`
+  4. `etapaMedico()`
+  5. `etapaHorario()`
+  6. `etapaConfirmar()` — incluindo `obterOuCriarPaciente()`
 
-Atenção especial aos testes de HMAC:
-- "deve rejeitar payload sem assinatura HMAC" → retorna 401
-- "deve rejeitar payload com assinatura HMAC inválida" → retorna 401
+### REFACTOR
+- Extrair `obterOuCriarPaciente()` como função pura testável em separado
+- Extrair `tratarInputInvalido()` como função pura reutilizável
+- Extrair `formatSlotPtAO()` para lib/utils.ts
 
-O middleware `verificarHmacEvolution` deve ser testado em separado dos testes de integração.
+### Checkpoint 6
+```bash
+pnpm test --run --filter=api -- wa-conversa
+# ≥ 25 testes verdes
+# ≥ 85% lines coverage
+```
 
 ---
 
-## PASSO 8 — TDD: Rotas (integration tests com supertest)
+## PASSO 7 — TDD: wa-webhook.service.ts + middleware HMAC
 
-### RED: escreve todos os testes de rota
+### RED → GREEN → REFACTOR
+Testes: secção "wa-webhook.service.ts" e "verificarHmacEvolution" de tdd-specs.md.
+Implementação: `MODULE-whatsapp.md §7`.
 
-Cria `apps/api/src/routes/whatsapp.test.ts` com os testes de integração
-de `kit/skills/whatsapp/reference/tdd-whatsapp.md` secção "Rotas".
+ATENÇÃO: `verificarHmacEvolution` é um middleware Express — testá-lo em separado
+com req/res mocks, não via supertest.
 
-Usa `supertest` com um servidor Express de teste (não o servidor real).
-Mock dos services (não da DB) neste nível.
+---
 
-### GREEN: implementa as rotas
+## PASSO 8 — Rotas (integration tests com supertest)
 
-Cria `apps/api/src/routes/whatsapp.ts` com TODAS as rotas de
-`docs/11-modules/MODULE-whatsapp.md` §8.
+### RED — todos os testes de rota de tdd-specs.md
+Cria `apps/api/src/routes/whatsapp.test.ts`.
+Usa supertest com Express de teste. Mocka os SERVICES (não a DB).
+Confirma que TODOS FALHAM.
 
-Garante:
-- `requirePlan('PRO')` em rotas de gestão (instância + automações)
-- `requirePermission('whatsapp', 'manage')` em rotas de escrita
-- `apiKeyAuth` nos endpoints `/fluxo/*` (não JWT)
+### GREEN — implementa as rotas
+Cria `apps/api/src/routes/whatsapp.ts` com TODAS as rotas de `MODULE-whatsapp.md §8`.
+
+GARANTE (verificar linha a linha):
+- `requirePlan('PRO')` em `/instancias` e `/automacoes`
+- `requirePermission('whatsapp', 'manage')` nas rotas de escrita
+- `apiKeyAuth` (não JWT) nos endpoints `/fluxo/*`
 - `verificarHmacEvolution` no endpoint `/webhook`
 
 Regista as rotas em `apps/api/src/app.ts`:
 ```typescript
+import whatsappRouter from './routes/whatsapp';
 app.use('/api/whatsapp', whatsappRouter);
+```
+
+### Checkpoint 8
+```bash
+pnpm test --run --filter=api -- routes/whatsapp
 ```
 
 ---
 
-## PASSO 9 — TDD: Jobs BullMQ
+## PASSO 9 — Jobs BullMQ
 
-Cria `apps/worker/src/jobs/wa-lembrete.job.test.ts` e `wa-expirar-conversas.job.test.ts`.
-
+Cria `apps/worker/src/jobs/wa-lembrete.job.test.ts` com:
 ```typescript
-// wa-lembrete.job — testes:
-it('deve enfileirar lembrete 24h para agendamentos de amanhã', ...)
-it('deve enfileirar lembrete 2h para agendamentos daqui a 2h', ...)
-it('deve ignorar agendamentos de clínicas sem automação activa', ...)
-it('deve ignorar pacientes sem número WhatsApp', ...)
-
-// wa-expirar-conversas.job — testes:
-it('deve expirar conversas sem resposta há mais de 24h', ...)
-it('deve não afectar conversas CONCLUIDAS ou AGUARDA_INPUT', ...)
+it('deve enfileirar/executar lembrete para agendamentos de amanhã com instância CONECTADA')
+it('deve ignorar clínicas sem automação LEMBRETE_24H activa')
+it('deve ignorar pacientes sem número WhatsApp')
 ```
 
-Implementa os jobs após os testes estarem a RED.
+Implementa `apps/worker/src/jobs/wa-lembrete.job.ts` como em `MODULE-whatsapp.md §9`.
+Implementa `apps/worker/src/jobs/wa-expirar-conversas.job.ts`.
 
 Adiciona ao scheduler do worker:
 ```typescript
 agenda.every('0 7 * * *',  'wa-lembrete-24h',       {}, { timezone: 'Africa/Luanda' });
-agenda.every('0 * * * *',  'wa-expirar-conversas',  {}, { timezone: 'Africa/Luanda' });
-// Lembrete 2h: job a cada 30min — filtra agendamentos na janela [1h45, 2h15]
-agenda.every('*/30 * * * *', 'wa-lembrete-2h',      {}, { timezone: 'Africa/Luanda' });
+agenda.every('0 */2 * * *','wa-lembrete-2h',         {}, { timezone: 'Africa/Luanda' });
+agenda.every('0 * * * *',  'wa-expirar-conversas',   {}, { timezone: 'Africa/Luanda' });
 ```
 
 ---
 
-## PASSO 10 — UI com component tests
+## PASSO 10 — UI React (component tests)
 
-### RED: testes de componente primeiro
+### RED — component tests primeiro
+Cria `apps/web/src/pages/configuracoes/WhatsappPage.test.tsx` com
+TODOS os casos de tdd-specs.md secção "WhatsappPage.tsx".
+Confirma que FALHAM.
 
-Cria `apps/web/src/pages/configuracoes/WhatsappPage.test.tsx`:
-```typescript
-// Spec de `kit/skills/whatsapp/reference/tdd-whatsapp.md` secção "WhatsappPage.tsx"
-it('deve mostrar QR code quando estado=AGUARDA_QR', ...)
-it('deve mostrar badge verde CONECTADO quando estado=CONECTADO', ...)
-it('deve mostrar toggles para os 5 tipos de automação', ...)
-it('deve mostrar campos de config ao activar automação', ...)
-it('deve actualizar estado QR em tempo real via WebSocket', ...)
-```
-
-### GREEN: implementa os componentes
-
-Cria os componentes seguindo `kit/skills/whatsapp/reference/ui-automacoes.md`:
+### GREEN — implementa componentes
+Cria seguindo `MODULE-whatsapp.md §(UI)` e `kit/skills/whatsapp/reference/ui-painel.md`:
 - `apps/web/src/pages/configuracoes/WhatsappPage.tsx`
 - `apps/web/src/components/wa/WaConexaoCard.tsx`
 - `apps/web/src/components/wa/WaAutomacaoCard.tsx`
 - `apps/web/src/components/wa/WaActividadeRecente.tsx`
 
+Envolve toda a página com `<PlanGate planoMinimo="PRO">`.
 Adiciona rota `/configuracoes/whatsapp` ao router.
 
 ---
 
-## CHECKPOINT FINAL — tudo junto
+## CHECKPOINT FINAL — obrigatório antes de considerar completo
 
 ```bash
-pnpm typecheck                        # zero erros em todos os packages
-pnpm test --run                       # todos os testes a verde
+pnpm typecheck                        # zero erros em TODOS os packages
+pnpm test --run                       # TODOS os testes verdes
 pnpm test --run --coverage --filter=api
-# Verificar:
-# wa-instancia.service: ≥ 85% lines
-# wa-automacao.service: ≥ 85% lines
-# wa-conversa.service:  ≥ 85% lines
-# wa-webhook.service:   ≥ 85% lines
+# wa-instancia.service:  ≥ 85% lines
+# wa-automacao.service:  ≥ 85% lines
+# wa-conversa.service:   ≥ 85% lines
+# wa-webhook.service:    ≥ 85% lines
 pnpm lint                             # zero warnings
 ```
 
-Verificações manuais:
-- [ ] `POST /api/whatsapp/instancias` com plano BASICO → 402 PLAN_UPGRADE_REQUIRED
-- [ ] `POST /api/whatsapp/instancias` com plano PRO → 201 + qrCode presente
+### Checklist manual obrigatório
+
+**Database:**
+- [ ] `pnpm prisma db push --preview-feature` sem erros
+- [ ] Campos `origem` (Paciente) e `canal` (Agendamento) visíveis no Prisma Studio
+
+**Segurança:**
 - [ ] `POST /api/whatsapp/webhook` sem HMAC → 401
-- [ ] `POST /api/whatsapp/webhook` com HMAC válido → 200
-- [ ] `POST /api/whatsapp/fluxo/inicio` com JWT → 401 (só aceita API key)
+- [ ] `POST /api/whatsapp/webhook` com HMAC inválido → 401
+- [ ] `POST /api/whatsapp/fluxo/inicio` com JWT → 401
 - [ ] `POST /api/whatsapp/fluxo/inicio` com API key válida → 200
-- [ ] `/configuracoes/whatsapp` renderiza sem erros na consola
-- [ ] Toggle de automação desactivado se instância não está CONECTADA
-- [ ] Actividade recente actualiza em tempo real (WebSocket)
+- [ ] `POST /api/whatsapp/instancias` com plano BASICO → 402
+
+**Funcionalidade:**
+- [ ] `POST /api/whatsapp/instancias` PRO → 201 com qrCode no body
+- [ ] `GET /api/whatsapp/instancias/estado` → retorna estado actual
+- [ ] `GET /api/whatsapp/automacoes` → retorna 5 tipos com estado e config
+- [ ] `/configuracoes/whatsapp` renderiza sem erros na consola do browser
+- [ ] Toggle de automação disabled quando instância não CONECTADA
+
+**Qualidade:**
+- [ ] Zero `console.log` no código commitado
+- [ ] Zero `any` TypeScript sem comentário justificativo
+- [ ] Zero `it.only` ou `test.only` nos ficheiros de teste
 
 ---
 
 ## SE ENCONTRARES CONFLITOS
 
-Se `apps/api/src/app.ts` já tiver registo de rotas `/api/whatsapp` → PARA e reporta.
-Se o scheduler do worker usar biblioteca diferente de `agenda` → PARA e reporta.
-Se `prisma.agendamento` não tiver campo `canal` → PARA antes de adicionar (migration necessária).
-Em todos os casos: adaptas o novo ao existente. Nunca o contrário.
+- Se `agendamentosService.create()` não aceita campo `canal` → PARA e reporta
+- Se o scheduler do worker usa biblioteca diferente de `agenda` → PARA e reporta
+- Se `apiKeyAuth` middleware não existe ainda → PARA e reporta qual middleware de auth por API key existe
+- Se `publishEvent()` não existe ou tem assinatura diferente → PARA e reporta
 
-**Regra TDD final:** se um teste passa sem que tenhas escrito código para ele,
-ou se um teste falha por razão de sintaxe em vez de comportamento,
-resolve antes de avançar.
+Regra universal: **adaptas o novo ao existente, nunca o contrário.**

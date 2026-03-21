@@ -65,10 +65,25 @@ export function useBilling() {
     },
   });
 
+  const defaultLimite = { maximo: 0, actual: 0, percentagem: 0 };
+  const defaultLimites = {
+    medicos: defaultLimite,
+    consultas: defaultLimite,
+    pacientes: defaultLimite,
+    apiKeys: defaultLimite,
+  };
+
   return {
-    subscricaoActual: subscricaoActual.data,
-    subscricaoUso: subscricaoUso.data,
-    historico: historicoQuery.data,
+    subscricaoActual: subscricaoActual.data || {
+      plano: '---',
+      estado: '---',
+      diasRestantes: 0,
+      validaAte: null,
+      limites: defaultLimites,
+      features: {}
+    } as SubscricaoActual,
+    subscricaoUso: subscricaoUso.data || defaultLimites as unknown as SubscricaoUso,
+    historico: historicoQuery.data || [],
     isLoading: subscricaoActual.isLoading || subscricaoUso.isLoading || historicoQuery.isLoading,
   };
 }

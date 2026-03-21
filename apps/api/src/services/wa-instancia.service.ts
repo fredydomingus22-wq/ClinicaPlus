@@ -4,6 +4,7 @@ import { publishEvent } from '../lib/eventBus';
 import { config } from '../lib/config';
 import { WaEstadoInstancia, Plano, WaInstancia } from '@prisma/client';
 import { logger } from '../lib/logger';
+import { auditLogService } from './auditLog.service';
 import crypto from 'crypto';
 
 export const waInstanciaService = {
@@ -37,7 +38,7 @@ export const waInstanciaService = {
     return instancia;
   },
 
-  async criar(clinicaId: string): Promise<WaInstancia> {
+  async criar(clinicaId: string, userId: string): Promise<WaInstancia> {
     const clinica = await prisma.clinica.findUniqueOrThrow({
       where: { id: clinicaId },
     });
@@ -46,8 +47,8 @@ export const waInstanciaService = {
       throw new Error('Módulo WhatsApp apenas disponível para planos PRO ou superiores.');
     }
 
-    // Gerar nome único baseado em clinicaId e timestamp para permitir múltiplas
-    const instanceName = `cp-${clinicaId}-${Date.now()}`;
+    // Formato: cp-{slug}-{random6} (MODULE-whatsapp.md §6)
+    const instanceName = `cp-${clinica.slug}-${crypto.randomBytes(3).toString('hex')}`;
     const webhookUrl = `${config.API_PUBLIC_URL}/api/whatsapp/webhook`;
     const evolutionToken = crypto.randomUUID();
 
@@ -65,15 +66,30 @@ export const waInstanciaService = {
       logger.warn({ instanceName }, 'Não foi possível obter QR inicial após criação. O polling tratará do resto.');
     }
 
-    return prisma.waInstancia.create({
+    const qrExpiresAt = qrCodeBase64 ? new Date(Date.now() + 60_000) : null;
+
+    const instancia = await prisma.waInstancia.create({
       data: {
         clinicaId,
         evolutionName: instanceName,
         evolutionToken,
         qrCodeBase64,
+        qrExpiresAt,
         estado: WaEstadoInstancia.AGUARDA_QR,
+        atualizadoEm: new Date(),
       },
     });
+
+    await auditLogService.log({
+      actorId: userId,
+      clinicaId,
+      accao: 'CREATE',
+      recurso: 'wa_instancia',
+      recursoId: instancia.id,
+      depois: { evolutionName: instanceName, estado: WaEstadoInstancia.AGUARDA_QR }
+    });
+
+    return instancia;
   },
 
   async obterQrCode(id: string, clinicaId: string): Promise<{ qrcode: string }> {
@@ -82,12 +98,21 @@ export const waInstanciaService = {
     try {
       const { base64 } = await evolutionApi.obterQrCode(instancia.evolutionName);
 
+      const qrExpiresAt = new Date(Date.now() + 60_000);
       await prisma.waInstancia.update({
         where: { id: instancia.id },
         data: {
           qrCodeBase64: base64,
+          qrExpiresAt,
           estado: WaEstadoInstancia.AGUARDA_QR,
+          atualizadoEm: new Date()
         },
+      });
+
+      await publishEvent(`clinica:${clinicaId}`, 'whatsapp:qrcode', {
+        instanciaId: instancia.id,
+        qrCode: base64,
+        expiresAt: qrExpiresAt
       });
 
       return { qrcode: base64 };
@@ -134,6 +159,7 @@ export const waInstanciaService = {
       data: {
         qrCodeBase64: qrBase64,
         estado: WaEstadoInstancia.AGUARDA_QR,
+        atualizadoEm: new Date()
       },
     });
 
@@ -171,11 +197,12 @@ export const waInstanciaService = {
       logger.info({ evolutionName, old: instancia.estado, new: novoEstado, state }, 'Estado da instância actualizado via Webhook');
       await prisma.waInstancia.update({
         where: { id: instancia.id },
-      data: {
-        estado: novoEstado,
-        qrCodeBase64: keepQr,
-        ...(numeroTelefone && { numeroTelefone }),
-      },
+        data: {
+          estado: novoEstado,
+          qrCodeBase64: keepQr,
+          atualizadoEm: new Date(),
+          ...(numeroTelefone && { numeroTelefone }),
+        },
       });
     }
 
@@ -190,16 +217,14 @@ export const waInstanciaService = {
 
     try {
       const resp = await evolutionApi.estadoConexao(instancia.evolutionName);
-      const { state } = resp;
-      
-      logger.info({ id, evolutionName: instancia.evolutionName, rawState: state, resp }, 'Sincronização activa: Resposta da Evolution API');
+      logger.info({ id, evolutionName: instancia.evolutionName, resp }, 'Sincronização activa: Resposta da Evolution API');
 
       let novoEstado = instancia.estado;
       let keepQr = instancia.qrCodeBase64;
       let numeroTelefone = instancia.numeroTelefone;
 
-      const safeState = (state || '').toLowerCase();
-      const isSucesso = ['open', 'connected', 'authenticated', 'connecting'].includes(safeState);
+      const safeState = (resp.instance?.state || '').toLowerCase();
+      const isSucesso = ['open', 'connected', 'authenticated'].includes(safeState);
       const isErro = ['close', 'refused', 'rejected', 'disconnected'].includes(safeState);
       const isPendente = ['connecting', 'pairing'].includes(safeState);
 
@@ -234,6 +259,7 @@ export const waInstanciaService = {
             estado: novoEstado,
             qrCodeBase64: keepQr,
             numeroTelefone,
+            atualizadoEm: new Date()
           },
         });
       }
@@ -253,14 +279,6 @@ export const waInstanciaService = {
     } catch {
       // Ignorar se já estiver offline
     }
-
-    await prisma.waInstancia.update({
-      where: { id: instancia.id },
-      data: {
-        estado: WaEstadoInstancia.DESCONECTADO,
-        qrCodeBase64: null,
-      },
-    });
   },
 
   async eliminar(id: string, clinicaId: string): Promise<void> {

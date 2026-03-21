@@ -156,11 +156,17 @@ export default function RelatoriosPage() {
         ) : (
           <>
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <KPIItem 
-                label="Receita Total" 
+                label="Receita Real" 
                 value={formatKwanza(data?.totais.receita || 0)} 
                 icon={<DollarSign className="text-success-600" />}
+              />
+              <KPIItem 
+                label="Previsão (Rascunhos)" 
+                value={formatKwanza(data?.totais.receitaPrevista || 0)} 
+                icon={<BarChart3 className="text-primary-600" />}
+                variant="info"
               />
               <KPIItem 
                 label="Consultas" 

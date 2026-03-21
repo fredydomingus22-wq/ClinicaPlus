@@ -1,8 +1,8 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { config } from './config';
 import { logger } from './logger';
+import { AppError } from './AppError';
 import { TEMPLATES } from './n8n-templates/index';
-// Remover a importação directa do Prisma aqui se não for preciso; importamos WaTipoAutomacao do types/prisma ou só usamos type.
 import type { WaTipoAutomacao } from '@prisma/client';
 
 const n8n = axios.create({
@@ -14,6 +14,15 @@ const n8n = axios.create({
   },
   timeout: 20_000,
 });
+
+// Interceptor: converter erros da n8n API em AppError (MODULE-whatsapp.md §5)
+n8n.interceptors.response.use(
+  res => res,
+  (err: AxiosError) => {
+    const msg = (err.response?.data as { message?: string })?.message ?? err.message;
+    throw new AppError(`n8n API: ${msg}`, 502, 'N8N_API_ERROR');
+  }
+);
 
 /**
  * Variáveis passadas para os templates n8n.
@@ -35,31 +44,22 @@ export const n8nApi = {
   async criarWorkflow(tipo: WaTipoAutomacao, vars: TemplateVars): Promise<{ workflowId: string; webhookPath: string }> {
     const templateFactory = TEMPLATES[tipo];
     if (!templateFactory) {
-      throw new Error(`Template não encontrado para o tipo: ${tipo}`);
+      throw new AppError(`Template não encontrado para o tipo: ${tipo}`, 400, 'N8N_TEMPLATE_NOT_FOUND');
     }
     const template = templateFactory(vars);
-    
+
+    const { data } = await n8n.post('/api/v1/workflows', template);
+    const workflowId = data.id as string;
+    const webhookPath = extrairWebhookPath(data);
+
+    // Activação é opcional — não bloquear se falhar
     try {
-      const { data } = await n8n.post('/api/v1/workflows', template);
-      const workflowId = data.id as string;
-      const webhookPath = extrairWebhookPath(data);
-
-      // Activação é opcional ou protegida com try-catch
-      try {
-        await n8n.post(`/api/v1/workflows/${workflowId}/activate`);
-      } catch (err: unknown) {
-        logger.warn({ err, workflowId }, 'Workflow criado mas activação falhou no n8n.');
-      }
-
-      return { workflowId, webhookPath };
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: unknown }; message?: string };
-      logger.error({ 
-        error: axiosError.response?.data || axiosError.message, 
-        tipo 
-      }, 'Erro ao criar workflow no n8n');
-      throw new Error('Falha na comunicação com o n8n.', { cause: error });
+      await n8n.post(`/api/v1/workflows/${workflowId}/activate`);
+    } catch (err: unknown) {
+      logger.warn({ err, workflowId }, 'Workflow criado mas activação falhou no n8n.');
     }
+
+    return { workflowId, webhookPath };
   },
 
   /**
@@ -81,6 +81,12 @@ export const n8nApi = {
    */
   async eliminar(workflowId: string): Promise<void> {
     await n8n.delete(`/api/v1/workflows/${workflowId}`);
+  },
+
+  /** Obter detalhes de um workflow (MODULE-whatsapp.md §5) */
+  async detalhes(workflowId: string): Promise<unknown> {
+    const { data } = await n8n.get(`/api/v1/workflows/${workflowId}`);
+    return data;
   },
 };
 

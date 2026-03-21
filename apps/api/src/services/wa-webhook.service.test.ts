@@ -40,6 +40,7 @@ describe('waWebhookService', () => {
       qrCodeBase64: null,
       criadoEm: new Date(),
       atualizadoEm: new Date(),
+      qrExpiresAt: null,
     } as WaInstancia);
   });
 
@@ -129,7 +130,8 @@ describe('waWebhookService', () => {
           numeroTelefone: cleanNumber,
           qrCodeBase64: null,
           criadoEm: new Date(),
-          atualizadoEm: new Date()
+          atualizadoEm: new Date(),
+          qrExpiresAt: null
         }
       };
 

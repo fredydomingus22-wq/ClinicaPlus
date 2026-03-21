@@ -1,81 +1,79 @@
-# ADR-012 — Módulo WhatsApp: Evolution API + n8n + Automações Geridas
+# ADR-012 — Módulo WhatsApp: Evolution API + n8n Gerido + Automações
 
-**Data:** 2026-03-13
-**Status:** ACEITE
-**Autores:** ClinicaPlus Core Team
-**Lê também:** ADR-006 (BullMQ), ADR-009 (API Keys), ADR-011 (Planos)
+**Data:** 2026-03-18  
+**Status:** ACEITE  
+**Decisores:** ClinicaPlus Core Team  
+**Contexto:** Módulo de automação WhatsApp para v2.1  
 
 ---
 
 ## Contexto
 
-O ClinicaPlus precisa de permitir que clínicas recebam e confirmem agendamentos
-via WhatsApp, enviem lembretes automáticos, e configurem fluxos de mensagens —
-sem que o admin saia do painel ou aprenda a usar ferramentas externas.
+As clínicas em Angola usam WhatsApp pessoal para lembretes e marcações — manual, lento, não escalável. Um paciente que liga para marcar fora do horário não é atendido. Lembretes são enviados um a um pela recepcionista.
 
-Decisões em aberto:
-1. Gateway WhatsApp: API oficial Meta vs solução não-oficial (Baileys)
-2. Motor de automação: n8n self-hosted vs Zapier/Make vs código custom
-3. Interface de configuração: o admin configura o n8n directamente vs painel gerido
-4. Arquitectura do fluxo: n8n orquestra tudo vs ClinicaPlus API central
+Precisamos de automatizar:
+1. Marcação de consulta via WhatsApp (paciente inicia a conversa)
+2. Lembretes automáticos 24h e 2h antes
+3. Confirmação/cancelamento por resposta do paciente
+4. Boas-vindas a novos números
+
+E garantir que o **admin da clínica configura tudo no painel ClinicaPlus**, sem sair para o n8n.
 
 ---
 
 ## Decisões
 
-### 1. Gateway: Evolution API com Baileys (Fase 1) → Meta Cloud API (Fase 2)
+### D1 — Gateway WhatsApp: Evolution API v2 (Baileys) em Fase 1
 
-**Fase 1:** Evolution API v2 com protocolo Baileys.
-- Gratuito, self-hosted no Railway
-- 1 instância por clínica (número WhatsApp dedicado)
-- Risco aceite: protocolo não-oficial, possível banimento de número
-- Mitigação: avisar clínicas, fazer backup de conversas, migração para Fase 2 preparada
+**Motivo:** Angola não tem integração bancária/operadora para Meta Cloud API oficial. A Evolution API usa o protocolo Baileys (WhatsApp Web), é self-hosted, gratuita, e suportada pela comunidade.
 
-**Fase 2 (v3):** Migração para Meta Cloud API oficial quando o volume o justificar.
-- A Evolution API suporta ambos com a mesma interface REST — migração é configuração, não código.
+**Risco aceite:** o protocolo Baileys não é oficial — a Meta pode revogar. Mitigação: número de conta WhatsApp Business dedicado por clínica, backup diário de conversas, arquitectura preparada para migrar para Meta Cloud API sem alterar código (apenas config).
 
-**Descartado:** Twilio (caro para Angola), 360dialog (sem presença local), WhatsApp Business App (não tem API).
+**Fase 2 (v3):** Migration para Meta Cloud API oficial — a Evolution API suporta ambos na mesma interface REST.
 
-### 2. Motor de automação: n8n self-hosted (Railway)
+### D2 — Motor de automação: n8n self-hosted (Railway)
 
-- Workflows criados **programaticamente** pelo ClinicaPlus via n8n REST API
-- O admin nunca vê nem abre o n8n — é infra interna como o Redis
-- Templates de workflow pré-construídos por nós, parametrizados por clínica
-- n8n MCP server disponível para diagnóstico e desenvolvimento
+**Motivo:** n8n tem node oficial para Evolution API, permite workflows visuais complexos, tem API REST para criação programática de workflows, e é self-hosted (sem custo por execução).
 
-**Descartado:** Zapier/Make (custo por execução, sem self-host, sem API de criação de workflows), código custom (maintenance burden, duplicar o que o n8n já faz bem).
+**Princípio fundamental:** O admin da clínica **nunca vê o n8n**. O ClinicaPlus cria e gere workflows n8n automaticamente via API quando o admin activa uma automação.
 
-### 3. Interface: painel gerido no ClinicaPlus
+### D3 — Estado da conversa: ClinicaPlus DB (não no n8n)
 
-O admin vê toggles simples. O sistema cria/destrói workflows no n8n automaticamente.
-Cada automação tem um `n8nWorkflowId` — se desactivar, o workflow é desactivado no n8n.
+O n8n é **stateless** — apenas roteia mensagens. Todo o estado da conversa (etapa actual, dados acumulados, histórico) vive nas tabelas `WaConversa` e `WaMensagem` do ClinicaPlus. O n8n chama o ClinicaPlus API a cada mensagem recebida.
 
-### 4. Arquitectura: n8n chama ClinicaPlus API (não o contrário)
+**Vantagem:** se o n8n for reiniciado ou substituído, o estado das conversas é preservado.
 
-```
-Paciente → WhatsApp → Evolution API → n8n webhook
-n8n → processa etapa → POST /api/whatsapp/fluxo/* (ClinicaPlus)
-ClinicaPlus → cria agendamento, actualiza conversa, envia resposta via Evolution API
-```
+### D4 — Webhook único por instância, múltiplos workflows
 
-O ClinicaPlus API é a fonte de verdade. O n8n é o roteador de mensagens.
-Os templates n8n são stateless — estado da conversa vive no ClinicaPlus DB.
+A Evolution API suporta apenas 1 webhook URL por instância. O workflow de marcação recebe TODAS as mensagens e filtra por estado da conversa. Os outros workflows (lembrete, confirmação) são activados pelo ClinicaPlus directamente via HTTP.
+
+### D5 — Autenticação n8n → ClinicaPlus: API Key interna
+
+Os endpoints `/api/whatsapp/fluxo/*` são chamados pelo n8n. Não usam JWT (o n8n não tem sessão de utilizador). Usam uma API key interna gerada automaticamente quando o admin activa a automação, com scope `WRITE_AGENDAMENTOS`.
+
+---
+
+## Alternativas rejeitadas
+
+| Alternativa | Porquê não |
+|-------------|-----------|
+| Twilio WhatsApp | Caro, não suporta Angola directamente |
+| Zapier/Make | Sem self-host, sem criação programática de fluxos, custo por execução |
+| Código custom sem n8n | Maintenance burden, duplicar o que o n8n já faz |
+| Meta Cloud API (agora) | Processo de onboarding Meta demora semanas, requer número verificado |
 
 ---
 
 ## Consequências
 
 **Fica mais fácil:**
-- Admin configura automações sem saber o que é n8n
-- Adicionar novos tipos de automação: criar template + adicionar enum
-- Migrar gateway WhatsApp: só mudar `evolutionApi.ts`, não os templates
+- Admin configura automações em 3 cliques sem sair do ClinicaPlus
+- Adicionar novo tipo de automação = criar template TypeScript + enum
+- Migrar para Meta Cloud API em v3 = mudar config, não código
 
 **Fica mais difícil:**
-- Debugging: falha pode ser na Evolution API, no n8n, ou no ClinicaPlus
+- Debugging: falha pode ser na Evolution API, n8n, ou ClinicaPlus — logs distribuídos
 - Deploy: 2 novos serviços Railway (Evolution API + n8n)
-- Testes: precisam de mocks para Evolution API e n8n
+- Testes: precisam de mocks para ambas as APIs externas
 
-**Trade-offs aceites:**
-- Baileys tem risco de banimento de número — aceite para Fase 1
-- n8n adiciona latência (~200ms) vs chamada directa — aceite (fluxo conversacional, não real-time)
-- Plano PRO+ obrigatório para WhatsApp automações (ver ADR-011 feature matrix)
+**Plano obrigatório:** PRO (1 instância WA) ou ENTERPRISE (ilimitado)

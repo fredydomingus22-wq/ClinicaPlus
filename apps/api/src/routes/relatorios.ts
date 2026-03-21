@@ -21,6 +21,8 @@ interface ReceitaResult {
   medico_nome: string | null;
   consultas: number;
   receita: number;
+  receita_prevista: number;
+  rascunhos: number;
   seguros_pendentes: number;
 }
 
@@ -70,15 +72,20 @@ relatoriosRouter.get('/receita', requireRole([Papel.ADMIN]), async (req: Request
         f."medicoId" AS medico_id,
         m.nome AS medico_nome,
         COUNT(DISTINCT f.id)::int AS consultas,
-        SUM(f.total)::int AS receita,
+        SUM(CASE WHEN f.estado IN ('EMITIDA', 'PAGA') THEN f.total ELSE 0 END)::int AS receita,
+        SUM(CASE WHEN f.estado = 'RASCUNHO' THEN f.total ELSE 0 END)::int AS receita_prevista,
+        COUNT(DISTINCT CASE WHEN f.estado = 'RASCUNHO' THEN f.id ELSE NULL END)::int AS rascunhos,
         SUM(CASE WHEN f.tipo = 'SEGURO' AND sp.estado = 'PENDENTE' THEN f.total ELSE 0 END)::int AS seguros_pendentes
       FROM faturas f
       LEFT JOIN medicos m ON f."medicoId" = m.id
       LEFT JOIN pagamentos p ON p."faturaId" = f.id
       LEFT JOIN seguros_pagamento sp ON sp."pagamentoId" = p.id
       WHERE f."clinicaId" = $1
-        AND f."dataEmissao" BETWEEN $2 AND $3
-        AND f.estado IN ('EMITIDA', 'PAGA')
+        AND (
+          (f.estado IN ('EMITIDA', 'PAGA') AND f."dataEmissao" BETWEEN $2 AND $3)
+          OR 
+          (f.estado = 'RASCUNHO' AND f."criadoEm" BETWEEN $2 AND $3)
+        )
         ${extraWhere}
       GROUP BY DATE_TRUNC('${interval}', f."dataEmissao"), f."medicoId", m.nome
       ORDER BY periodo DESC
@@ -88,9 +95,11 @@ relatoriosRouter.get('/receita', requireRole([Papel.ADMIN]), async (req: Request
     const totais = results.reduce((acc, curr) => {
       acc.consultas += curr.consultas;
       acc.receita += curr.receita;
+      acc.receitaPrevista += curr.receita_prevista || 0;
+      acc.rascunhos += curr.rascunhos || 0;
       acc.segurosPendentes += curr.seguros_pendentes || 0;
       return acc;
-    }, { consultas: 0, receita: 0, segurosPendentes: 0 });
+    }, { consultas: 0, receita: 0, receitaPrevista: 0, rascunhos: 0, segurosPendentes: 0 });
 
     const mediaConsulta = totais.consultas > 0 ? Math.round(totais.receita / totais.consultas) : 0;
 
@@ -120,6 +129,10 @@ relatoriosRouter.get('/receita/export', requireRole([Papel.ADMIN]), async (req: 
   try {
     const clinicaId = req.clinica.id!;
     const plan = req.clinica.plano;
+
+    // Verificar se o plano permite exportação
+    const { planEnforcementService } = await import('../services/planEnforcement.service');
+    await planEnforcementService.canUseFeature(clinicaId, 'export');
 
     const { inicio, fim, medicoId, tipo } = req.query as ReceitaQuery;
     let dataInicio = inicio ? new Date(inicio) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);

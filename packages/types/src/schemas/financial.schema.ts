@@ -104,4 +104,14 @@ export interface FaturaDTO {
   atualizadoEm: string;
   itens?: ItemFaturaDTO[];
   pagamentos?: PagamentoDTO[];
+  paciente?: {
+    id: string;
+    nome: string;
+    numeroPaciente?: string;
+    endereco?: string;
+  };
+  medico?: {
+    id: string;
+    nome: string;
+  };
 }

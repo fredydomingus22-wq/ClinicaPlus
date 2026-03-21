@@ -119,13 +119,30 @@ export function useWhatsApp() {
   useSocketEvent('whatsapp:estado', handleStatusUpdate);
   useSocketEvent('whatsapp:qrcode', handleQrUpdate);
 
+  // Garantir sincronia ao reconectar (refetch global se o socket cair e voltar)
+  useSocketEvent('connect', useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: whatsappKeys.all });
+  }, [queryClient]));
+
+  // Actualizar actividade e agendamentos em tempo real (ref: ui-painel.md §570-573)
+  const handleMarcacao = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: whatsappKeys.actividade() });
+    queryClient.invalidateQueries({ queryKey: ['agendamentos'] });
+  }, [queryClient]);
+  useSocketEvent('whatsapp:marcacao', handleMarcacao);
+
+  // Estado derivado
+  const instancias = Array.isArray(instanciasQuery.data) ? instanciasQuery.data : [];
+  const isConectado = instancias.some((i: { estado: string }) => i.estado === 'CONECTADO');
+
   return {
-    instancias: Array.isArray(instanciasQuery.data) ? instanciasQuery.data : [],
+    instancias,
     automacoes: Array.isArray(automacoesQuery.data) ? automacoesQuery.data : [],
     templates: Array.isArray(templatesQuery.data) ? templatesQuery.data : [],
     actividade: Array.isArray(actividadeQuery.data) ? actividadeQuery.data : [],
     metricas: metricasQuery.data,
     isLoading: instanciasQuery.isLoading || automacoesQuery.isLoading || templatesQuery.isLoading,
+    isConectado,
     
     // Actions
     criarInstancia: () => criarMutation.mutate(),
