@@ -47,7 +47,8 @@ export const waAutomacaoService = {
     }
 
     // Se ainda não tem workflowId (foi adicionado mas n8n falhou na altura), criamos agora
-    if (!automacao.n8nWorkflowId) {
+    // EXCEPÇÃO: IA_ASSISTANT não usa n8n
+    if (!automacao.n8nWorkflowId && automacao.tipo !== WaTipoAutomacao.IA_ASSISTANT) {
        try {
          await this.provisionarWorkflow(automacao.id, clinicaId);
          // Recarregar objecto com o novo ID
@@ -62,7 +63,7 @@ export const waAutomacaoService = {
     }
 
     try {
-      if (automacao.n8nWorkflowId) {
+      if (automacao.n8nWorkflowId && automacao.tipo !== WaTipoAutomacao.IA_ASSISTANT) {
         logger.info({ 
           workflowId: automacao.n8nWorkflowId, 
           n8nBaseUrl: config.N8N_BASE_URL 
@@ -152,6 +153,10 @@ export const waAutomacaoService = {
       where: { id: clinicaId },
       select: { slug: true }
     });
+
+    if (automacao.tipo === WaTipoAutomacao.IA_ASSISTANT) {
+      return; // Skip n8n for AI Assistant
+    }
 
     if (automacao.n8nWorkflowId) {
       await n8nApi.eliminar(automacao.n8nWorkflowId).catch(err => {

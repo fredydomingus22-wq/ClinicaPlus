@@ -1,4 +1,5 @@
 import asyncio
+from typing import List, Dict, Any
 from db.layer import ClinicaDB
 from lib.evolution_client import EvolutionClient
 
@@ -12,14 +13,14 @@ async def lembrete_proactivo_job():
     evo = EvolutionClient()
     
     try:
-        agendamentos = await db.obter_agendamentos_para_lembrete(48)
+        agendamentos: List[Dict[str, Any]] = await db.obter_agendamentos_para_lembrete(48)
         if not agendamentos:
             print("ℹ️ Nenhum agendamento pendente de confirmação para as próximas 48h.")
             return
 
         for ag in agendamentos:
             # Format message
-            data_hora = ag["data_hora"]
+            data_hora = ag["dataHora"]
             dia_str = data_hora.strftime("%d/%m")
             hora_str = data_hora.strftime("%H:%M")
             
@@ -40,9 +41,6 @@ async def lembrete_proactivo_job():
                 opcoes=opcoes
             )
             
-            # Note: In a real production scenario, we might want to mark as 'lembrete_enviado' 
-            # to avoid double sending if the job restarts.
-        
         print(f"✅ Job de lembretes concluído. Total enviados: {len(agendamentos)}")
     except Exception as e:
         print(f"❌ Erro no job lembrete_proactivo: {e}")

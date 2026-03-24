@@ -15,12 +15,8 @@ async def expirar_conversas_job():
 
     try:
         async with pool.acquire() as conn:
-            # Option A: Delete expired
-            # deleted = await conn.execute("DELETE FROM wa_conversas WHERE expira_em < NOW()")
-            
-            # Option B: Reset state but keep record (ADR-014 style)
             updated = await conn.execute(
-                "UPDATE wa_conversas SET estado = 'EXPIRADO', contexto = '{}' WHERE expira_em < NOW() AND estado != 'EXPIRADO'"
+                "UPDATE wa_conversas SET estado = 'EXPIRADO', contexto = '{}' WHERE \"expiraEm\" < NOW() AND estado != 'EXPIRADO'"
             )
             print(f"✅ Job concluído. Registos afetados: {updated}")
     except Exception as e:

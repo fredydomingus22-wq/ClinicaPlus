@@ -181,7 +181,7 @@ export function WhatsappPage() {
                   <div className="p-8 text-center text-xs font-bold text-neutral-500 uppercase tracking-widest">A carregar configurações...</div>
                 ) : (
                   (Array.isArray(templates) ? templates : [])
-                    .filter(tpl => ['MARCACAO_CONSULTA', 'LEMBRETE_24H', 'LEMBRETE_2H', 'CONFIRMACAO_CANCELAMENTO', 'BOAS_VINDAS'].includes(tpl.tipo))
+                    .filter(tpl => ['IA_ASSISTANT', 'MARCACAO_CONSULTA', 'LEMBRETE_24H', 'LEMBRETE_2H', 'CONFIRMACAO_CANCELAMENTO', 'BOAS_VINDAS'].includes(tpl.tipo))
                     .map((tpl, idx, arr) => {
                     const defaultInst = instancias.find((i) => i.estado === 'CONECTADO') || instancias[0];
                     const existingAuto = automacoes.find((a) => a.tipo === tpl.tipo && (defaultInst ? a.waInstanciaId === defaultInst.id : true));

@@ -9,7 +9,8 @@ import {
   ChevronUp, 
   Save, 
   AlertCircle,
-  Smartphone
+  Smartphone,
+  Sparkles
 } from 'lucide-react';
 import { 
   Switch, 
@@ -102,7 +103,20 @@ const AUTOMACAO_CONFIG: Record<string, {
         placeholder: 'Olá! 👋 Bem-vindo a {clinica}.\nPara marcar uma consulta escreve *marcar*.' },
     ],
   },
+  IA_ASSISTANT: {
+    titulo: 'Assistente de IA',
+    descricao: 'Inteligência Artificial que processa linguagem natural para marcações e suporte.',
+    icon: Sparkles,
+    cores: 'bg-indigo-50 text-indigo-700',
+    badge: 'Premium',
+    campos: [
+      { key: 'personalidade', label: 'Personalidade / Tom de voz', type: 'textarea',
+        placeholder: 'Ex: Amigável, formal, directo...',
+        default: 'Amigável e profissional.' },
+    ],
+  },
 };
+
 
 /** Nomes dos dias da semana em pt-AO */
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];

@@ -40,7 +40,7 @@ model Clinica {
   receitas            Receita[]
   subscricao          Subscricao?
   utilizadores        Utilizador[]
-  waInstancias         WaInstancia[]
+  waInstancias        WaInstancia[]
   webhooks            Webhook[]
 
   @@index([slug])
@@ -128,7 +128,7 @@ model Paciente {
   prontuarios    Prontuario[]
   receitas       Receita[]
   waConversas    WaConversa[]
-  perfilWa       Json?         // Meta-dados do WhatsApp (sessão Intel)
+  perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessão Intel)
 
 
   @@unique([clinicaId, numeroPaciente])
@@ -212,7 +212,7 @@ model Agendamento {
   lembretes      LembreteAgendamento[]
   prontuario     Prontuario?
   receita        Receita?
-  confirmadoWa   Boolean               @default(false) // Confirmação via Intel
+  confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // Confirmação via Intel
 
 
   @@index([clinicaId])
@@ -522,7 +522,7 @@ model WaInstancia {
   qrCodeBase64   String?
   qrExpiresAt    DateTime?
   criadoEm       DateTime          @default(now())
-  atualizadoEm  DateTime          @updatedAt
+  atualizadoEm   DateTime          @updatedAt
   conversas      WaConversa[]
   automacoes     WaAutomacao[]
   clinica        Clinica           @relation(fields: [clinicaId], references: [id])
@@ -532,20 +532,20 @@ model WaInstancia {
 }
 
 model WaAutomacao {
-  id             String          @id @default(cuid())
-  instanciaId    String          @map("waInstanciaId")
-  instancia      WaInstancia     @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
-  
+  id          String      @id @default(cuid())
+  instanciaId String      @map("waInstanciaId")
+  instancia   WaInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+
   tipo           WaTipoAutomacao
   ativo          Boolean         @default(false)
   n8nWorkflowId  String?
   n8nWebhookPath String?
   n8nWebhookUrl  String?
-  
-  configuracao   Json            @default("{}")
-  criadoEm       DateTime        @default(now())
-  atualizadoEm   DateTime        @updatedAt
-  clinicaId      String
+
+  configuracao Json     @default("{}")
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  clinicaId    String
 
   @@unique([instanciaId, tipo])
   @@index([instanciaId])
@@ -562,12 +562,12 @@ model WaConversa {
   estado           WaEstadoConversa @default(AGUARDA_INPUT)
   etapaFluxo       String?
   contexto         Json?
-  ultimaMensagemEm DateTime?
-  criadoEm         DateTime         @default(now())
-  clinicaId        String
-  expiraEm         DateTime?        // Expiração da sessão Intel
-  mensagens        WaMensagem[]
+  ultimaMensagemEm DateTime?        @map("ultima_mensagem_em")
+  expiraEm         DateTime?        @map("expira_em") // Expiração da sessão Intel
+  criadoEm         DateTime         @default(now()) @map("criado_em")
 
+  clinicaId        String
+  mensagens        WaMensagem[]
 
   @@unique([instanciaId, numeroWhatsapp])
   @@index([instanciaId, estado])
@@ -812,7 +812,9 @@ enum WaTipoAutomacao {
   BEM_VINDO
   LEMBRETE
   FAQ
+  IA_ASSISTANT
 }
+
 
 enum WaEstadoConversa {
   AGUARDA_INPUT

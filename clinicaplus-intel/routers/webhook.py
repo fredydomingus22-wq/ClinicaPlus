@@ -45,9 +45,21 @@ async def processar_mensagem(payload: dict):
     if event_type != "messages.upsert":
         return
 
+    if not instancia or not isinstance(instancia, str):
+        return
+
     # 3. Session Lock (Layer 3)
-    # We resolve clinica_id from instance name for the lock key
-    clinica_id = instancia
+    # We resolve IDs correctly from the database
+    ids = await db.resolver_ids_por_instancia(instancia)
+    if not ids:
+        return # Instância desconhecida
+        
+    clinica_id = ids["clinicaId"]
+    instancia_id = ids["instanciaId"]
+    
+    # Check if IA is active for this instance
+    if not await db.is_ia_ativo(clinica_id, instancia_id):
+        return # IA não está activa — ignora webhook silenciosamente
     
     messages = data.get("messages", [])
     if not messages: return
@@ -57,9 +69,10 @@ async def processar_mensagem(payload: dict):
     
     async with session_lock(clinica_id, numero):
         # The rest of the logic goes inside the lock
-        await _executar_fluxo_mensagem(clinica_id, instancia, msg, payload)
+        await _executar_fluxo_mensagem(clinica_id, instancia_id, instancia, msg, payload)
 
-async def _executar_fluxo_mensagem(clinica_id: str, instancia: str, msg: dict, payload: dict):
+async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia_nome: str, msg: dict, payload: dict):
+
     # Extract message details
     push_name = msg.get("pushName")
     message_content = msg.get("message", {})
@@ -79,7 +92,8 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia: str, msg: dict, p
     if not texto: return
 
     # 1. Fetch State
-    conversa = await db.obter_conversa(clinica_id, instancia, numero)
+    conversa = await db.obter_conversa(clinica_id, instancia_id, numero)
+
     estado = DialogueState() if not conversa else DialogueState(**conversa.contexto)
     
     # 1.5 Cache Layer (Layer 4)
@@ -121,7 +135,8 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia: str, msg: dict, p
             pergunta = "Escolhe o horário:"
             opcoes = [s.dataHora.strftime("%H:%M") for s in slots]
             
-        await evo_client.enviar_poll(instancia, numero, pergunta, opcoes)
+        await evo_client.enviar_poll(instancia_nome, numero, pergunta, opcoes)
+
         novo_estado.ultimaAccao = "AGUARDA_INPUT"
         
     elif decisao.accao == "CRIAR_AGENDAMENTO":
@@ -139,18 +154,21 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia: str, msg: dict, p
         # Final integration step (API call to internal TS) passaria o "risco" no payload
         # Assuming success:
         msg_txt = nlg.gerar_resposta(template_nome, decisao.dados_extra)
-        await evo_client.enviar_texto(instancia, numero, msg_txt)
+        await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
+
         novo_estado.ultimaAccao = "AGENDADO"
         # Reset state after success or leave it to expire
         
     else:
          # Standard text message
          msg_txt = nlg.gerar_resposta(template_nome, decisao.dados_extra)
-         await evo_client.enviar_texto(instancia, numero, msg_txt)
+         await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
          novo_estado.ultimaAccao = decisao.accao
 
+
     # 6. Save State
-    await db.actualizar_conversa(clinica_id, instancia, numero, novo_estado, push_name)
+    await db.actualizar_conversa(clinica_id, instancia_id, numero, novo_estado, push_name)
+
 
 
 @router.post("/webhook/whatsapp")
@@ -185,4 +203,3 @@ async def webhook_whatsapp(request: Request, background_tasks: BackgroundTasks):
     background_tasks.add_task(processar_mensagem, payload)
     
     return {"status": "ok", "message": "Webhook received"}
-
