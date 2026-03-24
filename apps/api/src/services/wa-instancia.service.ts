@@ -1,7 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
 import { publishEvent } from '../lib/eventBus';
-import { config } from '../lib/config';
 import { WaEstadoInstancia, Plano, WaInstancia } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { auditLogService } from './auditLog.service';
@@ -62,7 +61,9 @@ export const waInstanciaService = {
 
     // Formato: cp-{slug}-{random6} (MODULE-whatsapp.md §6)
     const instanceName = `cp-${clinica.slug}-${crypto.randomBytes(3).toString('hex')}`;
-    const webhookUrl = `${config.API_PUBLIC_URL}/api/whatsapp/webhook`;
+    // O webhook aponta agora diretamente para a Engine NLU FastAPI
+    const intelUrl = process.env.INTEL_SERVICE_URL || 'http://localhost:8001';
+    const webhookUrl = `${intelUrl}/webhook/whatsapp`;
     const evolutionToken = crypto.randomUUID();
 
     await evolutionApi.criarInstancia(instanceName, webhookUrl);
@@ -138,7 +139,8 @@ export const waInstanciaService = {
           logger.warn({ clinicaId, id }, 'Instância 404 na Evolution. Tentando auto-recuperação...');
           
           try {
-            const webhookUrl = `${config.API_PUBLIC_URL}/api/whatsapp/webhook`;
+            const intelUrl = process.env.INTEL_SERVICE_URL || 'http://localhost:8001';
+            const webhookUrl = `${intelUrl}/webhook/whatsapp`;
             await evolutionApi.criarInstancia(instancia.evolutionName, webhookUrl);
             const res = await evolutionApi.obterQrCode(instancia.evolutionName);
             
