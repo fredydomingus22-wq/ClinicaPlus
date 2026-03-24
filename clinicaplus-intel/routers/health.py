@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from db.pool import get_pool
+from lib.redis_client import get_redis
+
 
 router = APIRouter()
 
@@ -11,8 +13,10 @@ async def health_check():
         "status": "up",
         "service": "clinicaplus-intel",
         "dependencies": {
-            "database": "unknown"
+            "database": "unknown",
+            "redis": "unknown"
         }
+
     }
     
     try:
@@ -28,4 +32,17 @@ async def health_check():
         health["dependencies"]["database"] = f"down: {str(e)}"
         health["status"] = "degraded"
         
+    try:
+        redis = await get_redis()
+        if redis:
+            await redis.ping()
+            health["dependencies"]["redis"] = "up"
+        else:
+            health["dependencies"]["redis"] = "down: not_initialized"
+            health["status"] = "degraded"
+    except Exception as e:
+        health["dependencies"]["redis"] = f"down: {str(e)}"
+        health["status"] = "degraded"
+        
     return health
+

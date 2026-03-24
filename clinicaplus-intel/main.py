@@ -6,16 +6,30 @@ from db.pool import init_pool, close_pool
 from routers.webhook import router as webhook_router
 from routers.health import router as health_router
 from routers.admin import router as admin_router
+from lib.redis_client import init_redis, close_redis
+from jobs.scheduler import init_scheduler, shutdown_scheduler
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup Events
     print("Iniciando pool de conexões (asyncpg)...")
     await init_pool()
+    print("Iniciando Redis...")
+    await init_redis()
+    print("Iniciando Scheduler...")
+    await init_scheduler()
     yield
     # Shutdown Events
+    print("Finalizando Scheduler...")
+    await shutdown_scheduler()
     print("Fechando pool de conexões...")
+
     await close_pool()
+    print("Fechando Redis...")
+    await close_redis()
+
 
 app = FastAPI(
     title="ClinicaPlus Intelligence",

@@ -11,6 +11,11 @@ from lib.evolution_client import EvolutionClient
 from db.layer import ClinicaDB, WaFormatter
 from noshow.predictor import predictor
 from noshow.heuristica import SinaisRisco
+from lib.session_lock import session_lock
+from lib.dedup import ja_processado
+from lib.rate_limiter import rate_limit_excedido
+from lib.cache import get_especialidades, set_especialidades, get_medicos_activos, set_medicos_activos
+
 
 router = APIRouter()
 evo_client = EvolutionClient()
@@ -40,51 +45,56 @@ async def processar_mensagem(payload: dict):
     if event_type != "messages.upsert":
         return
 
-    # Assuming we get the clinicaId implicitly by matching the instanceName (ADR-014 rules)
-    # The instance name from Evolution should map directly to clinicaId
-    clinica_id = instancia 
-
-    # Extract message details
-    mensagens = data.get("messages", [])
-    if not mensagens: return
+    # 3. Session Lock (Layer 3)
+    # We resolve clinica_id from instance name for the lock key
+    clinica_id = instancia
     
-    msg = mensagens[0]
-    if msg.get("key", {}).get("fromMe"): 
-        return # Ignore outgoing messages
-        
+    messages = data.get("messages", [])
+    if not messages: return
+    msg = messages[0]
     remote_jid = msg.get("key", {}).get("remoteJid", "")
     numero = remote_jid.split("@")[0]
-    push_name = msg.get("pushName")
     
+    async with session_lock(clinica_id, numero):
+        # The rest of the logic goes inside the lock
+        await _executar_fluxo_mensagem(clinica_id, instancia, msg, payload)
+
+async def _executar_fluxo_mensagem(clinica_id: str, instancia: str, msg: dict, payload: dict):
+    # Extract message details
+    push_name = msg.get("pushName")
     message_content = msg.get("message", {})
+    numero = msg.get("key", {}).get("remoteJid", "").split("@")[0]
+    
+    # Ignore outgoing messages
+    if msg.get("key", {}).get("fromMe"): 
+        return 
     
     texto = ""
-    # Extract text from standard message or poll update
+    # Extract text (simplificado)
     if "conversation" in message_content:
         texto = message_content["conversation"]
     elif "extendedTextMessage" in message_content:
         texto = message_content["extendedTextMessage"].get("text", "")
-    elif "pollUpdateMessage" in message_content:
-        # User voted in a poll
-        votos = message_content["pollUpdateMessage"].get("voters", [])
-        # Very simplified poll abstraction; typically evolution gives the optionName mapped
-        # Assuming the pipeline gets the selected string or we map it before
-        # In a real scenario, decrypt poll votes. Here we assume we get the raw text 
-        # for simplicity or rely on an already decrypted text field if Evolution provides it.
-        texto = msg.get("messageType") # Needs specific Evolution parser
-        pass
-        
-    if not texto:
-        return
+    
+    if not texto: return
 
     # 1. Fetch State
     conversa = await db.obter_conversa(clinica_id, instancia, numero)
     estado = DialogueState() if not conversa else DialogueState(**conversa.contexto)
     
-    # Pre-fetch context options
-    medicos = await db.todos_medicos_activos(clinica_id)
-    especialidades = await db.especialidades_activas(clinica_id)
+    # 1.5 Cache Layer (Layer 4)
+    medicos = await get_medicos_activos(clinica_id)
+    if not medicos:
+        medicos = await db.todos_medicos_activos(clinica_id)
+        await set_medicos_activos(clinica_id, medicos)
+        
+    especialidades = await get_especialidades(clinica_id)
+    if not especialidades:
+        especialidades = await db.especialidades_activas(clinica_id)
+        await set_especialidades(clinica_id, especialidades)
+    
     opcoes_nlu = {"medicos": medicos, "especialidades": especialidades}
+
     
     # 2. NLU
     nlu_res = analisar(texto, medicos=medicos, especialidades=especialidades)
@@ -156,7 +166,23 @@ async def webhook_whatsapp(request: Request, background_tasks: BackgroundTasks):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
+    # Layer 1: Rate Limiting
+    instancia = payload.get("instance")
+    data = payload.get("data", {})
+    messages = data.get("messages", [])
+    if messages:
+        numero = messages[0].get("key", {}).get("remoteJid", "").split("@")[0]
+        if numero and await rate_limit_excedido(instancia, numero):
+            return {"status": "ok", "message": "Rate limit exceeded"}
+
+    # Layer 2: Deduplication
+    if messages:
+        msg_id = messages[0].get("key", {}).get("id")
+        if msg_id and await ja_processado(instancia, msg_id):
+            return {"status": "ok", "message": "Duplicate message ignored"}
+
     # Offload processing to background
     background_tasks.add_task(processar_mensagem, payload)
     
     return {"status": "ok", "message": "Webhook received"}
+

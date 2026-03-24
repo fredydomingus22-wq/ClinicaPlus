@@ -121,7 +121,8 @@ class ClinicaDB:
             )
             if row:
                 return Paciente(id=row["id"], nome=row["nome"], telefone=row["telefone"], 
-                                clinicaId=row["clinica_id"], perfil_wa=row.get("perfil_wa"))
+                                clinicaId=row["clinica_id"], perfilWa=row.get("perfil_wa"))
+
         return None
 
     async def historico_agendamentos_paciente(self, clinicaId: str, pacId: str, limite: int = 3) -> List[Agendamento]:
@@ -160,6 +161,30 @@ class ClinicaDB:
                     "taxa_no_show": taxa
                 }
         return {"total": 0, "no_shows": 0, "cancelamentos": 0, "taxa_no_show": 0.0}
+
+    async def obter_agendamentos_para_lembrete(self, horas_futuro: int = 48) -> List[Dict[str, Any]]:
+        """
+        Fetches appointments occurring within the next N hours that haven't been confirmed yet.
+        Returns data joined with patient info (phone, name) and instance info.
+        """
+        async with conn() as c:
+            # Join agendamentos with patients and instances (or clinicas to get instance name)
+            # Need to know which Evolution API instance to use
+            rows = await c.fetch(
+                """SELECT a.id, a.data_hora, a.clinica_id, p.nome as paciente_nome, p.telefone, 
+                          m.nome as medico_nome, i.name as instancia_nome
+                   FROM agendamentos a
+                   JOIN pacientes p ON a.paciente_id = p.id
+                   JOIN medicos m ON a.medico_id = m.id
+                   JOIN clinicas c_inf ON a.clinica_id = c_inf.id
+                   JOIN wa_instancias i ON c_inf.id = i.clinica_id
+                   WHERE a.data_hora BETWEEN NOW() AND NOW() + interval '$1 hours'
+                   AND a.estado = 'AGENDADO'
+                   AND a.confirmado_wa = false""",
+                str(horas_futuro)
+            )
+            return [dict(r) for r in rows]
+
 
     async def slots_por_regra(self, clinicaId: str, medId: str, data_alvo: date, limite: int = 5, periodo_ini: int = None, periodo_fim: int = None) -> List[SlotDisponivel]:
         # This is a simplified version of the complex slot logic.
