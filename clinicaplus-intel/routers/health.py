@@ -4,7 +4,9 @@ from db.pool import get_pool
 router = APIRouter()
 
 @router.get("/health")
+@router.get("/health.py")  # Alias for Railway healthcheck compatibility
 async def health_check():
+
     health = {
         "status": "up",
         "service": "clinicaplus-intel",
