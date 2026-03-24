@@ -18,4 +18,5 @@ export const TEMPLATES: Partial<Record<WaTipoAutomacao, (vars: TemplateVars) => 
   BEM_VINDO: templateBoasVindas,
   LEMBRETE: templateLembrete24h,
   FAQ: templateBoasVindas,
+  IA_ASSISTANT: () => ({}),
 };
