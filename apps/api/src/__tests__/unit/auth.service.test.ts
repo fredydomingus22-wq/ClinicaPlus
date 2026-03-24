@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { authService } from '../../services/auth.service';
 import { prisma } from '../../lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../../lib/AppError';
 import { generatePatientNumber } from '../../services/patientNumber.service';

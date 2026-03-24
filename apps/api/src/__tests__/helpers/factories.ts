@@ -1,5 +1,5 @@
 import { PrismaClient, Clinica, Utilizador, Medico, Paciente, Especialidade } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { faker } from '@faker-js/faker';
 
 const prisma = new PrismaClient();
