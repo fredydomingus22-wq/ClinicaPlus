@@ -62,16 +62,17 @@ class ClinicaDB:
     async def obter_conversa(self, clinicaId: str, instanciaId: str, numero: str) -> Optional[Conversa]:
         async with conn() as c:
             row = await c.fetchrow(
-                "SELECT * FROM wa_conversas WHERE clinica_id = $1 AND instancia_id = $2 AND numero_whatsapp = $3",
+                'SELECT * FROM wa_conversas WHERE "clinicaId" = $1 AND "instanciaId" = $2 AND "numeroWhatsapp" = $3',
                 clinicaId, instanciaId, numero
             )
             if row:
                 return Conversa(
-                    id=row["id"], clinicaId=row["clinica_id"], instanciaId=row["instancia_id"],
-                    numeroWhatsapp=row["numero_whatsapp"], estado=row["estado"],
+                    id=row["id"], clinicaId=row["clinicaId"], instanciaId=row["instanciaId"],
+                    numeroWhatsapp=row["numeroWhatsapp"], estado=row["estado"],
                     contexto=json.loads(row["contexto"]) if isinstance(row["contexto"], str) else row["contexto"],
-                    pushName=row["push_name"], ultimaMensagemEm=row["ultima_mensagem_em"]
+                    pushName=row["pushName"], ultimaMensagemEm=row["ultimaMensagemEm"]
                 )
+
         return None
 
     async def actualizar_conversa(self, clinicaId: str, instanciaId: str, numero: str, estado_obj: Any, pushName: Optional[str] = None):
@@ -81,65 +82,72 @@ class ClinicaDB:
         async with conn() as c:
             # Upsert logic for wa_conversas
             await c.execute(
-                """INSERT INTO wa_conversas (id, clinica_id, instancia_id, numero_whatsapp, estado, contexto, push_name, ultima_mensagem_em, expira_em)
+                """INSERT INTO wa_conversas (id, "clinicaId", "instanciaId", "numeroWhatsapp", estado, contexto, "pushName", "ultimaMensagemEm", "expiraEm")
                    VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, NOW(), NOW() + interval '24 hours')
-                   ON CONFLICT (instancia_id, numero_whatsapp) DO UPDATE 
-                   SET estado = $4, contexto = $5, push_name = COALESCE($6, wa_conversas.push_name), ultima_mensagem_em = NOW(), expira_em = NOW() + interval '24 hours'""",
+                   ON CONFLICT ("instanciaId", "numeroWhatsapp") DO UPDATE 
+                   SET estado = $4, contexto = $5, "pushName" = COALESCE($6, wa_conversas."pushName"), "ultimaMensagemEm" = NOW(), "expiraEm" = NOW() + interval '24 hours'""",
                 clinicaId, instanciaId, numero, estado_obj.ultimaAccao or "AGUARDA_INPUT", contexto_json, pushName
             )
+
 
     async def especialidades_activas(self, clinicaId: str) -> List[str]:
         async with conn() as c:
             rows = await c.fetch(
-                "SELECT DISTINCT especialidade FROM medicos WHERE clinica_id = $1 AND ativo = true",
+                'SELECT DISTINCT especialidade FROM medicos WHERE "clinicaId" = $1 AND ativo = true',
                 clinicaId
             )
             return [r["especialidade"] for r in rows]
 
+
     async def todos_medicos_activos(self, clinicaId: str) -> List[Dict[str, Any]]:
         async with conn() as c:
             rows = await c.fetch(
-                "SELECT id, nome, especialidade, preco FROM medicos WHERE clinica_id = $1 AND ativo = true",
+                'SELECT id, nome, especialidade, preco FROM medicos WHERE "clinicaId" = $1 AND ativo = true',
                 clinicaId
             )
             return [dict(r) for r in rows]
 
+
     async def medicos_por_especialidade(self, clinicaId: str, esp_nome: str) -> List[Medico]:
         async with conn() as c:
             rows = await c.fetch(
-                "SELECT * FROM medicos WHERE clinica_id = $1 AND especialidade = $2 AND ativo = true",
+                'SELECT * FROM medicos WHERE "clinicaId" = $1 AND especialidade = $2 AND ativo = true',
                 clinicaId, esp_nome
             )
             return [Medico(id=r["id"], nome=r["nome"], especialidade=r["especialidade"], 
-                          preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinica_id"]) for r in rows]
+                          preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinicaId"]) for r in rows]
+
 
     async def paciente_por_telefone(self, clinicaId: str, tel: str) -> Optional[Paciente]:
         async with conn() as c:
             row = await c.fetchrow(
-                "SELECT * FROM pacientes WHERE clinica_id = $1 AND telefone = $2",
+                'SELECT * FROM pacientes WHERE "clinicaId" = $1 AND telefone = $2',
                 clinicaId, tel
             )
             if row:
                 return Paciente(id=row["id"], nome=row["nome"], telefone=row["telefone"], 
-                                clinicaId=row["clinica_id"], perfilWa=row.get("perfil_wa"))
+                                clinicaId=row["clinicaId"], perfilWa=row.get("perfilWa"))
+
 
         return None
 
     async def historico_agendamentos_paciente(self, clinicaId: str, pacId: str, limite: int = 3) -> List[Agendamento]:
         async with conn() as c:
             rows = await c.fetch(
-                """SELECT a.*, m.nome as medico_nome, m.especialidade as medico_esp, p.nome as paciente_nome
+                f"""SELECT a.*, m.nome as medico_nome, m.especialidade as medico_esp, p.nome as paciente_nome
                    FROM agendamentos a
-                   JOIN medicos m ON a.medico_id = m.id
-                   JOIN pacientes p ON a.paciente_id = p.id
-                   WHERE a.clinica_id = $1 AND a.paciente_id = $2
-                   ORDER BY a.data_hora DESC LIMIT $3""",
+                   JOIN medicos m ON a."medicoId" = m.id
+                   JOIN pacientes p ON a."pacienteId" = p.id
+                   WHERE a."clinicaId" = $1 AND a."pacienteId" = $2
+                   ORDER BY a."dataHora" DESC LIMIT $3""",
                 clinicaId, pacId, limite
             )
-            return [Agendamento(id=r["id"], dataHora=r["data_hora"], estado=r["estado"], 
-                               canal=r["canal"], medicoNome=r["medico_nome"], 
+
+            return [Agendamento(id=r["id"], dataHora=r["dataHora"], estado=r["estado"], 
+                               canal=r.get("canal", "PRESENCIAL"), medicoNome=r["medico_nome"], 
                                medicoEsp=r["medico_esp"], pacienteNome=r["paciente_nome"],
-                               clinicaId=r["clinica_id"]) for r in rows]
+                               clinicaId=r["clinicaId"]) for r in rows]
+
 
     async def stats_no_show_paciente(self, clinicaId: str, pacId: str) -> Dict[str, Any]:
         async with conn() as c:
@@ -147,9 +155,10 @@ class ClinicaDB:
                 """SELECT COUNT(*) as total, 
                    COUNT(*) FILTER (WHERE estado = 'FALTOU') as no_shows,
                    COUNT(*) FILTER (WHERE estado = 'CANCELADO') as cancelamentos
-                   FROM agendamentos WHERE clinica_id = $1 AND paciente_id = $2""",
+                   FROM agendamentos WHERE "clinicaId" = $1 AND "pacienteId" = $2""",
                 clinicaId, pacId
             )
+
             if row:
                 total = row["total"]
                 no_shows = row["no_shows"]
@@ -171,19 +180,20 @@ class ClinicaDB:
             # Join agendamentos with patients and instances (or clinicas to get instance name)
             # Need to know which Evolution API instance to use
             rows = await c.fetch(
-                """SELECT a.id, a.data_hora, a.clinica_id, p.nome as paciente_nome, p.telefone, 
-                          m.nome as medico_nome, i.name as instancia_nome
+                """SELECT a.id, a."dataHora", a."clinicaId", p.nome as paciente_nome, p.telefone, 
+                          m.nome as medico_nome, i."evolutionName" as instancia_nome
                    FROM agendamentos a
-                   JOIN pacientes p ON a.paciente_id = p.id
-                   JOIN medicos m ON a.medico_id = m.id
-                   JOIN clinicas c_inf ON a.clinica_id = c_inf.id
-                   JOIN wa_instancias i ON c_inf.id = i.clinica_id
-                   WHERE a.data_hora BETWEEN NOW() AND NOW() + interval '$1 hours'
+                   JOIN pacientes p ON a."pacienteId" = p.id
+                   JOIN medicos m ON a."medicoId" = m.id
+                   JOIN clinicas c_inf ON a."clinicaId" = c_inf.id
+                   JOIN wa_instancias i ON c_inf.id = i."clinicaId"
+                   WHERE a."dataHora" BETWEEN NOW() AND NOW() + interval '$1 hours'
                    AND a.estado = 'AGENDADO'
-                   AND a.confirmado_wa = false""",
+                   AND a."confirmadoWa" = false""",
                 str(horas_futuro)
             )
             return [dict(r) for r in rows]
+
 
 
     async def slots_por_regra(self, clinicaId: str, medId: str, data_alvo: date, limite: int = 5, periodo_ini: int = None, periodo_fim: int = None) -> List[SlotDisponivel]:
@@ -193,25 +203,27 @@ class ClinicaDB:
         async with conn() as c:
             query = """SELECT s.*, m.nome as medico_nome, m.preco
                        FROM slots_disponiveis s
-                       JOIN medicos m ON s.medico_id = m.id
-                       WHERE s.clinica_id = $1 AND s.medico_id = $2 
-                       AND s.data_hora::date = $3
-                       AND s.esta_livre = true"""
+                       JOIN medicos m ON s."medicoId" = m.id
+                       WHERE s."clinicaId" = $1 AND s."medicoId" = $2 
+                       AND s."dataHora"::date = $3
+                       AND s."estaLivre" = true"""
             params = [clinicaId, medId, data_alvo]
             
             if periodo_ini is not None:
-                query += " AND EXTRACT(HOUR FROM s.data_hora) >= $4"
+                query += ' AND EXTRACT(HOUR FROM s."dataHora") >= $4'
                 params.append(periodo_ini)
             if periodo_fim is not None:
-                query += f" AND EXTRACT(HOUR FROM s.data_hora) < ${len(params)+1}"
+                query += f' AND EXTRACT(HOUR FROM s."dataHora") < ${len(params)+1}'
                 params.append(periodo_fim)
                 
-            query += f" ORDER BY s.data_hora ASC LIMIT ${len(params)+1}"
+            query += f' ORDER BY s."dataHora" ASC LIMIT ${len(params)+1}'
             params.append(limite)
+
             
             rows = await c.fetch(query, *params)
-            return [SlotDisponivel(dataHora=r["data_hora"], medicoId=r["medico_id"], 
+            return [SlotDisponivel(dataHora=r["dataHora"], medicoId=r["medicoId"], 
                                  medicoNome=r["medico_nome"], preco=r["preco"]) for r in rows]
+
 
     async def nome_clinica(self, clinicaId: str) -> str:
         async with conn() as c:

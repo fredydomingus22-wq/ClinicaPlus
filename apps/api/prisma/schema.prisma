@@ -128,6 +128,8 @@ model Paciente {
   prontuarios    Prontuario[]
   receitas       Receita[]
   waConversas    WaConversa[]
+  perfilWa       Json?         // Meta-dados do WhatsApp (sessão Intel)
+
 
   @@unique([clinicaId, numeroPaciente])
   @@index([clinicaId])
@@ -210,6 +212,8 @@ model Agendamento {
   lembretes      LembreteAgendamento[]
   prontuario     Prontuario?
   receita        Receita?
+  confirmadoWa   Boolean               @default(false) // Confirmação via Intel
+
 
   @@index([clinicaId])
   @@index([clinicaId, dataHora])
@@ -561,7 +565,9 @@ model WaConversa {
   ultimaMensagemEm DateTime?
   criadoEm         DateTime         @default(now())
   clinicaId        String
+  expiraEm         DateTime?        // Expiração da sessão Intel
   mensagens        WaMensagem[]
+
 
   @@unique([instanciaId, numeroWhatsapp])
   @@index([instanciaId, estado])
