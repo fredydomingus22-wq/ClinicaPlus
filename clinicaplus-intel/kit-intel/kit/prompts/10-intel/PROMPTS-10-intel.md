@@ -371,3 +371,88 @@ MODEL_DIR=/data/models     # Railway Volume
 **Migração:** ao activar o intel, actualizar o webhook de CADA instância Evolution API activa. Fazer uma de cada vez, verificando que funciona antes de passar à seguinte.
 
 **Rollback:** se algo correr mal, reverter o webhook de volta para n8n temporariamente enquanto se corrige o problema.
+
+---
+
+## PASSO 11 — Redis: Lock, Cache, Dedup, Rate Limit
+
+**Ler primeiro:** `kit/skills/intel/reference/redis-cache-jobs.md`
+
+### 11a. Redis client singleton
+Criar `lib/redis_client.py` com `get_redis()` e `close_redis()`.
+Adicionar ao lifespan do main.py.
+
+### 11b. Session lock — CRÍTICO
+Criar `lib/session_lock.py`.
+Integrar no `_processar_mensagem()` como camada 2 (após dedup, antes de qualquer leitura de estado).
+
+**Teste obrigatório:**
+```python
+@pytest.mark.asyncio
+async def test_lock_previne_corrida():
+    """Duas chamadas simultâneas para o mesmo número processam sequencialmente."""
+    import asyncio
+    resultados = []
+    async def processar(delay):
+        async with session_lock("cli-1", "244923000000"):
+            await asyncio.sleep(delay)
+            resultados.append(delay)
+    await asyncio.gather(processar(0.1), processar(0.05))
+    assert resultados == [0.1, 0.05]  # o primeiro a obter o lock termina primeiro
+```
+
+### 11c. Deduplicação
+Criar `lib/dedup.py`.
+Integrar no webhook handler ANTES do lock.
+
+### 11d. Cache de especialidades e médicos
+Criar `lib/cache.py` com `get_especialidades()`, `get_medicos_activos()`, `invalidar_cache_clinica()`.
+Substituir chamadas directas a `db.especialidades_activas()` e `db.todos_medicos_activos()` no handler.
+Endpoint `POST /intel/cache/invalidar/{clinicaId}` em `routers/admin.py`.
+
+### 11e. Rate limiting
+Criar `lib/rate_limiter.py`.
+Integrar no webhook handler como camada 1 (antes do lock).
+
+### 11f. Actualizar requirements.txt
+```
+redis[asyncio]==5.0.1
+apscheduler==3.10.4
+```
+
+### 11g. Actualizar variáveis de ambiente
+```env
+REDIS_URL=rediss://default:xxx@xxx.upstash.io:6380
+```
+
+---
+
+## PASSO 12 — Jobs assíncronos (APScheduler)
+
+**Ler primeiro:** secções 6, 7, 8 de `reference/redis-cache-jobs.md`
+
+### 12a. Scheduler
+Criar `jobs/scheduler.py` com os 3 jobs configurados.
+Integrar no lifespan do `main.py`.
+
+### 12b. Job: expirar conversas
+Criar `jobs/expirar_conversas.py`.
+Corre às 03:00 Luanda. Reseta estado de conversas com `ultima_mensagem_em < NOW() - 24h`.
+
+### 12c. Job: lembretes proactivos
+Criar `jobs/lembrete_proactivo.py`.
+Corre às 08:00 Luanda. Envia Poll de confirmação a pacientes com consulta em 48h que não confirmaram.
+
+### 12d. Job: retreino do modelo
+Criar `jobs/retrain_noshow.py`.
+Corre às segundas-feiras às 02:00. Chama `noshow/trainer.py` se dados suficientes.
+
+### Checklist adicional
+- [ ] `GET /health` inclui `{ "redis": "connected" }`
+- [ ] Lock de sessão activo — testado com 2 mensagens simultâneas
+- [ ] Deduplicação activa — webhook repetido ignorado
+- [ ] Cache de especialidades activa — 0 queries à DB para especialidades em mensagens normais
+- [ ] Rate limit activo — número com >15 msgs/min ignorado silenciosamente
+- [ ] Job de expiração configurado — `scheduler.get_jobs()` mostra 3 jobs
+- [ ] Job de lembretes configurado e testado em modo dry-run
+

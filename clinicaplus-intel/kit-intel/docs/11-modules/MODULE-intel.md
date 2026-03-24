@@ -585,3 +585,65 @@ python-multipart==0.0.9
 - [ ] `test_nlu.py`: 26 casos, 92%+ pass rate
 - [ ] `test_dst.py`: slots preenchidos, slots em falta, erros consecutivos
 - [ ] `test_policy.py`: urgência, saltar etapas, alternativas, encaminhar humano
+
+---
+
+## 11. Redis — Camadas de infraestrutura
+
+### Stack Redis
+- **Upstash Redis** (TLS, serverless) — mesmo provider do TypeScript
+- Cliente: `redis[asyncio]` — nativo asyncio, compatível com FastAPI
+- Reutilizar a instância Upstash já existente no projecto (bases de dados separadas por prefixo de key)
+
+### Keys e TTLs
+
+| Prefixo | Exemplo | TTL | Propósito |
+|---------|---------|-----|-----------|
+| `lock:conv:` | `lock:conv:cli-1:244923456789` | 8s | Lock de sessão por conversa |
+| `dedup:msg:` | `dedup:msg:MSGID123` | 60s | Deduplicação de webhooks |
+| `cache:esp:` | `cache:esp:cli-1` | 5min | Cache de especialidades |
+| `cache:medicos:` | `cache:medicos:cli-1` | 5min | Cache de médicos activos |
+| `ratelimit:wa:` | `ratelimit:wa:244923456789` | 60s | Rate limit por número |
+
+### Estrutura de ficheiros (adicionados)
+
+```
+clinicaplus-intel/
+├── lib/
+│   ├── redis_client.py     # singleton Redis
+│   ├── session_lock.py     # lock distribuído por conversa
+│   ├── dedup.py            # deduplicação por messageId
+│   ├── cache.py            # cache de especialidades e médicos
+│   └── rate_limiter.py     # rate limit por número WhatsApp
+├── jobs/
+│   ├── scheduler.py        # APScheduler com 3 jobs
+│   ├── expirar_conversas.py
+│   ├── lembrete_proactivo.py
+│   └── retrain_noshow.py
+```
+
+### Ordem de processamento por mensagem (completa)
+
+```
+POST /webhook/whatsapp
+    ↓
+0. Verificar HMAC
+1. Resolver clinicaId por instanceName
+2. Extrair número + texto/voto
+3. [REDIS] Deduplicação por messageId   → ignorar se duplicado
+4. [REDIS] Rate limit por número        → ignorar se >15/min
+5. [REDIS] Adquirir session lock        → aguardar se outro thread a processar
+    ↓ (dentro do lock)
+6. Obter conversa da DB (estado DST)
+7. [REDIS] Cache: especialidades + médicos
+8. NLU → DST → Policy
+9. [DB reads] Slots, paciente, histórico
+10. Score no-show
+11. Actualizar conversa na DB
+12. Se CRIAR_AGENDAMENTO → TypeScript API
+13. NLG → enviar Poll ou texto
+    ↓
+14. [REDIS] Liberar session lock
+    ↓
+return {"ok": True}
+```

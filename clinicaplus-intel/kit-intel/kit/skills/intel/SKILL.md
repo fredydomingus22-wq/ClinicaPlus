@@ -184,3 +184,57 @@ except Exception as e:
 - `reference/evolution-polls.md` — como enviar e receber Polls
 - `reference/tdd-specs.md` — 40+ casos de teste para implementar
 - `reference/noshow-features.md` — features do modelo, heurística, transição ML
+
+---
+
+## Redis — regras adicionais (ver reference/redis-cache-jobs.md)
+
+### 8. Session lock SEMPRE antes de processar
+```python
+# CORRECTO — lock garante que DST não é corrompido por mensagens simultâneas
+async with session_lock(clinicaId, numero):
+    conversa = await db.obter_conversa(...)
+    # ... pipeline completo
+
+# ERRADO — sem lock, 2 mensagens simultâneas do mesmo número corrompem o DST
+conversa = await db.obter_conversa(...)
+```
+
+### 9. Deduplicação ANTES do lock
+```python
+# CORRECTO — dedup antes de adquirir o lock (evita contentão desnecessária)
+if await ja_processado(messageId):
+    return
+async with session_lock(clinicaId, numero):
+    ...
+
+# ERRADO — dedup dentro do lock (desperdiça o lock para mensagens duplicadas)
+async with session_lock(clinicaId, numero):
+    if await ja_processado(messageId):
+        return
+```
+
+### 10. Cache para especialidades e médicos
+```python
+# CORRECTO — cache Redis, TTL 5min
+especialidades = await get_especialidades(clinicaId)  # Redis → DB se cache miss
+
+# ERRADO — query à DB a cada mensagem
+especialidades = await db.especialidades_activas(clinicaId)
+```
+
+### 11. Invalidar cache quando TypeScript altera médicos
+O TypeScript API DEVE chamar `POST /intel/cache/invalidar/{clinicaId}` após:
+- Adicionar ou desactivar um médico
+- Alterar especialidade de um médico
+- Adicionar uma nova especialidade
+
+### Sub-skills disponíveis (actualizado)
+- `reference/nlu-slots.md`
+- `reference/dst-state.md`
+- `reference/policy-rules.md`
+- `reference/db-queries.md`
+- `reference/evolution-polls.md`
+- `reference/tdd-specs.md`
+- `reference/noshow-features.md`
+- `reference/redis-cache-jobs.md`   ← NOVO: locks, cache, dedup, rate limit, jobs
