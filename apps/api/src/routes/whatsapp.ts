@@ -253,9 +253,9 @@ router.post('/fluxo/inicio',
   async (req, res, next) => {
     try {
       const clinicaId = req.clinica.id;
-      const { numero, pushName } = req.body;
+      const { numero } = req.body;
       const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
-      await waConversaService.etapaInicio(numero, clinicaId, instancia.evolutionName, pushName || '');
+      await waConversaService.etapaInicio(numero, clinicaId, instancia.evolutionName);
       return res.json({ success: true });
     } catch (error) { return next(error); }
 });

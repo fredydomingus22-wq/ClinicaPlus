@@ -139,7 +139,8 @@ export enum WaTipoAutomacao {
   BEM_VINDO = 'BEM_VINDO',
   BOAS_VINDAS = 'BOAS_VINDAS',
   LEMBRETE = 'LEMBRETE',
-  FAQ = 'FAQ'
+  FAQ = 'FAQ',
+  IA_ASSISTANT = 'IA_ASSISTANT'
 }
 export const WaTipoAutomacaoSchema = z.nativeEnum(WaTipoAutomacao);
 

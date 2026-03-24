@@ -35,3 +35,11 @@ devreview-agent/
 devfix-agent/
 ui-audit-agent/
 .vercel
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/

@@ -36,6 +36,7 @@ function estaNoHorario(cfg: ConfigMarcacao): boolean {
 }
 
 export interface ContextoMarcacao {
+  nomePaciente?: string;
   especialidadeId?: string;
   especialidadeNome?: string;
   medicoId?: string;
@@ -66,12 +67,12 @@ export const waConversaService = {
 
     // Reset de contexto se comando de reinício
     if (inputLower === 'oi' || inputLower === 'menu') {
-      return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName, '');
+      return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName);
     }
 
     if (conversa.estado === WaEstadoConversa.AGUARDA_INPUT) {
       if (input === '1' || inputLower === 'marcar' || inputLower === 'vaga') {
-        return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName, '');
+        return this.etapaInicio(conversa.numeroWhatsapp, conversa.instancia.clinicaId, conversa.instancia.evolutionName);
       }
       
       const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId }, select: { nome: true } });
@@ -89,7 +90,7 @@ export const waConversaService = {
    * Inicia o fluxo de marcação.
    * Chamado pelo n8n via POST /fluxo/inicio ou internamente.
    */
-  async etapaInicio(numero: string, clinicaId: string, instanceName: string, _pushName: string): Promise<void> {
+  async etapaInicio(numero: string, clinicaId: string, instanceName: string): Promise<void> {
     const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
     const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
 
@@ -157,8 +158,9 @@ export const waConversaService = {
       await evolutionApi.enviarTexto(conversa.instancia.evolutionName, conversa.numeroWhatsapp, 'Não temos especialidades disponíveis no momento. Por favor, contacte-nos directamente.');
       return;
     }
-
-    const nome = (conversa.contexto as any)?.nomePaciente || '';
+    
+    const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
+    const nome = ctx.nomePaciente || '';
     const msg = `Obrigado, *${nome.split(' ')[0]}*! 👋\n\n`
       + `Por favor, escolha a **Especialidade**:\n\n${formatarMensagemLista(especialidades.map(e => e.nome))}\n\n`
       + `Responda com o *número* da opção.`;
@@ -184,7 +186,7 @@ export const waConversaService = {
 
     if (!conversa || conversa.estado !== WaEstadoConversa.EM_FLUXO_MARCACAO) {
       if (resposta.toLowerCase().includes('marcar')) {
-        return this.etapaInicio(numero, clinicaId, instanceName, '');
+        return this.etapaInicio(numero, clinicaId, instanceName);
       }
       return;
     }
@@ -203,7 +205,7 @@ export const waConversaService = {
       case 'CONFIRMAR':
         return this.etapaConfirmar(conversaComInstancia, resposta);
       default:
-        return this.etapaInicio(numero, clinicaId, instanceName, '');
+        return this.etapaInicio(numero, clinicaId, instanceName);
     }
   },
 
@@ -355,7 +357,7 @@ export const waConversaService = {
     if (input === '1' || inputLower === 'sim' || inputLower === 's' || inputLower === 'confirmar') {
       const ctx = (conversa.contexto as unknown as ContextoMarcacao) || {};
       const clinica = await prisma.clinica.findUnique({ where: { id: conversa.instancia.clinicaId } });
-      const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, (conversa.contexto as any)?.nomePaciente || '');
+      const pacienteId = await obterOuCriarPaciente(conversa.numeroWhatsapp, conversa.instancia.clinicaId, ctx.nomePaciente || '');
 
       const agendamento = await prisma.agendamento.create({
         data: {

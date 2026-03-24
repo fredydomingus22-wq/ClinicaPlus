@@ -243,8 +243,9 @@ export function WaAutomacaoCard({
                    <div key={campo.key}>
                      {campo.type === 'time' && (
                        <div>
-                         <label className="text-xs font-bold text-neutral-700">{campo.label}</label>
+                         <label htmlFor={`${automacao.tipo}-${campo.key}`} className="text-xs font-bold text-neutral-700">{campo.label}</label>
                          <input
+                           id={`${automacao.tipo}-${campo.key}`}
                            type="time"
                            className="mt-1 block w-full rounded border border-neutral-200 px-3 py-1.5 text-sm font-medium focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                            value={(form[campo.key] as string) ?? campo.default ?? ''}
@@ -255,8 +256,9 @@ export function WaAutomacaoCard({
 
                      {campo.type === 'textarea' && (
                        <div>
-                         <label className="text-xs font-bold text-neutral-700">{campo.label}</label>
+                         <label htmlFor={`${automacao.tipo}-${campo.key}`} className="text-xs font-bold text-neutral-700">{campo.label}</label>
                          <Textarea
+                           id={`${automacao.tipo}-${campo.key}`}
                            className="mt-1 min-h-[80px] font-medium text-sm leading-relaxed"
                            value={(form[campo.key] as string) ?? campo.default ?? ''}
                            onChange={(e) => handleChange(campo.key, e.target.value)}

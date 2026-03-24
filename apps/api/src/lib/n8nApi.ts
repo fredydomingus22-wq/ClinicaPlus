@@ -15,6 +15,19 @@ const n8n = axios.create({
   timeout: 20_000,
 });
 
+interface N8nNode {
+  type: string;
+  parameters?: {
+    path?: string;
+  };
+}
+
+interface N8nWorkflow {
+  id: string;
+  active: boolean;
+  nodes: N8nNode[];
+}
+
 // Interceptor: converter erros da n8n API em AppError (MODULE-whatsapp.md §5)
 n8n.interceptors.response.use(
   res => res,
@@ -50,15 +63,15 @@ export const n8nApi = {
     if (!templateFactory) {
       throw new AppError(`Template não encontrado para o tipo: ${tipo}`, 400, 'N8N_TEMPLATE_NOT_FOUND');
     }
-    const template = templateFactory(vars) as Record<string, any>;
-    const webhookPath = extrairWebhookPath(template);
+    const template = templateFactory(vars) as unknown as N8nWorkflow;
+    const webhookPath = extrairWebhookPath(template as unknown as Record<string, unknown>);
 
     // Resolver conflitos de webhook (n8n não permite 2 ativos no mesmo path)
     if (webhookPath) {
       try {
         const workflows = await this.listarWorkflows();
         const conflitos = workflows.filter(w => 
-          w.active && extrairWebhookPath(w as Record<string, any>) === webhookPath
+          w.active && extrairWebhookPath(w as unknown as Record<string, unknown>) === webhookPath
         );
 
         for (const w of conflitos) {
@@ -86,9 +99,9 @@ export const n8nApi = {
   /**
    * Lista todos os workflows do n8n.
    */
-  async listarWorkflows(): Promise<Array<{ id: string; active: boolean; nodes: any[] }>> {
+  async listarWorkflows(): Promise<N8nWorkflow[]> {
     const { data } = await n8n.get('/api/v1/workflows');
-    return (data.data || []) as Array<{ id: string; active: boolean; nodes: any[] }>;
+    return (data.data || []) as N8nWorkflow[];
   },
 
   /**

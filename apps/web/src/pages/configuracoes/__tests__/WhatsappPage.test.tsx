@@ -96,10 +96,11 @@ describe('WhatsappPage', () => {
     expect(screen.getAllByText(/244923000000/i)[0]).toBeInTheDocument();
   });
 
-  it('deve mostrar toggles para os 5 tipos de automação', () => {
+  it('deve mostrar toggles para os tipos de automação suportados', () => {
     vi.mocked(useWhatsApp).mockReturnValue({
       instancias: [{ id: '4', estado: 'CONECTADO' }],
       templates: [
+        { id: 't0', tipo: 'IA_ASSISTANT', maxMensagensPromo: 10, usaAi: false, usaAiDefault: false, nome: 'Assistente de IA', descricao: '...' },
         { id: 't1', tipo: 'MARCACAO_CONSULTA', maxMensagensPromo: 10, usaAi: false, usaAiDefault: false, nome: 'Marcação de Consulta', descricao: '...' },
         { id: 't2', tipo: 'LEMBRETE_24H', maxMensagensPromo: 10, usaAi: false, usaAiDefault: false, nome: 'Lembrete 24h', descricao: '...' },
         { id: 't3', tipo: 'LEMBRETE_2H', maxMensagensPromo: 10, usaAi: false, usaAiDefault: false, nome: 'Lembrete 2h', descricao: '...' },
@@ -107,6 +108,7 @@ describe('WhatsappPage', () => {
         { id: 't5', tipo: 'BOAS_VINDAS', maxMensagensPromo: 10, usaAi: false, usaAiDefault: false, nome: 'Boas-vindas', descricao: '...' }
       ],
       automacoes: [
+        { id: '0', tipo: 'IA_ASSISTANT', ativo: true },
         { id: '1', tipo: 'MARCACAO_CONSULTA', ativo: false },
         { id: '2', tipo: 'LEMBRETE_24H', ativo: true },
         { id: '3', tipo: 'LEMBRETE_2H', ativo: false },
@@ -129,10 +131,11 @@ describe('WhatsappPage', () => {
       </MemoryRouter>
     );
     
-    expect(screen.getByRole('heading', { name: /Marcação de Consulta/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Lembrete 24h/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Lembrete 2h/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Confirmação de Cancelamento/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Assistente de IA/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Marcação de Consultas/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lembrete 24h antes/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lembrete 2h antes/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Confirmação por resposta/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Boas-vindas/i })).toBeInTheDocument();
   });
 
@@ -165,8 +168,8 @@ describe('WhatsappPage', () => {
     const expandBtn = screen.getByRole('button', { name: /Configurações da Automação/i });
     fireEvent.click(expandBtn);
 
-    // Se estiver activo, deve mostrar campos extras (ex: prompt ou n8n config)
-    expect(screen.getByLabelText(/Prompt do Fluxo/i)).toBeInTheDocument();
+    // Se estiver activo, deve mostrar campos extras
+    expect(screen.getByLabelText(/Horário de início/i)).toBeInTheDocument();
   });
 
   it('deve actualizar estado QR em tempo real via WebSocket', () => {
