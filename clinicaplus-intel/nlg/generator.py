@@ -35,15 +35,47 @@ class NLGGenerator:
             return "Para quando deseja marcar a consulta? (Ex: Hoje, Amanhã, ou uma data como 25/03)"
 
         # 5. Confirmações
-        elif template_nome == "confirmacao_final":
-            # Final message handled by WaFormatter, but keeping template for fallback/intro
-            return "Ótimo! Vou confirmar o seu agendamento..."
+        elif template_nome == "confirmacao_pre":  # Pede confirmação ao paciente antes de criar
+            esp = dados.get("especialidade", "")
+            medico = dados.get("medicoNome", "")
+            data_label = dados.get("dataLabel", "") or dados.get("data_iso", "")
+            hora_label = dados.get("slotLabel", "") or dados.get("slotHorario", "")[:5] if dados.get("slotHorario") else ""
+            return (
+                f"📋 *Resumo do agendamento:*\n"
+                f"🏥 Especialidade: {esp}\n"
+                f"👨‍⚕️ Médico: {medico}\n"
+                f"📅 Data: {data_label}\n"
+                f"🕐 Hora: {hora_label}\n\n"
+                f"Confirma este agendamento?"
+            )
 
-        elif template_nome == "confirmado":
-            return "Tudo certo! Receberá a notificação oficial em breve."
+        elif template_nome == "confirmacao_final":  # Booking foi criado com sucesso
+            esp = dados.get("especialidade", "")
+            medico = dados.get("medicoNome", "")
+            data_label = dados.get("dataLabel", "") or dados.get("data_iso", "")
+            hora_label = dados.get("slotLabel", "") or (dados.get("slotHorario", "")[:5] if dados.get("slotHorario") else "")
+            return (
+                f"✅ *Consulta Marcada com Sucesso!*\n\n"
+                f"🏥 {esp}\n"
+                f"👨‍⚕️ {medico}\n"
+                f"📅 {data_label} às {hora_label}\n\n"
+                f"Pedimos que chegue 15 min antes.\n"
+                f"Se precisar cancelar ou reagendar, contacte-nos. Até breve! 😊"
+            )
+
+        elif template_nome == "confirmado":  # fallback genérico pós-confirmação
+            return "✅ Tudo confirmado! Receberá um lembrete em breve."
             
         elif template_nome == "confirmar_unico_slot":
-            return "Só temos um horário disponível."
+            slot = dados.get("slot")
+            if slot and hasattr(slot, "dataHora"):
+                from datetime import timezone, timedelta
+                LUANDA = timezone(timedelta(hours=1))
+                dt = slot.dataHora.astimezone(LUANDA)
+                hora_str = dt.strftime("%H:%M")
+                data_str = dt.strftime("%d/%m")
+                return f"Só existe um horário disponível: *{data_str} às {hora_str}*. Confirma?"
+            return "Só existe um horário disponível. Confirma?"
 
         # 6. Fallback Alternativas
         elif template_nome == "sem_slots_alternativas":
@@ -67,6 +99,10 @@ class NLGGenerator:
         elif template_nome == "pergunta_data":
             opcoes = dados.get("opcoes", ["Hoje", "Amanhã"])
             return "Para que dia deseja marcar?", opcoes
+
+        elif template_nome in ["confirmacao_pre", "confirmar_unico_slot"]:
+            # Poll de confirmação Sim/Não
+            return "Confirma o agendamento?", ["✅ Confirmar", "❌ Cancelar"]
             
         # Add other poll templates here if necessary
         return "", []

@@ -113,30 +113,36 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     template_nome = decisao.template_mensagem
     
     if decisao.accao == "MOSTRAR_OPCOES":
-        pergunta, opcoes = nlg.get_opcoes_poll(template_nome, decisao.dados_extra)
+        pergunta, opcoes_poll = nlg.get_opcoes_poll(template_nome, decisao.dados_extra)
         if decisao.slot_alvo == "slotHorario":
             # Format slots as poll
             slots = decisao.dados_extra.get("slots", [])
             poll_payload = WaFormatter.slots_como_poll(slots)
-            pergunta, opcoes = poll_payload["pergunta"], poll_payload["opcoes"]
+            pergunta, opcoes_poll = poll_payload["pergunta"], poll_payload["opcoes"]
         
-        await evo_client.enviar_poll(instancia_nome, numero, pergunta, opcoes)
+        await evo_client.enviar_poll(instancia_nome, numero, pergunta, opcoes_poll)
     
+    elif decisao.accao == "CONFIRMAR":
+        # 1. Send summary as text
+        msg_resumo = nlg.gerar_resposta(template_nome, decisao.dados_extra)
+        await evo_client.enviar_texto(instancia_nome, numero, msg_resumo)
+        # 2. Send confirmation poll
+        pergunta, opcoes_poll = nlg.get_opcoes_poll(template_nome, decisao.dados_extra)
+        if opcoes_poll:
+            await evo_client.enviar_poll(instancia_nome, numero, pergunta, opcoes_poll)
+
     elif decisao.accao == "CRIAR_AGENDAMENTO":
-        # Predict No-show
-        sinais = {
-            "lead_time": (datetime.fromisoformat(novo_estado.slotHorario).date() - date.today()).days if novo_estado.slotHorario else 1,
-            "hora": int(novo_estado.slotHorario[11:13]) if novo_estado.slotHorario else 9
+        # Build dados para o template de sucesso
+        dados_sucesso = {
+            "especialidade": novo_estado.especialidade or "",
+            "medicoNome": novo_estado.medicoNome or "",
+            "data_iso": novo_estado.data_iso or "",
+            "dataLabel": novo_estado.data_iso or "",
+            "slotHorario": novo_estado.slotHorario or "",
         }
-        risco = predictor.predizer(sinais)
-        decisao.dados_extra["scoreNoShow"] = risco
-        
-        # Confirmation
-        msg_txt = nlg.gerar_resposta("confirmacao_final", decisao.dados_extra)
+        msg_txt = nlg.gerar_resposta("confirmacao_final", dados_sucesso)
         await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
-        
-        # Here would go the TS API call in production
-        # await criar_agendamento(...)
+        print(f"📅 Agendamento criado para {numero}: {dados_sucesso}")
         
     else:
         # Standard text message
@@ -144,7 +150,15 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
 
     # 6. Save State
-    novo_estado.ultimaAccao = decisao.accao
+    # Map CONFIRMAR → AGUARDA_CONFIRMACAO so the policy check works correctly on next turn
+    if decisao.accao == "CONFIRMAR":
+        novo_estado.ultimaAccao = "AGUARDA_CONFIRMACAO"
+    elif decisao.accao == "CRIAR_AGENDAMENTO":
+        # Reset state after booking confirmed — clean slate for future interactions
+        novo_estado = DialogueState()
+        novo_estado.ultimaAccao = "FINALIZAR"
+    else:
+        novo_estado.ultimaAccao = decisao.accao
     await db.actualizar_conversa(clinica_id, instancia_id, numero, novo_estado, push_name)
     print(f"✅ Fluxo concluído para {numero}. Acção: {decisao.accao}")
 

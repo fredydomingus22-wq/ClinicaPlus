@@ -121,11 +121,20 @@ class DialoguePolicy:
                 dados_extra={"slots": slots[:5]}
             )
 
-        # 7. COMPLETE -> CONFIRM
+        # 7. COMPLETE -> CONFIRM (show summary + ask for confirmation via poll)
         if estado.esta_completo():
+            dados = {
+                "especialidade": estado.especialidade,
+                "medicoNome": estado.medicoNome or "",
+                "data_iso": estado.data_iso,
+                "dataLabel": estado.data_iso,
+                "slotHorario": estado.slotHorario,
+                "slotLabel": estado.slotHorario[:5] if estado.slotHorario else "",
+            }
             return PolicyDecision(
                 accao="CONFIRMAR",
-                template_mensagem="confirmacao_final"
+                template_mensagem="confirmacao_pre",
+                dados_extra=dados
             )
 
         # Default fallback (should not happen if proximo is well-defined)
