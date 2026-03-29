@@ -76,13 +76,21 @@ class ClinicaDB:
     async def actualizar_conversa(self, clinicaId: str, instanciaId: str, numero: str, estado_obj: Any, pushName: Optional[str] = None) -> None:
         from dataclasses import asdict
         contexto_json = json.dumps(asdict(estado_obj))
+        # Map internal policy actions to valid DB Enum values (WaEstadoConversa)
+        db_state = "EM_FLUXO"
+        accao = estado_obj.ultimaAccao
+        if not accao or accao in ["RESET", "INICIO"]:
+            db_state = "AGUARDA_INPUT"
+        elif accao == "FINALIZAR":
+            db_state = "FINALIZADO"
+        
         async with conn() as c:
             await c.execute(
                 """INSERT INTO wa_conversas (id, "clinicaId", "instanciaId", "numeroWhatsapp", estado, contexto, ultima_mensagem_em, expira_em, criado_em)
                    VALUES (gen_random_uuid()::text, $1, $2, $3, $4::"WaEstadoConversa", $5::jsonb, NOW(), NOW() + interval '24 hours', NOW())
                    ON CONFLICT ("instanciaId", "numeroWhatsapp") DO UPDATE 
                    SET estado = $4::"WaEstadoConversa", contexto = $5::jsonb, ultima_mensagem_em = NOW(), expira_em = NOW() + interval '24 hours'""",
-                clinicaId, instanciaId, numero, estado_obj.ultimaAccao or "AGUARDA_INPUT", contexto_json
+                clinicaId, instanciaId, numero, db_state, contexto_json
             )
 
     async def especialidades_activas(self, clinicaId: str) -> List[str]:
