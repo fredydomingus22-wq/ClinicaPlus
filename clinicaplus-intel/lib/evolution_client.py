@@ -36,18 +36,10 @@ class EvolutionClient:
     async def enviar_poll(self, instancia_nome: str, numero: str, pergunta: str, opcoes: List[str]) -> bool:
         """Envia uma mensagem do tipo Poll (sondagem) com as opções."""
         url = f"{self.base_url}/message/sendPoll/{instancia_nome}"
-        
-        # Evolution API format for sendPoll
-        poll_options = []
-        for opt in opcoes:
-             # Ensure correct format (depends on exact Evolution version, typically just string name)
-             # V2 requires {"optionName": "str"}
-             poll_options.append({"optionName": opt})
-             
         payload = {
             "number": numero,
             "name": pergunta,
-            "options": poll_options,
+            "values": opcoes,
             "selectableCount": 1, 
             "delay": 1200
         }
