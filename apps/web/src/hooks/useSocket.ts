@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/auth.store';
+import { toast } from 'react-hot-toast';
 
 // Singleton instance outside the component to survive re-renders
 let instance: Socket | null = null;
@@ -49,6 +50,12 @@ export function useSocket(): Socket | null {
     instance.on('connect_error', (err) => {
       // eslint-disable-next-line no-console
       console.error('❌ Socket connection error:', err.message);
+      
+      if (err.message === 'timeout') {
+         toast.error('Ligação lenta detectada. A tentar restabelecer...');
+      } else {
+         toast.error('Erro de ligação ao servidor de tempo real.');
+      }
     });
 
     instance.on('auth:expired', () => {

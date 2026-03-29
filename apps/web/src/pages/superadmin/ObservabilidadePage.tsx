@@ -3,10 +3,12 @@ import {
   Activity, 
   Server, 
   RefreshCw,
-  ArrowUpRight
+  ArrowUpRight,
+  Loader2
 } from 'lucide-react';
-import { useHealthScores, useInfraStatus } from '../../hooks/useSuperAdmin';
+import { useHealthScores, useInfraStatus, useSystemLogs } from '../../hooks/useSuperAdmin';
 import { Link } from 'react-router-dom';
+import { SystemLogDTO } from '../../api/superadmin';
 
 interface HealthScore {
   clinicaId: string;
@@ -22,13 +24,31 @@ interface InfraService {
   uptime: string;
 }
 
+const NIVEL_META: Record<string, { label: string; color: string }> = {
+  ERROR: { label: 'ERROR', color: 'bg-sa-destructive/20 text-sa-destructive' },
+  WARN:  { label: 'WARN',  color: 'bg-sa-warning/20 text-sa-warning' },
+  INFO:  { label: 'INFO',  color: 'bg-sa-primary/20 text-sa-primary' },
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return `${mins}m atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  return `${Math.floor(hrs / 24)}d atrás`;
+}
+
 export function ObservabilidadePage() {
   const { data: healthScores, isLoading: loadingHealth, refetch: refetchHealth } = useHealthScores();
   const { data: infra, isLoading: loadingInfra, refetch: refetchInfra } = useInfraStatus();
+  const { data: logsData, isLoading: loadingLogs, refetch: refetchLogs } = useSystemLogs({ limit: 20 });
 
-  const handleRefresh = () => {
+  const handleRefresh = (): void => {
     refetchHealth();
     refetchInfra();
+    refetchLogs();
   };
 
   return (
@@ -46,7 +66,7 @@ export function ObservabilidadePage() {
             onClick={handleRefresh}
             className="p-2.5 rounded-lg bg-sa-background border border-sa-border text-sa-text-muted hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${(loadingHealth || loadingInfra) ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${(loadingHealth || loadingInfra || loadingLogs) ? 'animate-spin' : ''}`} />
             Actualizar Agora
           </button>
         </div>
@@ -135,7 +155,7 @@ export function ObservabilidadePage() {
            </div>
         </div>
 
-        {/* System Events Ticker */}
+        {/* Live Incident Feed — dados reais dos logs do sistema */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
            <h3 className="text-[10px] font-bold text-white uppercase tracking-[4px] flex items-center gap-3">
               <RefreshCw className="w-4 h-4 text-sa-text-muted" /> Live Incident Feed
@@ -143,31 +163,35 @@ export function ObservabilidadePage() {
 
            <div className="bg-[#050505] border border-sa-border rounded-3xl overflow-hidden flex flex-col h-[500px]">
               <div className="flex-1 overflow-y-auto divide-y divide-white/[0.03]">
-                 {[
-                   { type: 'ERROR', msg: 'Falha crítica no webhook gateway', time: '2m ago', clinic: 'Clinica Central' },
-                   { type: 'WARN', msg: 'Latência p99 acima de 500ms', time: '12m ago', clinic: 'Viana Health' },
-                   { type: 'INFO', msg: 'Backup concluído com sucesso', time: '1h ago', clinic: 'System' },
-                   { type: 'WARN', msg: 'Tentativa de brute-force detectada', time: '3h ago', clinic: 'Talatona Med' },
-                    { type: 'ERROR', msg: 'Erro 502 Bad Gateway no Worker', time: '5h ago', clinic: 'System' }
-                 ].map((ev, i) => (
-                   <div key={i} className="p-5 hover:bg-white/[0.02] transition-colors space-y-2">
-                      <div className="flex justify-between items-center">
-                         <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                           ev.type === 'ERROR' ? 'bg-sa-destructive/20 text-sa-destructive' :
-                           ev.type === 'WARN' ? 'bg-sa-warning/20 text-sa-warning' :
-                           'bg-sa-primary/20 text-sa-primary'
-                         } uppercase tracking-widest`}>
-                           {ev.type}
-                         </span>
-                         <span className="text-[9px] text-sa-text-dim font-mono">{ev.time}</span>
+                {loadingLogs ? (
+                  <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-30">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="text-xs uppercase tracking-[3px]">A carregar eventos...</span>
+                  </div>
+                ) : logsData?.items.length === 0 ? (
+                  <div className="p-10 text-center opacity-30 italic text-sm">Sem eventos recentes</div>
+                ) : (
+                  logsData?.items.map((log: SystemLogDTO) => {
+                    const meta = NIVEL_META[log.nivel] ?? { label: log.nivel, color: 'bg-white/10 text-white' };
+                    return (
+                      <div key={log.id} className="p-5 hover:bg-white/[0.02] transition-colors space-y-2">
+                         <div className="flex justify-between items-center">
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${meta.color} uppercase tracking-widest`}>
+                              {meta.label}
+                            </span>
+                            <span className="text-[9px] text-sa-text-dim font-mono">{timeAgo(log.criadoEm)}</span>
+                         </div>
+                         <p className="text-xs text-white/90 font-medium leading-relaxed">{log.mensagem}</p>
+                         <p className="text-[9px] text-sa-text-dim uppercase tracking-wider">{log.utilizadorNome || log.acao || 'System'}</p>
                       </div>
-                      <p className="text-xs text-white/90 font-medium leading-relaxed">{ev.msg}</p>
-                      <p className="text-[9px] text-sa-text-dim uppercase tracking-wider">{ev.clinic}</p>
-                   </div>
-                 ))}
+                    );
+                  })
+                )}
               </div>
               <div className="p-4 border-t border-sa-border bg-white/5 text-center">
-                 <button className="text-[10px] font-bold text-sa-primary uppercase tracking-widest hover:underline">Ver Todos os Logs</button>
+                 <Link to="/superadmin/logs" className="text-[10px] font-bold text-sa-primary uppercase tracking-widest hover:underline">
+                   Ver Todos os Logs
+                 </Link>
               </div>
            </div>
         </div>

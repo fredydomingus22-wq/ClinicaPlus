@@ -125,8 +125,11 @@ app.get('/health', async (_req, res) => {
   
   let redisStatus = 'connected';
   try {
-    const pong = await redis.ping();
-    if (pong !== 'PONG') throw new Error('Redis PONG failed');
+    // Redis check with 2s timeout
+    await Promise.race([
+      redis.ping().then(pong => { if (pong !== 'PONG') throw new Error('Redis PONG failed'); }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis Timeout')), 2000))
+    ]);
   } catch (err) {
     redisStatus = 'disconnected';
     logger.error({ err }, 'Health check: Redis connection failed');

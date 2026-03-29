@@ -127,73 +127,124 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     # 6. Save State
     novo_estado.ultimaAccao = decisao.accao
     await db.actualizar_conversa(clinica_id, instancia_id, numero, novo_estado, push_name)
+    print(f"✅ Fluxo concluído para {numero}. Acção: {decisao.accao}")
 
 async def processar_mensagem(payload: dict):
-    instancia = payload.get("instance")
-    event = payload.get("event")
-    data = payload.get("data", {})
-
-    ids = await db.resolver_ids_por_instancia(instancia)
-    if not ids: return
-    clinica_id, instancia_id = ids["clinicaId"], ids["instanciaId"]
-
-    if not await db.is_ia_ativo(clinica_id, instancia_id): return
-
-    if event == "messages.upsert":
-        msg = data.get("messages", [{}])[0]
-        if msg.get("key", {}).get("fromMe"): return
+    try:
+        instancia = payload.get("instance")
+        event = payload.get("event")
+        data = payload.get("data", {})
         
-        numero = msg["key"]["remoteJid"].split("@")[0]
-        message = msg.get("message", {})
-        texto = message.get("conversation") or message.get("extendedTextMessage", {}).get("text")
-        push_name = msg.get("pushName", "")
-        
-        if not texto: return
-        msg_id = msg["key"]["id"]
-        
-        if await ja_processado(msg_id): return
-        
-        async with session_lock(clinica_id, numero):
-            await _executar_fluxo_mensagem(clinica_id, instancia_id, instancia, numero, texto, push_name, msg)
+        print(f"📩 Webhook recebido: {instancia} - Evento: {event}")
 
-    elif event == "messages.update":
-        # Handle Poll updates
-        if isinstance(data, list):
-            for update in data:
-                poll_update = update.get("update", {}).get("pollUpdates")
-                if poll_update:
-                    numero = update["key"]["remoteJid"].split("@")[0]
-                    texto = _extrair_voto_poll(update)
-                    if texto:
-                        async with session_lock(clinica_id, numero):
-                            await _executar_fluxo_mensagem(clinica_id, instancia_id, instancia, numero, texto, "", update)
-                    break
+        ids = await db.resolver_ids_por_instancia(instancia)
+        if not ids: 
+            print(f"⚠️ Instância {instancia} não encontrada na DB.")
+            return
+        clinica_id, instancia_id = ids["clinicaId"], ids["instanciaId"]
+
+        if not await db.is_ia_ativo(clinica_id, instancia_id): 
+            print(f"ℹ️ IA Assistant inativo para {instancia}. Ignorando.")
+            return
+
+        if event == "messages.upsert":
+            # Evolution v2 often nest messages in 'messages' array
+            msg = data.get("messages", [{}])[0]
+            if msg.get("key", {}).get("fromMe"): return
+            
+            numero = msg["key"]["remoteJid"].split("@")[0]
+            message = msg.get("message", {})
+            
+            # Extract text (handles multiple message types)
+            texto = (
+                message.get("conversation") or 
+                message.get("extendedTextMessage", {}).get("text") or
+                message.get("buttonsResponseMessage", {}).get("selectedButtonId") or
+                message.get("listResponseMessage", {}).get("singleSelectReply", {}).get("selectedRowId")
+            )
+            push_name = msg.get("pushName", "")
+            
+            if not texto: 
+                print(f"ℹ️ Mensagem sem texto de {numero}. Ignorando.")
+                return
+            
+            msg_id = msg["key"]["id"]
+            if await ja_processado(msg_id): 
+                print(f"ℹ️ Mensagem {msg_id} duplicada. Ignorando.")
+                return
+            
+            print(f"🤖 A processar: '{texto[:20]}...' de {numero}")
+            
+            try:
+                async with session_lock(clinica_id, numero):
+                    await _executar_fluxo_mensagem(clinica_id, instancia_id, instancia, numero, texto, push_name, msg)
+            except TimeoutError:
+                print(f"❌ Timeout ao obter lock para {numero}. Possível sobrecarga.")
+                await evo_client.enviar_texto(instancia, numero, "Desculpe, estou a processar muitas mensagens. Pode repetir, por favor?")
+
+    except Exception as e:
+        import traceback
+        print(f"💥 ERRO CRÍTICO no processamento de mensagem: {str(e)}")
+        traceback.print_exc()
+
+async def processar_poll_update(clinica_id: str, instancia_id: str, instancia: str, data: Any):
+    # Handle Poll updates (Evolution v2)
+    # data can be a list or a single update object
+    updates = data if isinstance(data, list) else [data]
+    for update in updates:
+        poll_update = update.get("update", {}).get("pollUpdates")
+        if poll_update:
+            numero = update["key"]["remoteJid"].split("@")[0]
+            texto = _extrair_voto_poll(update)
+            if texto:
+                print(f"📊 Voto em Poll detectado: {texto} de {numero}")
+                try:
+                    async with session_lock(clinica_id, numero):
+                        await _executar_fluxo_mensagem(clinica_id, instancia_id, instancia, numero, texto, "", update)
+                except Exception as e:
+                    print(f"💥 Erro ao processar poll: {e}")
+            break
 
 @router.post("/webhook/whatsapp")
 async def webhook_whatsapp(request: Request, background_tasks: BackgroundTasks, x_evolution_hmac: str = Header(None)):
-    body = await request.body()
-    if not validar_hmac(body, x_evolution_hmac):
-        raise HTTPException(status_code=401, detail="HMAC inválido")
-    
-    payload = json.loads(body)
-    instancia = payload.get("instance")
-    event = payload.get("event")
-    
-    if event not in ["messages.upsert", "messages.update"]:
-        return {"status": "ignored"}
-    
-    # Simple deduplication and rate limit check (Layer 1&2)
-    # Extract number for rate limiting
-    data = payload.get("data", {})
-    numero = None
-    if event == "messages.upsert":
-        numero = data.get("messages", [{}])[0].get("key", {}).get("remoteJid", "").split("@")[0]
-    elif event == "messages.update" and isinstance(data, list):
-        numero = data[0].get("key", {}).get("remoteJid", "").split("@")[0]
+    try:
+        body = await request.body()
+        if not validar_hmac(body, x_evolution_hmac):
+            print("❌ HMAC Inválido no Webhook")
+            raise HTTPException(status_code=401, detail="HMAC inválido")
+        
+        payload = json.loads(body)
+        instancia = payload.get("instance")
+        event = payload.get("event")
+        
+        if event not in ["messages.upsert", "messages.update"]:
+            return {"status": "ignored"}
+        
+        # Simple deduplication and rate limit check (Layer 1&2)
+        data = payload.get("data", {})
+        numero = None
+        if event == "messages.upsert":
+            numero = data.get("messages", [{}])[0].get("key", {}).get("remoteJid", "").split("@")[0]
+        elif event == "messages.update":
+            # For poll updates, data might be a list
+            sample = data[0] if isinstance(data, list) and len(data) > 0 else (data if isinstance(data, dict) else {})
+            numero = sample.get("key", {}).get("remoteJid", "").split("@")[0]
 
-    if numero:
-        if await rate_limit_excedido(instancia, numero):
-            return {"status": "ratelimit"}
+        if numero:
+            if await rate_limit_excedido(instancia, numero):
+                print(f"⚠️ Rate limit atingido para {numero} na instância {instancia}")
+                return {"status": "ratelimit"}
 
-    background_tasks.add_task(processar_mensagem, payload)
-    return {"status": "ok"}
+        if event == "messages.upsert":
+            background_tasks.add_task(processar_mensagem, payload)
+        elif event == "messages.update":
+            # Resolve IDs early for background task
+            ids = await db.resolver_ids_por_instancia(instancia)
+            if ids:
+                background_tasks.add_task(processar_poll_update, ids["clinicaId"], ids["instanciaId"], instancia, data)
+        
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"🔥 Erro no endpoint Webhook: {e}")
+        # Return 200 anyway to avoid Evolution API retries if logical error
+        return {"status": "error", "message": str(e)}
