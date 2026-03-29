@@ -1,0 +1,7 @@
+dist/
+node_modules/
+coverage/
+check_users.ts
+set_test_password.ts
+prisma/seeds/
+prisma/migrations/

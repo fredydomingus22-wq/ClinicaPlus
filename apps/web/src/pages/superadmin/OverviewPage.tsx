@@ -155,7 +155,7 @@ export function OverviewPage() {
                     fontSize: '12px',
                     color: '#fff'
                   }}
-                  formatter={(value: number) => [formatKwanza(value), 'Receita']}
+                  formatter={(value: unknown) => [typeof value === 'number' ? formatKwanza(value) : '—', 'Receita'] as [string, string]}
                 />
                 <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={40}>
                   {dashboard?.mrrChartData?.map((_entry: MRRChartEntry, index: number) => (
