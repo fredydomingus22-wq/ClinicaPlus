@@ -77,12 +77,12 @@ class ClinicaDB:
         from dataclasses import asdict
         contexto_json = json.dumps(asdict(estado_obj))
         # Map internal policy actions to valid DB Enum values (WaEstadoConversa)
-        db_state = "EM_FLUXO"
+        db_state = "EM_FLUXO_MARCACAO"
         accao = estado_obj.ultimaAccao
         if not accao or accao in ["RESET", "INICIO"]:
             db_state = "AGUARDA_INPUT"
         elif accao == "FINALIZAR":
-            db_state = "FINALIZADO"
+            db_state = "FINALIZADA"
         
         async with conn() as c:
             await c.execute(
