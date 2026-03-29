@@ -11,17 +11,15 @@ export const apiKeyAuth = async (req: Request, _res: Response, next: NextFunctio
   const apiKey = req.headers['x-api-key'] as string;
 
   if (!apiKey) {
-    return next(new AppError('API Key ausente (Header X-API-KEY)', 401, 'API_KEY_MISSING'));
+    return next(new AppError('API Key ausente (Header X-API-KEY)', 401, 'API_KEY_REQUIRED'));
   }
 
   try {
-    const [prefixo, rawKey] = apiKey.split('.');
-    
-    if (!prefixo || !rawKey) {
-      return next(new AppError('Formato de API Key inválido', 401, 'API_KEY_INVALID_FORMAT'));
+    if (!apiKey.startsWith('cp_live_') && !apiKey.startsWith('cp_internal_')) {
+      return next(new AppError('Formato de API Key inválido (deve começar por cp_live_ ou cp_internal_)', 401, 'API_KEY_INVALID_FORMAT'));
     }
 
-    const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+    const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
 
     const keyRecord = await prisma.apiKey.findUnique({
       where: { keyHash },
@@ -29,7 +27,7 @@ export const apiKeyAuth = async (req: Request, _res: Response, next: NextFunctio
     });
 
     if (!keyRecord || !keyRecord.ativo) {
-      return next(new AppError('API Key inválida ou desactivada', 401, 'API_KEY_INVALID'));
+      return next(new AppError('API Key inválida ou desactivada', 401, 'INVALID_API_KEY'));
     }
 
     if (keyRecord.expiresAt && keyRecord.expiresAt < new Date()) {

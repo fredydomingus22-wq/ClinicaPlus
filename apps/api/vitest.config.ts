@@ -13,9 +13,9 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       // Thresholds globais por defeito
       thresholds: {
-        lines:     70,
-        functions: 70,
-        branches:  65,
+        lines:     85,
+        functions: 85,
+        branches:  75,
         // Thresholds específicos por módulo (ADR/MODULE spec)
         'src/services/wa-*':        { lines: 85, functions: 85, branches: 80 },
         'src/services/subscricao*': { lines: 90, functions: 90, branches: 85 },

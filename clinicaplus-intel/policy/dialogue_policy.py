@@ -80,21 +80,20 @@ class DialoguePolicy:
                 dados_extra={"opcoes": opcoes.get("especialidades", [])[:8]}
             )
             
+        if not estado.medicoId and estado.especialidade:
+            medicos_esp = [m for m in opcoes.get("medicos", []) 
+                          if m.get("especialidade") == estado.especialidade]
+            if len(medicos_esp) == 1:
+                estado.medicoId = medicos_esp[0]["id"]
+                estado.medicoNome = medicos_esp[0]["nome"]
+
         if proximo == "data":
-            # Rule of unique doctor
-            if not estado.medicoId:
-                medicos_esp = [m for m in opcoes.get("medicos", []) 
-                              if m.get("especialidade") == estado.especialidade]
-                if len(medicos_esp) == 1:
-                    estado.medicoId = medicos_esp[0]["id"]
-                    estado.medicoNome = medicos_esp[0]["nome"]
-                    # Slot medico filled automatically, proceed to data
-            
-            # If still missing med, should we ask? (usually specialities -> med -> data)
-            # But prompt says esp -> data -> slotHorario. 
-            # If esp has multiple medicos, we might need a step for med choice.
-            # Module spec says: especialidade -> médico (opcional) -> data -> horário
-            pass
+            return PolicyDecision(
+                accao="MOSTRAR_OPCOES",
+                template_mensagem="pergunta_data",
+                slot_alvo="data_iso",
+                dados_extra={"opcoes": ["Hoje", "Amanhã", "Segunda", "Terça"]}
+            )
 
         if proximo == "slotHorario":
             slots = opcoes.get("slots", [])
@@ -138,9 +137,27 @@ class DialoguePolicy:
         )
 
     def _calcular_alternativas(self, estado: DialogueState, todos_slots: List[Any]) -> List[Dict[str, Any]]:
-        """Generates up to 3 alternatives when the original request is unavailable."""
-        # This is a placeholder for the actual heuristic logic defined in Step 9
-        return [
-            {"label": "Amanhã às 09:00", "valor": "2026-03-25T09:00:00"},
-            {"label": "Quinta às 14:00", "valor": "2026-03-26T14:00:00"}
-        ]
+        """Gera até 3 alternativas quando o pedido original não está disponível."""
+        from datetime import datetime, date, timedelta
+        
+        base_date = date.fromisoformat(estado.data_iso) if estado.data_iso else date.today()
+        
+        alternativas = []
+        # Sugerir amanhã e depois de amanhã em horários padrão se não houver slots
+        for i in range(1, 4):
+            alt_date = base_date + timedelta(days=i)
+            # Apenas dias úteis (seg-sex) para simplicidade da heurística
+            if alt_date.weekday() < 5:
+                label = "Amanhã" if i == 1 else alt_date.strftime("%d/%m")
+                alternativas.append({
+                    "label": f"{label} às 09:00", 
+                    "valor": datetime.combine(alt_date, datetime.min.time()).replace(hour=9).isoformat()
+                })
+                alternativas.append({
+                    "label": f"{label} às 14:00", 
+                    "valor": datetime.combine(alt_date, datetime.min.time()).replace(hour=14).isoformat()
+                })
+            if len(alternativas) >= 3:
+                break
+                
+        return alternativas[:3]

@@ -14,9 +14,9 @@ describe('wa-lembrete.job', () => {
         dataHora: amanha,
         estado: 'CONFIRMADO',
         clinica: {
-          waInstancia: {
+          waInstancias: [{
             automacoes: [{ tipo: 'LEMBRETE_24H', ativo: true }]
-          }
+          }]
         }
       }
     ] as any);
@@ -32,7 +32,7 @@ describe('wa-lembrete.job', () => {
     vi.mocked(prisma.agendamento.findMany).mockResolvedValue([{ 
       id: 'ag-1', 
       clinicaId: 'c-1', 
-      clinica: { waInstancia: null },
+      clinica: { waInstancias: [] },
       paciente: { telefone: '123' } 
     }] as any);
 
@@ -43,7 +43,7 @@ describe('wa-lembrete.job', () => {
     vi.mocked(prisma.agendamento.findMany).mockResolvedValue([{ 
       id: 'ag-1', 
       clinicaId: 'c-1', 
-      clinica: { waInstancia: { automacoes: [] } },
+      clinica: { waInstancias: [{ automacoes: [] }] },
       paciente: { telefone: null } 
     }] as any);
 

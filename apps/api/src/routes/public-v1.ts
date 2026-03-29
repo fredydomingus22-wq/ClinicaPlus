@@ -1,7 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
-import { EscopoApiKey } from '@clinicaplus/types';
+import { EscopoApiKey, PacienteCreateSchema, AgendamentoCreateSchema, ReceitaListQuerySchema } from '@clinicaplus/types';
+import { pacientesService } from '../services/pacientes.service';
+import { agendamentosService } from '../services/agendamentos.service';
+import { receitasService } from '../services/receitas.service';
 
 const router = Router();
 
@@ -10,7 +13,9 @@ const router = Router();
  */
 function requireScope(scope: EscopoApiKey) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    if (!req.user?.escopos?.includes(scope as never)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scopes = (req as any).apiScopes || [];
+    if (!scopes.includes(scope)) {
       return next(new AppError(`Escopo necessário: ${scope}`, 403, 'INSUFFICIENT_SCOPE'));
     }
     next();
@@ -38,6 +43,17 @@ router.get('/pacientes', requireScope(EscopoApiKey.READ_PACIENTES), async (req: 
 });
 
 /**
+ * POST /public/v1/pacientes
+ */
+router.post('/pacientes', requireScope(EscopoApiKey.WRITE_PACIENTES), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = PacienteCreateSchema.parse(req.body);
+    const paciente = await pacientesService.create(data, req.clinica.id);
+    res.status(201).json({ success: true, data: paciente });
+  } catch (err) { next(err); }
+});
+
+/**
  * GET /public/v1/agendamentos
  */
 router.get('/agendamentos', requireScope(EscopoApiKey.READ_AGENDAMENTOS), async (req: Request, res: Response): Promise<void> => {
@@ -60,6 +76,28 @@ router.get('/agendamentos', requireScope(EscopoApiKey.READ_AGENDAMENTOS), async 
   });
 
   res.json({ success: true, data: agendamentos });
+});
+
+/**
+ * POST /public/v1/agendamentos
+ */
+router.post('/agendamentos', requireScope(EscopoApiKey.WRITE_AGENDAMENTOS), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = AgendamentoCreateSchema.parse(req.body);
+    const agendamento = await agendamentosService.create(data, req.clinica.id);
+    res.status(201).json({ success: true, data: agendamento });
+  } catch (err) { next(err); }
+});
+
+/**
+ * GET /public/v1/receitas
+ */
+router.get('/receitas', requireScope(EscopoApiKey.READ_RECEITAS), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const query = ReceitaListQuerySchema.parse(req.query);
+    const result = await receitasService.list(req.clinica.id, query);
+    res.json({ success: true, data: result.items, total: result.total });
+  } catch (err) { next(err); }
 });
 
 export default router;

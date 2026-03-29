@@ -231,7 +231,12 @@ if (require.main === module) {
       },
       '🚀 ClinicaPlus API started'
     );
-    schedulerService.start();
+    // Only start scheduler in production
+    if (config.NODE_ENV === 'production') {
+      schedulerService.start();
+    } else {
+      logger.info('Scheduler skipped (not in production)');
+    }
     
     // Verify Redis connection on startup
     redis.ping()

@@ -3,6 +3,8 @@ import { prisma } from '../lib/prisma';
 import { auditLogService } from './auditLog.service';
 import { permissaoService } from './permissao.service';
 import { webhookQueue } from '../lib/queues';
+import { subscricaoService } from './subscricao.service';
+import { planEnforcementService } from './planEnforcement.service';
 import { 
   WebhookCreateInput, 
   WebhookUpdateInput, 
@@ -18,6 +20,8 @@ export const webhooksService = {
    */
   async create(data: WebhookCreateInput, clinicaId: string, criadoPor: string): Promise<WebhookDTO> {
     await permissaoService.requirePermission(criadoPor, 'webhook', 'manage');
+    await planEnforcementService.canUseFeature(clinicaId, 'webhook');
+    await subscricaoService.verificarLimite(clinicaId, 'webhooks');
 
     // Gerar um secret aleatório para assinar as entregas
     const secret = crypto.randomBytes(32).toString('base64');
@@ -63,6 +67,10 @@ export const webhooksService = {
         ...(data.ativo !== undefined ? { ativo: data.ativo } : {}),
       },
     });
+
+    if (updated.ativo && !existing.ativo) {
+      await subscricaoService.verificarLimite(clinicaId, 'webhooks');
+    }
 
     await auditLogService.log({
       actorId: atualizadoPor,
@@ -131,13 +139,21 @@ export const webhooksService = {
 
       // 2. Para cada webhook, criar a entrega e enfileirar o job
       for (const wh of webhooks) {
+        const canonicalPayload = {
+          id: `evt_${crypto.randomBytes(12).toString('hex')}`,
+          evento: evento,
+          clinicaId: clinicaId,
+          timestamp: new Date().toISOString(),
+          data: payload
+        };
+
         // Criar registo de entrega
         const entrega = await prisma.webhookEntrega.create({
           data: {
             webhookId: wh.id,
             evento: evento,
             url: wh.url,
-            payload: payload as Prisma.InputJsonValue,
+            payload: canonicalPayload as Prisma.InputJsonValue,
           }
         });
 

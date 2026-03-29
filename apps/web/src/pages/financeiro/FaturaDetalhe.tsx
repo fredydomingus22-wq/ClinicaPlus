@@ -32,7 +32,7 @@ import { formatKwanza } from '@clinicaplus/utils';
 import { EstadoFatura, MetodoPagamento, PagamentoCreateSchema, type PagamentoCreateInput, type ItemFaturaDTO, EstadoSeguro, TipoFatura } from '@clinicaplus/types';
 import { FaturaStatusBadge } from '../../components/financeiro/FaturaStatusBadge';
 import { FaturaPrint } from '../../components/print/FaturaPrint';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, type SubmitHandler, type Resolver, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-hot-toast';
 
@@ -404,6 +404,7 @@ export default function FaturaDetalhe() {
         onClose={() => setIsPagamentoModalOpen(false)}
         faturaId={fatura.id}
         valorPendente={fatura.total - totalPago}
+        seguradoras={clinica?.configuracao?.seguradoras || []}
       />
 
       {/* Anular Modal */}
@@ -437,14 +438,15 @@ export default function FaturaDetalhe() {
   );
 }
 
-function PagamentoModal({ isOpen, onClose, faturaId, valorPendente }: { 
+function PagamentoModal({ isOpen, onClose, faturaId, valorPendente, seguradoras }: { 
   isOpen: boolean; 
   onClose: () => void; 
   faturaId: string;
   valorPendente: number;
+  seguradoras: string[];
 }) {
   const mutation = useRegistarPagamento();
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<PagamentoCreateInput>({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<PagamentoCreateInput>({
     resolver: zodResolver(PagamentoCreateSchema) as unknown as Resolver<PagamentoCreateInput>,
     defaultValues: {
       faturaId,
@@ -452,6 +454,15 @@ function PagamentoModal({ isOpen, onClose, faturaId, valorPendente }: {
       valor: valorPendente
     }
   });
+
+  const watchMetodo = watch('metodo');
+
+  // Ao mudar para Seguro, preencher valorSolicitado
+  React.useEffect(() => {
+    if (watchMetodo === MetodoPagamento.SEGURO) {
+      setValue('seguro.valorSolicitado', valorPendente);
+    }
+  }, [watchMetodo, valorPendente, setValue]);
 
   const onSubmit: SubmitHandler<PagamentoCreateInput> = async (data) => {
     try {
@@ -463,6 +474,8 @@ function PagamentoModal({ isOpen, onClose, faturaId, valorPendente }: {
       toast.error('Erro ao registar pagamento.');
     }
   };
+
+  const seguroErrors = errors.seguro as FieldErrors<Exclude<PagamentoCreateInput['seguro'], undefined>> | undefined;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Registar Pagamento">
@@ -491,6 +504,46 @@ function PagamentoModal({ isOpen, onClose, faturaId, valorPendente }: {
           placeholder="Ex: MCX-123456"
           {...register('referencia')}
         />
+
+        {watchMetodo === MetodoPagamento.SEGURO && (
+          <div className="p-4 bg-primary-50 rounded-2xl border border-primary-100 space-y-4 animate-slide-up">
+            <h4 className="text-xs font-bold text-primary-700 uppercase tracking-widest flex items-center gap-2">
+               <ShieldCheck className="h-4 w-4" /> Detalhes do Seguro
+            </h4>
+            
+            <Select 
+              label="Seguradora"
+              required
+              options={seguradoras.map(s => ({ value: s, label: s }))}
+              {...register('seguro.seguradora')}
+              error={seguroErrors?.seguradora?.message}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input 
+                label="Nº Beneficiário"
+                required
+                placeholder="Ex: 001234567"
+                {...register('seguro.numeroBeneficiario')}
+                error={seguroErrors?.numeroBeneficiario?.message}
+              />
+              <Input 
+                label="Nº Autorização"
+                placeholder="Opcional"
+                {...register('seguro.numeroAutorizacao')}
+                error={seguroErrors?.numeroAutorizacao?.message}
+              />
+            </div>
+            
+            <Input 
+              label="Valor Solicitado (Kz)"
+              type="number"
+              required
+              {...register('seguro.valorSolicitado', { valueAsNumber: true })}
+              error={seguroErrors?.valorSolicitado?.message}
+            />
+          </div>
+        )}
 
         <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200">
            <div className="flex justify-between items-center text-xs">

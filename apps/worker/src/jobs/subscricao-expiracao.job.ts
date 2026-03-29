@@ -25,17 +25,18 @@ export async function jobVerificarExpiracoes() {
     });
 
     for (const clinica of trialsExpirados) {
-      log.info({ clinicaId: clinica.id }, 'Convertendo TRIAL expirado -> BASICO/ACTIVA');
+      log.info({ clinicaId: clinica.id }, 'Convertendo TRIAL expirado -> BASICO');
       await prisma.$transaction(async (tx) => {
         const sub = await tx.subscricao.create({
           data: {
             clinicaId: clinica.id,
             plano: Plano.BASICO,
-            estado: EstadoSubscricao.ACTIVA,
+            estado: EstadoSubscricao.ACTIVA, // Converter para activa básica
             inicioEm: agora,
             validaAte: addDays(agora, 30),
             razao: RazaoMudancaPlano.TRIAL_EXPIRADO,
             alteradoPor: 'sistema',
+            notas: 'Conversão automática após fim do Trial'
           }
         });
 
@@ -56,13 +57,26 @@ export async function jobVerificarExpiracoes() {
         subscricaoEstado: EstadoSubscricao.ACTIVA,
         subscricaoValidaAte: { lt: agora },
       },
+      include: { subscricoes: { orderBy: { criadoEm: 'desc' }, take: 1 } }
     });
 
     for (const clinica of activasExpiradas) {
       log.info({ clinicaId: clinica.id }, 'Transição ACTIVA -> GRACE_PERIOD');
-      await prisma.clinica.update({
-        where: { id: clinica.id },
-        data: { subscricaoEstado: EstadoSubscricao.GRACE_PERIOD },
+      const subId = clinica.subscricoes[0]?.id;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.clinica.update({
+          where: { id: clinica.id },
+          data: { subscricaoEstado: EstadoSubscricao.GRACE_PERIOD },
+        });
+
+        if (subId) {
+          await tx.subscricaoNotificacao.upsert({
+            where: { subscricaoId_tipo: { subscricaoId: subId, tipo: 'EXPIROU' } },
+            create: { subscricaoId: subId, tipo: 'EXPIROU', enviadoEm: agora },
+            update: { enviadoEm: agora }
+          });
+        }
       });
       
       // Enviar email Grace Period
@@ -93,7 +107,7 @@ export async function jobVerificarExpiracoes() {
     for (const clinica of graceExpirados) {
       log.info({ clinicaId: clinica.id }, 'Suspendendo conta após GRACE_PERIOD');
       await prisma.$transaction(async (tx) => {
-        await tx.subscricao.create({
+        const sub = await tx.subscricao.create({
           data: {
             clinicaId: clinica.id,
             plano: Plano.BASICO,
@@ -112,6 +126,10 @@ export async function jobVerificarExpiracoes() {
             plano: Plano.BASICO,
             subscricaoEstado: EstadoSubscricao.SUSPENSA
           }
+        });
+
+        await tx.subscricaoNotificacao.create({
+          data: { subscricaoId: sub.id, tipo: 'GRACE_END', enviadoEm: agora }
         });
       });
 

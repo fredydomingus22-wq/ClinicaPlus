@@ -80,6 +80,7 @@ export const StepSlots: React.FC<StepSlotsProps> = ({
                   return (
                     <button
                       key={time}
+                      data-testid="slot-button"
                       disabled={!available}
                       onClick={() => onSelectTime(time)}
                       className={`

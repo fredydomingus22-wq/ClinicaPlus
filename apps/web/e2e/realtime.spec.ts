@@ -5,7 +5,7 @@ test.describe('Real-Time WebSocket', () => {
 
   const tenantSlug = 'nutrimacho-ao';
 
-  test.skip('actualização de estado visível sem refresh (< 2s)', async ({ browser }) => {
+  test('actualização de estado visível sem refresh (< 2s)', async ({ browser }) => {
     // TODO: This requires a fully functional WebSocket server running and
     // specific seeded data for an appointment on the current day.
     const ctx1 = await browser.newContext();

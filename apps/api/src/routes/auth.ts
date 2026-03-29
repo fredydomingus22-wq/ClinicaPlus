@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authService } from '../services/auth.service';
+import { mfaService } from '../services/mfa.service';
+import { auditLogService } from '../services/auditLog.service';
+import jwt from 'jsonwebtoken';
 import { LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, SuperAdminLoginSchema, UtilizadorUpdateSchema } from '@clinicaplus/types';
 import { config } from '../lib/config';
 import { authRateLimiter } from '../middleware/rateLimiter';
@@ -29,7 +32,7 @@ const COOKIE_OPTS = {
 router.post('/login', authRateLimiter, async (req, res, next) => {
   try {
     const { email, password, clinicaSlug } = LoginSchema.parse(req.body);
-    const result = await authService.login(email, password, clinicaSlug);
+    const result = await authService.login(email, password, clinicaSlug, req.ip);
     
     res.cookie(COOKIE_NAME, result.refreshToken, COOKIE_OPTS);
     
@@ -48,9 +51,29 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
 // POST /api/auth/login-superadmin
 router.post('/login-superadmin', authRateLimiter, async (req, res, next) => {
   try {
-    const { email, password } = SuperAdminLoginSchema.parse(req.body);
-    const result = await authService.loginSuperAdmin(email, password);
+    const { email, password, mfaToken } = SuperAdminLoginSchema.parse(req.body);
+    const result = await authService.loginSuperAdmin(email, password, req.ip, mfaToken);
     
+    // If MFA setup is required
+    if (result.requiresMfaSetup) {
+      res.json({
+        success: true,
+        requiresMfaSetup: true,
+        setupToken: result.setupToken
+      });
+      return;
+    }
+
+    // If MFA is required but token was not provided
+    if (result.requiresMfa) {
+      res.json({
+        success: true,
+        requiresMfa: true
+      });
+      return;
+    }
+
+    // Normal successful login
     res.cookie(COOKIE_NAME, result.refreshToken, COOKIE_OPTS);
     
     res.json({
@@ -194,6 +217,59 @@ router.patch('/me', authenticate, async (req, res, next) => {
       data: result,
       message: 'Perfil atualizado com sucesso'
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/auth/mfa/setup
+router.post('/mfa/setup', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) throw new AppError('Não autorizado', 401);
+    
+    const token = authHeader.split(' ')[1];
+    if (!token) throw new AppError('Token de setup ausente', 401);
+    const secret: string = config.JWT_SECRET!;
+    const decoded = jwt.verify(token, secret) as unknown as { sub: string, intent: string };
+    
+    if (decoded.intent !== 'mfa_setup') throw new AppError('Token de setup inválido', 401);
+    
+    const result = await mfaService.setup(decoded.sub);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/auth/mfa/activate
+router.post('/mfa/activate', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) throw new AppError('Não autorizado', 401);
+    
+    const { token: mfaToken } = req.body;
+    if (!mfaToken) throw new AppError('Token do autenticador ausente', 400);
+
+    const setupToken = authHeader.split(' ')[1];
+    if (!setupToken) throw new AppError('Token de setup ausente', 401);
+    const decoded = jwt.verify(setupToken, config.JWT_SECRET as string) as unknown as { sub: string, intent: string };
+    
+    if (decoded.intent !== 'mfa_setup') throw new AppError('Token de setup inválido', 401);
+    
+    await mfaService.activate(decoded.sub, mfaToken);
+    
+    // Log success
+    await auditLogService.log({
+      actorId: decoded.sub,
+      clinicaId: 'SYSTEM',
+      accao: 'UPDATE',
+      recurso: 'MFA',
+      ip: req.ip || null,
+      metadata: { status: 'success' }
+    });
+
+    res.json({ success: true, message: 'Autenticação de 2 fatores ativada.' });
   } catch (error) {
     next(error);
   }

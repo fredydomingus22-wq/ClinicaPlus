@@ -3,6 +3,8 @@ import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 import { emailTemplates } from '../lib/emailTemplates';
 import { prisma } from '../lib/prisma';
+import { reminderQueue } from '../lib/queues';
+import type { Prisma } from '@prisma/client';
 
 const resend = new Resend(config.RESEND_API_KEY);
 
@@ -307,6 +309,119 @@ export const notificationService = {
     } catch (err) {
       logger.error({ err, email: data.email }, 'Failed to send password reset email');
       throw err;
+    }
+  },
+
+  /**
+   * Schedules reminders (24h and 2h before) for an appointment.
+   * Handles both DB record creation (audit) and BullMQ job addition (delivery).
+   */
+  async scheduleReminders(
+    agendamentoId: string,
+    clinicaId: string,
+    dataHora: Date,
+    tx?: Prisma.TransactionClient
+  ): Promise<void> {
+    const db = tx || prisma;
+    const now = new Date();
+
+    try {
+      // 1. Fetch clinic config
+      const configClinica = await db.configuracaoClinica.findUnique({
+        where: { clinicaId },
+      });
+
+      const remindersToCreate: Prisma.LembreteAgendamentoCreateManyInput[] = [];
+
+      // 24h Reminder
+      if (configClinica?.lembrete24h ?? true) {
+        const sendAt = new Date(dataHora.getTime() - 24 * 60 * 60 * 1000);
+        if (sendAt > now) {
+          remindersToCreate.push({
+            clinicaId,
+            agendamentoId,
+            tipo: 'H24',
+            agendadoPara: sendAt,
+          });
+        }
+      }
+
+      // 2h Reminder
+      if (configClinica?.lembrete2h ?? true) {
+        const sendAt = new Date(dataHora.getTime() - 2 * 60 * 60 * 1000);
+        if (sendAt > now) {
+          remindersToCreate.push({
+            clinicaId,
+            agendamentoId,
+            tipo: 'H2',
+            agendadoPara: sendAt,
+          });
+        }
+      }
+
+      if (remindersToCreate.length === 0) return;
+
+      // 2. Persist in DB for audit/history
+      // Note: createMany might not be available on all transaction clients depending on usage, 
+      // but in this project it's fine.
+      await db.lembreteAgendamento.createMany({
+        data: remindersToCreate,
+      });
+
+      // 3. Queue in BullMQ for delivery (Delayed Jobs)
+      // We don't do this inside the transaction to avoid holding DB locks 
+      // while talking to Redis, but we do it immediately after if no tx,
+      // or the caller should handle it.
+      // BUT, to keep it simple and professional, we add them to BullMQ.
+      // Since they have specific jobIds, even if the transaction retries, it's idempotent.
+      for (const r of remindersToCreate) {
+        const sendAt = new Date(r.agendadoPara as Date);
+        const delay = sendAt.getTime() - now.getTime();
+        if (delay > 0) {
+          const tipoJob = r.tipo === 'H24' ? '24h' : '2h';
+          await reminderQueue.add(
+            'reminder-schedule',
+            { agendamentoId, tipo: tipoJob },
+            { 
+              jobId: `reminder-${tipoJob}-${agendamentoId}`, 
+              delay,
+              attempts: 3,
+              backoff: { type: 'exponential', delay: 3600000 }
+            }
+          );
+        }
+      }
+
+      logger.info({ agendamentoId, count: remindersToCreate.length }, 'Reminders scheduled and queued');
+    } catch (err) {
+      logger.error({ err, agendamentoId }, 'Failed to schedule reminders');
+      // We don't throw here to avoid blocking the main appointment flow 
+      // as reminders are secondary.
+    }
+  },
+
+  /**
+   * Cancels pending reminders for an appointment.
+   */
+  async cancelReminders(agendamentoId: string): Promise<void> {
+    try {
+      // 1. Mark as cancelled in DB
+      await prisma.lembreteAgendamento.updateMany({
+        where: { agendamentoId, enviadoEm: null },
+        data: { 
+          enviadoEm: new Date(), 
+          sucesso: false, 
+          erro: 'Cancelado pelo utilizador/sistema' 
+        },
+      });
+
+      // 2. Remove from BullMQ
+      await reminderQueue.remove(`reminder-24h-${agendamentoId}`);
+      await reminderQueue.remove(`reminder-2h-${agendamentoId}`);
+
+      logger.info({ agendamentoId }, 'Pending reminders cancelled');
+    } catch (err) {
+      logger.error({ err, agendamentoId }, 'Failed to cancel reminders');
     }
   },
 };

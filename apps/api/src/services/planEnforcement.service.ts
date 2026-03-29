@@ -4,6 +4,9 @@ import { AppError } from '../lib/AppError';
 export type Feature = 'apiKey' | 'webhook' | 'relatoriosHist' | 'export';
 export type Resource = 'medicos' | 'consultas' | 'pacientes';
 
+const ENFORCEMENT_DATE = new Date('2026-03-27T00:00:00Z'); // Data de ativação do enforcement
+const GRACE_PERIOD_DAYS = 30;
+
 export const planEnforcementService = {
   /**
    * Verifies if a clinic has reached its limit for a specific resource.
@@ -18,6 +21,23 @@ export const planEnforcementService = {
     const limites = await prisma.planoLimite.findUniqueOrThrow({
       where: { plano: clinica.plano },
     });
+
+    // 1. Verificar Grace Period para BASICO
+    const isBasico = clinica.plano === 'BASICO';
+    if (isBasico) {
+      const dbClinica = await prisma.clinica.findUniqueOrThrow({
+        where: { id: clinicaId },
+        select: { criadoEm: true }
+      });
+      
+      const daysSinceEnforcement = Math.floor((Date.now() - ENFORCEMENT_DATE.getTime()) / (1000 * 60 * 60 * 24));
+      const createdBeforeEnforcement = dbClinica.criadoEm < ENFORCEMENT_DATE;
+
+      // Se criada antes e ainda estamos nos primeiros 30 dias de enforcement
+      if (createdBeforeEnforcement && daysSinceEnforcement >= 0 && daysSinceEnforcement < GRACE_PERIOD_DAYS) {
+        return; // Permitir operação (Grace Period ativo)
+      }
+    }
 
     if (recurso === 'medicos' && limites.maxMedicos !== -1) {
       const n = await prisma.medico.count({
@@ -107,7 +127,7 @@ export const planEnforcementService = {
       throw new AppError(
         `Esta funcionalidade não está incluída no seu plano ${clinica.plano}.`,
         402,
-        'PLAN_RESTRICTION'
+        'FEATURE_NOT_AVAILABLE'
       );
     }
 

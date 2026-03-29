@@ -1,5 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../lib/logger';
+import { Papel } from '@prisma/client';
+
+interface AuditRequest extends Request {
+  user: {
+    id: string;
+    clinicaId: string | null;
+    papel: Papel;
+    isApiKey?: boolean;
+    escopos?: string[];
+  };
+}
 
 /**
  * Logs all write operations (POST, PATCH, PUT, DELETE) for auditing.
@@ -12,16 +23,18 @@ export function auditLogger(req: Request, res: Response, next: NextFunction): vo
   const originalEnd = res.end;
   
   // @ts-expect-error - patching res.end for logging purposes
-  res.end = function(chunk: unknown, encoding: string | BufferEncoding, callback?: () => void): Response {
+  res.end = function (chunk?: unknown, encoding?: BufferEncoding, callback?: () => void): Response {
+    const durationMs = Date.now() - start;
+
     if (writeMethods.includes(req.method)) {
-      const durationMs = Date.now() - start;
-      const userId = req.user?.id;
-      const clinicaId = req.user?.clinicaId || req.clinica?.id;
+      const auditReq = req as unknown as AuditRequest;
+      const userId = auditReq.user?.id;
+      const clinicaId = auditReq.user?.clinicaId || auditReq.clinica?.id;
 
       // Extract resource from path (e.g., /api/pacientes -> pacientes)
       const pathParts = req.path.split('/').filter(Boolean);
       const resource = pathParts[1] || 'unknown'; 
-      const resourceId = req.params.id;
+      const resourceId = req.params?.id;
 
       logger.info({
         type: 'audit',

@@ -15,12 +15,50 @@ import toast from 'react-hot-toast';
 import { useUIStore } from '../../stores/ui.store';
 import { StatTicker } from '../../pages/superadmin/components/StatTicker';
 import { CommandPalette } from '../../pages/superadmin/components/CommandPalette';
+import { useSuperAdminStore } from '../../stores/superadmin.store';
+import { useEffect, useState } from 'react';
+
+function SessionCountdown({ expiresAt }: { expiresAt: string | null }) {
+  const [timeLeft, setTimeLeft] = useState<string>('--:--:--');
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const end = new Date(expiresAt).getTime();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        setTimeLeft('00:00:00');
+        clearInterval(interval);
+        return;
+      }
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return (
+    <div className="w-full px-4 mb-4 mt-4">
+      <div className="bg-sa-background/40 border border-sa-primary/20 rounded-lg p-3 text-center">
+        <p className="text-[10px] text-sa-text-muted uppercase tracking-widest font-bold mb-1">Sessão Respira</p>
+        <p className="text-sa-primary font-mono text-sm">{timeLeft}</p>
+      </div>
+    </div>
+  );
+}
 
 export function SuperAdminLayout() {
   const { utilizador, clear } = useAuthStore();
   const navigate = useNavigate();
-  // Using existing global notifications
   const { notifications, dismissNotification } = useUIStore();
+  const { isImpersonating, clinicaNome, expiresAt, endImpersonation } = useSuperAdminStore();
 
   const handleLogout = async () => {
     try {
@@ -86,6 +124,10 @@ export function SuperAdminLayout() {
             </div>
           </div>
           
+          <SessionCountdown 
+            expiresAt={isImpersonating ? expiresAt : new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()} 
+          />
+          
           <button
             onClick={handleLogout}
             title="Terminar Sessão"
@@ -106,9 +148,26 @@ export function SuperAdminLayout() {
         </header>
         
         {/* Main Central View */}
-        <main className="flex-1 overflow-y-auto w-full relative">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-          <Outlet />
+        <main className="flex-1 overflow-y-auto w-full relative flex flex-col">
+          {isImpersonating && (
+            <div className="bg-sa-warning/20 border-b border-sa-warning/50 text-sa-warning px-6 py-3 flex items-center justify-between shrink-0 animate-pulse">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                <span className="text-sm font-bold">Modo Impersonation Activo: A administrar clínica {clinicaNome}</span>
+              </div>
+              <button 
+                onClick={endImpersonation}
+                className="text-xs font-bold uppercase hover:text-white underline underline-offset-2"
+              >
+                Terminar Sessão Temprória
+              </button>
+            </div>
+          )}
+          
+          <div className="flex-1 relative">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+            <Outlet />
+          </div>
         </main>
 
         {/* System Status Footer */}

@@ -76,10 +76,15 @@ class DialogueStateTracker:
             "medicoId":      nlu.medico_id,
             "data_iso":      nlu.data_iso,
             "periodo":       nlu.periodo,
+            "slotHorario":   nlu.slotHorario,
         }
         
         for slot_name, val in slots_para_checar.items():
             if val is not None and getattr(estado, slot_name) is None:
+                # Normalização: se for slotHorario e tiver apenas HH:MM, combinar com data_iso
+                if slot_name == "slotHorario" and len(val) == 5 and ":" in val and estado.data_iso:
+                    val = f"{estado.data_iso}T{val}:00"
+                
                 setattr(estado, slot_name, val)
                 teve_progresso = True
                 accoes.append(f"SLOT_{slot_name.upper()}_PREENCHIDO")

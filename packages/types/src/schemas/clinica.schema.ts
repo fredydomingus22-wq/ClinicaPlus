@@ -38,6 +38,7 @@ export const ConfiguracaoClinicaUpdateSchema = z.object({
   horasAntecedencia: z.number().int().min(1).optional(),
   moedaSimbolo: z.string().max(5).optional(),
   fusoHorario: z.string().optional(),
+  seguradoras: z.array(z.string()).optional(),
 });
 
 export const ClinicaUpdateSchema = z.object({
@@ -56,9 +57,9 @@ export type ClinicaUpdateInput = z.infer<typeof ClinicaUpdateSchema>;
 export const ClinicaListQuerySchema = z.object({
   q: z.string().optional(),
   plano: z.string().optional(),
-  ativo: z.boolean().optional(),
-  page: z.number().int().min(1).optional(),
-  limit: z.number().int().min(1).max(100).optional(),
+  ativo: z.string().optional().transform(v => v === 'true').or(z.boolean().optional()),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export type ClinicaListQuery = z.infer<typeof ClinicaListQuerySchema>;

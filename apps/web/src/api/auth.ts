@@ -15,8 +15,14 @@ export const authApi = {
       .then(r => r.data.data),
 
   loginSuperAdmin: (data: SuperAdminLoginInput) => 
-    apiClient.post<{ data: AuthResponse }>('/auth/login-superadmin', data)
-      .then(r => r.data.data),
+    apiClient.post<{ 
+      success: boolean; 
+      requiresMfa?: boolean; 
+      requiresMfaSetup?: boolean;
+      setupToken?: string;
+      data?: AuthResponse 
+    }>('/auth/login-superadmin', data)
+      .then(r => r.data),
 
   registerPaciente: (data: Record<string, unknown>) => 
     apiClient.post<{ data: AuthResponse }>('/auth/registar-paciente', data)
@@ -53,4 +59,14 @@ export const authApi = {
   updateProfile: (data: UtilizadorUpdateInput) =>
     apiClient.patch<{ data: UtilizadorDTO }>('/auth/me', data)
       .then(r => r.data.data),
+
+  mfaSetup: (setupToken: string) =>
+    apiClient.post<{ data: { secret: string; qrCodeUrl: string } }>('/auth/mfa/setup', {}, {
+      headers: { Authorization: `Bearer ${setupToken}` }
+    }).then(r => r.data.data),
+
+  mfaActivate: (setupToken: string, token: string) =>
+    apiClient.post<{ success: boolean; message: string }>('/auth/mfa/activate', { token }, {
+      headers: { Authorization: `Bearer ${setupToken}` }
+    }).then(r => r.data),
 };

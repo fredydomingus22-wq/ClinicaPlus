@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
+
+load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.pool import init_pool, close_pool
@@ -11,12 +14,12 @@ from jobs.scheduler import start_scheduler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup Events
-    print("🚀 Iniciando ClinicaPlus Intelligence...")
+    print("Iniciando ClinicaPlus Intelligence...")
     await init_pool()
     start_scheduler() # Inicia o agendador de tarefas
     yield
     # Shutdown Events
-    print("👋 Fechando ClinicaPlus Intelligence...")
+    print("Fechando ClinicaPlus Intelligence...")
     await close_pool()
 
 app = FastAPI(

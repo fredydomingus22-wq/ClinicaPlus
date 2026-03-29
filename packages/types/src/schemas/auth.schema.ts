@@ -34,6 +34,7 @@ export const SuperAdminLoginSchema = z.object({
   password: z
     .string()
     .min(1, 'Palavra-passe obrigatória'),
+  mfaToken: z.string().optional(),
 });
 
 export type LoginInput = z.infer<typeof LoginSchema>;

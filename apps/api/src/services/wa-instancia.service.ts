@@ -59,6 +59,15 @@ export const waInstanciaService = {
       throw new Error('Módulo WhatsApp apenas disponível para planos PRO ou superiores.');
     }
 
+    // Verificar se já existe uma instância (MODULE-whatsapp.md §6)
+    const existente = await prisma.waInstancia.findFirst({
+      where: { clinicaId }
+    });
+
+    if (existente && clinica.plano !== Plano.ENTERPRISE) {
+      throw new Error('Esta clínica já possui uma instância de WhatsApp configurada. Actualize para ENTERPRISE para múltiplos números.');
+    }
+
     // Formato: cp-{slug}-{random6} (MODULE-whatsapp.md §6)
     const instanceName = `cp-${clinica.slug}-${crypto.randomBytes(3).toString('hex')}`;
     // O webhook aponta agora diretamente para a Engine NLU FastAPI
@@ -301,6 +310,17 @@ export const waInstanciaService = {
     } catch {
       // Ignorar se já estiver offline
     }
+
+    await prisma.waInstancia.update({
+      where: { id: instancia.id },
+      data: {
+        estado: WaEstadoInstancia.DESCONECTADO,
+        qrCodeBase64: null,
+        atualizadoEm: new Date()
+      },
+    });
+
+    await this.clearCache(instancia.evolutionName);
   },
 
   async eliminar(id: string, clinicaId: string): Promise<void> {

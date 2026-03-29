@@ -1,0 +1,4 @@
+﻿
+> api@1.0.0 lint C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\api
+> eslint src --ext .ts "--quiet"
+

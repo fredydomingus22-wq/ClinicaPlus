@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { subDays, subMonths } from 'date-fns';
 import { prisma } from '../lib/prisma';
-import { requireRole } from '../middleware/requireRole';
-import { Papel } from '@clinicaplus/types';
+import { requirePermission } from '../middleware/requirePermission';
 import { Prisma, TipoFatura } from '@prisma/client';
 
 export const relatoriosRouter = Router();
@@ -10,7 +9,7 @@ export const relatoriosRouter = Router();
 interface ReceitaQuery {
   inicio?: string;
   fim?: string;
-  agrupamento?: string;
+  agruparPor?: string;
   medicoId?: string;
   tipo?: string;
 }
@@ -26,11 +25,11 @@ interface ReceitaResult {
   seguros_pendentes: number;
 }
 
-relatoriosRouter.get('/receita', requireRole([Papel.ADMIN]), async (req: Request, res: Response, next) => {
+relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id!;
     const plan = req.clinica.plano;
-    const { inicio, fim, agrupamento = 'day', medicoId, tipo } = req.query as ReceitaQuery;
+    const { inicio, fim, agruparPor = 'day', medicoId, tipo } = req.query as ReceitaQuery;
 
     let dataInicio = inicio ? new Date(inicio) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const dataFim = fim ? new Date(fim) : new Date();
@@ -49,9 +48,9 @@ relatoriosRouter.get('/receita', requireRole([Papel.ADMIN]), async (req: Request
     }
 
 
-    // Whitelist agrupamento — DATE_TRUNC requires a literal, not a parameter
+    // Whitelist agruparPor — DATE_TRUNC requires a literal, not a parameter
     const allowedIntervals: Record<string, string> = { day: 'day', week: 'week', month: 'month' };
-    const interval = allowedIntervals[agrupamento] || 'day';
+    const interval = allowedIntervals[agruparPor] || 'day';
 
     // Build dynamic WHERE clauses with parameterized values
     const params: unknown[] = [clinicaId, dataInicio, dataFim];
@@ -125,7 +124,7 @@ relatoriosRouter.get('/receita', requireRole([Papel.ADMIN]), async (req: Request
   } catch (err) { next(err); }
 });
 
-relatoriosRouter.get('/receita/export', requireRole([Papel.ADMIN]), async (req: Request, res: Response, next) => {
+relatoriosRouter.get('/receita/export', requirePermission('relatorio', 'export'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id!;
     const plan = req.clinica.plano;

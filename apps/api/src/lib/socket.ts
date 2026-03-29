@@ -9,6 +9,7 @@ interface JwtPayload {
   id: string;
   clinicaId: string;
   papel: string;
+  exp?: number;
 }
 
 /**
@@ -57,6 +58,22 @@ export function setupSocket(httpServer: HttpServer): SocketServer {
     try {
       const payload = jwt.verify(token, config.JWT_SECRET) as unknown as JwtPayload;
       socket.data.user = payload;
+
+      // Token expiration push
+      if (payload.exp) {
+        const remaining = (payload.exp * 1000) - Date.now();
+        if (remaining > 0) {
+          const timer = setTimeout(() => {
+            if (socket.connected) {
+              socket.emit('auth:expired', { message: 'Sessão expirada. Por favor, inicie sessão novamente.' });
+              socket.disconnect(true);
+            }
+          }, remaining);
+
+          socket.on('disconnect', () => clearTimeout(timer));
+        }
+      }
+
       next();
     } catch (err: unknown) {
       logger.warn({ err, token: token.substring(0, 10) + '...' }, 'WS Handshake: Falha na autenticação');
@@ -85,6 +102,24 @@ export function setupSocket(httpServer: HttpServer): SocketServer {
       socket.join(`paciente:${userId}`);
     }
 
+    // Rate Limiting: 100 events/min
+    const eventLimit = { count: 0, resetAt: Date.now() + 60000 };
+    socket.use(([event], next) => {
+      const now = Date.now();
+      if (now > eventLimit.resetAt) {
+        eventLimit.count = 1;
+        eventLimit.resetAt = now + 60000;
+      } else {
+        eventLimit.count++;
+      }
+
+      if (eventLimit.count > 100) {
+        logger.warn({ userId, event }, 'WS: Rate limit exceeded');
+        return next(new Error('Rate limit exceeded (100 msg/min)'));
+      }
+      next();
+    });
+
     socket.on('disconnect', () => {
       logger.debug({ userId }, 'WS Client disconnected');
     });
@@ -107,10 +142,16 @@ export function setupSocket(httpServer: HttpServer): SocketServer {
         return;
       }
 
-      // Emit to the specified room
-      io.to(room).emit(event, data);
-      
-      logger.trace({ room, event }, 'WS: Evento emitido');
+      // Room Isolation Verification: 
+      // Ensure that if the event is destined for a clinica, it matches a known room pattern.
+      // This is primarily for safety against misconfigured emitters in other services.
+      // E.g., don't allow emitting to a room that doesn't belong to the system.
+      if (room.startsWith('clinica:') || room.startsWith('user:') || room.startsWith('medico:') || room.startsWith('paciente:')) {
+        io.to(room).emit(event, data);
+        logger.trace({ room, event }, 'WS: Evento emitido');
+      } else {
+        logger.warn({ room, event }, 'WS: Tentativa de emitir para sala não autorizada bloqueada');
+      }
     } catch (err: unknown) {
       logger.error({ err, msg }, 'WS: Erro ao processar mensagem do Redis');
     }

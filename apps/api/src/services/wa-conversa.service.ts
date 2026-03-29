@@ -91,7 +91,14 @@ export const waConversaService = {
    * Chamado pelo n8n via POST /fluxo/inicio ou internamente.
    */
   async etapaInicio(numero: string, clinicaId: string, instanceName: string): Promise<void> {
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: { 
+        OR: [
+          { evolutionName: instanceName },
+          { clinicaId }
+        ]
+      } 
+    });
     const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
 
     // Verificar horário de funcionamento do bot
@@ -178,7 +185,9 @@ export const waConversaService = {
    * Chamado pelo n8n via POST /fluxo/resposta.
    */
   async processarResposta(numero: string, clinicaId: string, instanceName: string, resposta: string): Promise<void> {
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     const conversa = await prisma.waConversa.findUnique({
       where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
       include: { instancia: true }
@@ -402,7 +411,7 @@ export const waConversaService = {
    * Obtém uma conversa pelo número WhatsApp — usado pelo n8n (GET /fluxo/conversa).
    */
   async obterConversa(numero: string, clinicaId: string): Promise<unknown> {
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ where: { clinicaId } });
     return prisma.waConversa.findUnique({
       where: { instanciaId_numeroWhatsapp: { instanciaId: instancia.id, numeroWhatsapp: numero } },
       include: { paciente: true },

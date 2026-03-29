@@ -47,6 +47,7 @@ function toClinicaDTO(
       horasAntecedencia: config.horasAntecedencia,
       moedaSimbolo: config.moedaSimbolo,
       fusoHorario: config.fusoHorario,
+      seguradoras: config.seguradoras,
     };
   }
 
@@ -145,7 +146,7 @@ export const clinicasService = {
         validaAte: endOfDay(addDays(new Date(), 7)),
         razao: RazaoMudancaPlano.UPGRADE_MANUAL, // Trial inicial
         alteradoPor: 'sistema',
-      });
+      }, tx);
 
       return newClinica;
     });

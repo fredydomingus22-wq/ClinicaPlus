@@ -12,6 +12,7 @@ import {
   Thermometer,
   Scale,
   Clipboard,
+  MessageSquare,
 } from 'lucide-react';
 import { formatDate, formatTime } from '@clinicaplus/utils';
 import type { AgendamentoDTO } from '@clinicaplus/types';
@@ -118,6 +119,14 @@ export function AgendamentoDetailModal({ agendamento, onClose }: AgendamentoDeta
               <InfoRow
                 label="Duração"
                 value={`${agendamento.duracao} min`}
+              />
+              <InfoRow
+                label="Origem"
+                value={agendamento.canal === 'WHATSAPP' ? (
+                  <span className="flex items-center gap-1.5 text-green-600 font-bold">
+                    <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                  </span>
+                ) : (agendamento.canal || 'Presencial')}
               />
             </div>
             <div className="flex items-center gap-2">

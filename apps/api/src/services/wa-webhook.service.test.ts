@@ -42,6 +42,7 @@ describe('waWebhookService', () => {
       atualizadoEm: new Date(),
       qrExpiresAt: null,
     } as WaInstancia);
+    mockPrisma.waAutomacao.findMany.mockResolvedValue([]);
   });
 
   describe('QRCODE_UPDATED', () => {
@@ -54,7 +55,7 @@ describe('waWebhookService', () => {
 
       await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
-      expect(waInstanciaService.processarQrCode).toHaveBeenCalledWith(clinicaId, 'base64-string');
+      expect(waInstanciaService.processarQrCode).toHaveBeenCalledWith(instanceName, 'base64-string');
     });
   });
 
@@ -68,7 +69,7 @@ describe('waWebhookService', () => {
 
       await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
-      expect(waInstanciaService.processarConexao).toHaveBeenCalledWith(clinicaId, 'open', '244900000000');
+      expect(waInstanciaService.processarConexao).toHaveBeenCalledWith(instanceName, 'open', '244900000000');
     });
   });
 

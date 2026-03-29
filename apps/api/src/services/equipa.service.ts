@@ -4,6 +4,7 @@ import { AppError } from '../lib/AppError';
 import { logger } from '../lib/logger';
 import { generateInitialPassword } from '@clinicaplus/utils';
 import { notificationService } from './notification.service';
+import { auditLogService } from './auditLog.service';
 import { Prisma } from '@prisma/client';
 import type { 
   EquipaCreateInput, 
@@ -85,7 +86,7 @@ export const equipaService = {
    * Creates a new staff user (e.g., RECEPCIONISTA, ADMIN), generates a password,
    * configures the account, and sends a welcome email.
    */
-  async create(data: EquipaCreateInput, clinicaId: string): Promise<UtilizadorDTO> {
+  async create(data: EquipaCreateInput, clinicaId: string, actorId: string, ip?: string): Promise<UtilizadorDTO> {
     // Check if email already exists for this clinic
     const existingUser = await prisma.utilizador.findUnique({
       where: {
@@ -148,6 +149,16 @@ export const equipaService = {
       return u;
     });
 
+    await auditLogService.log({
+      actorId,
+      clinicaId,
+      accao: 'CREATE',
+      recurso: 'utilizador',
+      recursoId: newUser.id,
+      depois: newUser,
+      ip: ip ?? null
+    });
+
     // Send welcome email (fire-and-forget)
     const clinica = await prisma.clinica.findUnique({ where: { id: clinicaId } });
     notificationService.sendStaffWelcomeEmail({
@@ -166,7 +177,7 @@ export const equipaService = {
   /**
    * Updates editable fields for a staff user.
    */
-  async update(id: string, data: UtilizadorUpdateInput, clinicaId: string): Promise<UtilizadorDTO> {
+  async update(id: string, data: UtilizadorUpdateInput, clinicaId: string, actorId: string, ip?: string): Promise<UtilizadorDTO> {
     const existing = await prisma.utilizador.findUnique({ where: { id } });
     if (!existing || existing.clinicaId !== clinicaId) {
       throw new AppError('Utilizador não encontrado', 404, 'NOT_FOUND');
@@ -220,6 +231,17 @@ export const equipaService = {
       }
 
       return updatedUser;
+    });
+
+    await auditLogService.log({
+      actorId,
+      clinicaId,
+      accao: data.ativo === false ? 'DELETE' : 'UPDATE', // Spec says DEACTIVATE, but auditLog has DELETE
+      recurso: 'utilizador',
+      recursoId: id,
+      antes: existing,
+      depois: u,
+      ip: ip ?? null
     });
 
     return toUtilizadorDTO(u);

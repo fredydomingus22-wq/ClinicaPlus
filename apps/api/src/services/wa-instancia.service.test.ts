@@ -60,8 +60,8 @@ describe('waInstanciaService', () => {
       await waInstanciaService.criar('clinica-1', 'user-1');
 
       expect(mockEvolutionApi.criarInstancia).toHaveBeenCalledWith(
-        'cp-clinica-1-prod',
-        expect.any(String)
+        expect.stringMatching(/^cp-clinica-plus-[0-9a-f]{6}$/),
+        expect.stringMatching(/\/webhook\/whatsapp$/)
       );
     });
 
@@ -91,7 +91,7 @@ describe('waInstanciaService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             clinicaId: 'clinica-1',
-            evolutionName: 'cp-clinica-1-prod',
+            evolutionName: expect.stringMatching(/^cp-clinica-plus-[0-9a-f]{6}$/),
             evolutionToken: expect.any(String),
             estado: WaEstadoInstancia.AGUARDA_QR,
           })
@@ -179,8 +179,8 @@ describe('waInstanciaService', () => {
       await waInstanciaService.criar('clinica-1', 'user-1');
 
       expect(mockEvolutionApi.criarInstancia).toHaveBeenCalledWith(
-        'cp-clinica-1-prod',
-        'https://api.test/api/whatsapp/webhook'
+        expect.stringMatching(/^cp-clinica-plus-[0-9a-f]{6}$/),
+        expect.stringMatching(/\/webhook\/whatsapp$/)
       );
     });
   });
@@ -204,8 +204,8 @@ describe('waInstanciaService', () => {
 
       expect(mockPrisma.waInstancia.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { clinicaId: 'clinica-1' },
-          data: { qrCodeBase64: 'base64-test', estado: WaEstadoInstancia.AGUARDA_QR }
+          where: { id: 'ins-1' },
+          data: expect.objectContaining({ qrCodeBase64: 'base64-test', estado: WaEstadoInstancia.AGUARDA_QR })
         })
       );
     });
@@ -229,7 +229,7 @@ describe('waInstanciaService', () => {
       expect(publishEvent).toHaveBeenCalledWith(
         'clinica:clinica-1',
         'whatsapp:qrcode',
-        { qrCodeBase64: 'base64-test' }
+        { instanciaId: 'ins-1', qrCodeBase64: 'base64-test' }
       );
     });
   });
@@ -253,8 +253,8 @@ describe('waInstanciaService', () => {
 
       expect(mockPrisma.waInstancia.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { clinicaId: 'clinica-1' },
-          data: { estado: WaEstadoInstancia.CONECTADO, qrCodeBase64: null }
+          where: { id: 'ins-1' },
+          data: expect.objectContaining({ estado: WaEstadoInstancia.CONECTADO, qrCodeBase64: null })
         })
       );
     });
@@ -277,8 +277,8 @@ describe('waInstanciaService', () => {
 
       expect(mockPrisma.waInstancia.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { clinicaId: 'clinica-1' },
-          data: { estado: WaEstadoInstancia.DESCONECTADO, qrCodeBase64: null }
+          where: { id: 'ins-1' },
+          data: expect.objectContaining({ estado: WaEstadoInstancia.DESCONECTADO, qrCodeBase64: null })
         })
       );
     });
@@ -300,7 +300,10 @@ describe('waInstanciaService', () => {
       await waInstanciaService.processarConexao('clinica-1', 'open');
       
       expect(mockPrisma.waInstancia.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ qrCodeBase64: null }) })
+        expect.objectContaining({
+          where: { id: 'ins-1' },
+          data: expect.objectContaining({ estado: WaEstadoInstancia.CONECTADO, qrCodeBase64: null })
+        })
       );
     });
 
@@ -323,14 +326,14 @@ describe('waInstanciaService', () => {
       expect(publishEvent).toHaveBeenCalledWith(
         'clinica:clinica-1',
         'whatsapp:estado',
-        { estado: WaEstadoInstancia.CONECTADO }
+        { instanciaId: 'ins-1', estado: WaEstadoInstancia.CONECTADO }
       );
     });
   });
 
   describe('desligar', () => {
     it('deve fazer logout na Evolution API e actualizar DB para DESCONECTADO', async () => {
-      mockPrisma.waInstancia.findUnique.mockResolvedValue({ 
+      mockPrisma.waInstancia.findFirst.mockResolvedValue({ 
         id: 'ins-1', 
         clinicaId: 'clinica-1', 
         evolutionName: 'cp-clinica-1-prod',
@@ -348,10 +351,59 @@ describe('waInstanciaService', () => {
       expect(mockEvolutionApi.desligar).toHaveBeenCalledWith('cp-clinica-1-prod');
       expect(mockPrisma.waInstancia.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { clinicaId: 'clinica-1' },
-          data: { estado: WaEstadoInstancia.DESCONECTADO, qrCodeBase64: null }
+          where: { id: 'ins-1' },
+          data: expect.objectContaining({ estado: WaEstadoInstancia.DESCONECTADO, qrCodeBase64: null })
         })
       );
+    });
+  });
+
+  describe('eliminar', () => {
+    const mockInstancia = {
+      id: 'ins-1',
+      clinicaId: 'clinica-1',
+      evolutionName: 'cp-clinica-1-prod',
+      evolutionToken: 'token-123',
+      estado: WaEstadoInstancia.CONECTADO,
+      numeroTelefone: '+244923456789',
+      qrCodeBase64: null,
+      criadoEm: new Date(),
+      atualizadoEm: new Date(),
+      qrExpiresAt: null
+    } as WaInstancia;
+
+    it('deve eliminar instância na Evolution API e no DB', async () => {
+      mockPrisma.waInstancia.findFirst.mockResolvedValue(mockInstancia);
+      mockEvolutionApi.eliminar.mockResolvedValue(undefined);
+      mockPrisma.waInstancia.delete.mockResolvedValue(mockInstancia);
+
+      await waInstanciaService.eliminar('ins-1', 'clinica-1');
+
+      expect(mockEvolutionApi.eliminar).toHaveBeenCalledWith('cp-clinica-1-prod');
+      expect(mockPrisma.waInstancia.delete).toHaveBeenCalledWith({
+        where: { id: 'ins-1' }
+      });
+    });
+
+    it('deve eliminar do DB mesmo se Evolution API falhar', async () => {
+      mockPrisma.waInstancia.findFirst.mockResolvedValue(mockInstancia);
+      mockEvolutionApi.eliminar.mockRejectedValue(new Error('Evolution API offline'));
+      mockPrisma.waInstancia.delete.mockResolvedValue(mockInstancia);
+
+      await waInstanciaService.eliminar('ins-1', 'clinica-1');
+
+      // Deve continuar e fazer delete no DB mesmo que Evolution falhe
+      expect(mockPrisma.waInstancia.delete).toHaveBeenCalledWith({
+        where: { id: 'ins-1' }
+      });
+    });
+
+    it('deve lançar erro se instância não pertence à clínica', async () => {
+      mockPrisma.waInstancia.findFirst.mockResolvedValue(null);
+
+      await expect(
+        waInstanciaService.eliminar('ins-1', 'clinica-errada')
+      ).rejects.toThrow();
     });
   });
 });

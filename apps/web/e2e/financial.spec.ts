@@ -11,7 +11,7 @@ test.describe('Módulo Financeiro', () => {
     await new LoginPage(page).login('admin@demo.ao', 'Demo1234!', tenantSlug);
   });
 
-  test.skip('criar fatura e registar pagamento completo', async ({ page }) => {
+  test('criar fatura e registar pagamento completo', async ({ page }) => {
     // TODO: Verify if the current UI has the multi-step wizard to create an invoice.
     // The actual flow might require selecting an existing appointment first.
     const fp = new FaturaPage(page);

@@ -6,19 +6,17 @@ import {
   Papel,
 } from '@clinicaplus/types';
 import { pacientesService } from '../services/pacientes.service';
-import { requireRole } from '../middleware/requireRole';
+import { requirePermission } from '../middleware/requirePermission';
 
 const router = Router();
-
-// All routes here are already behind `authenticate` + `tenantMiddleware` from server.ts.
-// req.user and req.clinica are guaranteed to be set.
+// ... (rest of imports)
 
 /**
  * GET /pacientes
- * Auth: ADMIN, MEDICO, RECEPCIONISTA
+ * Auth: paciente:read
  */
 router.get('/',
-  requireRole([Papel.ADMIN, Papel.MEDICO, Papel.RECEPCIONISTA]),
+  requirePermission('paciente', 'read'),
   async (req, res, next) => {
     try {
       const query = PacienteListQuerySchema.parse(req.query);
@@ -57,10 +55,10 @@ router.get('/:id', async (req, res, next) => {
 
 /**
  * POST /pacientes
- * Auth: ADMIN, RECEPCIONISTA
+ * Auth: paciente:create
  */
 router.post('/',
-  requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]),
+  requirePermission('paciente', 'create'),
   async (req, res, next) => {
     try {
       const body = PacienteCreateSchema.parse(req.body);

@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { notificationService } from './notification.service';
 import { addMonths, startOfMonth, differenceInCalendarDays, addDays } from 'date-fns';
+import { Prisma } from '@prisma/client';
 import { Plano, EstadoSubscricao, RazaoMudancaPlano } from '@clinicaplus/types';
 
 export const subscricaoService = {
@@ -21,12 +22,13 @@ export const subscricaoService = {
     razao: RazaoMudancaPlano;
     alteradoPor: string;
     notas?: string | null;
-  }): Promise<import('@prisma/client').Subscricao> {
-    const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: input.clinicaId } });
+  }, tx?: Prisma.TransactionClient): Promise<import('@prisma/client').Subscricao> {
+    const client = tx || prisma;
+    const clinica = await client.clinica.findUniqueOrThrow({ where: { id: input.clinicaId } });
 
-    return prisma.$transaction(async (tx) => {
+    const operation = async (transaction: Prisma.TransactionClient): Promise<import('@prisma/client').Subscricao> => {
       // 1. Create new immutable record
-      const subscricao = await tx.subscricao.create({
+      const subscricao = await transaction.subscricao.create({
         data: {
           clinicaId: input.clinicaId,
           plano:     input.plano,
@@ -43,7 +45,7 @@ export const subscricaoService = {
       });
 
       // 2. Update cache on Clinica (atomic transaction)
-      await tx.clinica.update({
+      await transaction.clinica.update({
         where: { id: input.clinicaId },
         data: {
           plano:               input.plano,
@@ -53,7 +55,7 @@ export const subscricaoService = {
       });
 
       // 3. Audit log
-      await tx.auditLog.create({
+      await transaction.auditLog.create({
         data: {
           clinicaId:   input.clinicaId,
           actorId:     input.alteradoPor,
@@ -70,7 +72,13 @@ export const subscricaoService = {
       });
 
       return subscricao;
-    });
+    };
+
+    if (tx) {
+      return operation(tx);
+    } else {
+      return prisma.$transaction(operation);
+    }
   },
 
   /**
@@ -104,7 +112,7 @@ export const subscricaoService = {
    * Verifies if a clinic has reached its limit for a specific resource.
    * Throws AppError with PLAN_LIMIT_REACHED if limit exceeded.
    */
-  async verificarLimite(clinicaId: string, recurso: 'medicos' | 'consultas' | 'pacientes' | 'apikeys'): Promise<void> {
+  async verificarLimite(clinicaId: string, recurso: 'medicos' | 'consultas' | 'pacientes' | 'apikeys' | 'webhooks'): Promise<void> {
     const clinica = await prisma.clinica.findUniqueOrThrow({
       where: { id: clinicaId },
     });
@@ -123,6 +131,7 @@ export const subscricaoService = {
       }),
       pacientes:  (): Promise<number> => prisma.paciente.count({ where: { clinicaId } }),
       apikeys:    (): Promise<number> => prisma.apiKey.count({ where: { clinicaId, ativo: true } }),
+      webhooks:   (): Promise<number> => prisma.webhook.count({ where: { clinicaId, ativo: true } }),
     };
 
     const limiteCampo = {
@@ -130,6 +139,7 @@ export const subscricaoService = {
       consultas: 'maxConsultasMes',
       pacientes: 'maxPacientes',
       apikeys:   'maxApiKeys',
+      webhooks:  'maxWebhooks',
     } as const;
 
     const limiteValue = limites[limiteCampo[recurso]] as number;

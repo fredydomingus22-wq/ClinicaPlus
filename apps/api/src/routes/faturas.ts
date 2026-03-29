@@ -2,13 +2,12 @@ import { Router, Request, Response } from 'express';
 import { faturasService } from '../services/faturas.service';
 import { FaturaCreateSchema, PagamentoCreateSchema } from '@clinicaplus/types';
 import { z } from 'zod';
-import { requireRole } from '../middleware/requireRole';
-import { Papel } from '@clinicaplus/types';
+import { requirePermission } from '../middleware/requirePermission';
 
 export const faturasRouter = Router();
 
-// Apenas ADMIN e RECEPCIONISTA podem criar faturas (conforme spec)
-faturasRouter.post('/', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (req: Request, res: Response, next) => {
+// Apenas utilizadores com permissão fatura:create podem criar faturas
+faturasRouter.post('/', requirePermission('fatura', 'create'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const utilizadorId = req.user!.id;
@@ -20,7 +19,7 @@ faturasRouter.post('/', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (
   } catch (err) { next(err); }
 });
 
-faturasRouter.get('/', async (req: Request, res: Response, next) => {
+faturasRouter.get('/', requirePermission('fatura', 'read'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const filters = req.query;
@@ -30,7 +29,7 @@ faturasRouter.get('/', async (req: Request, res: Response, next) => {
   } catch (err) { next(err); }
 });
 
-faturasRouter.get('/:id', async (req: Request, res: Response, next) => {
+faturasRouter.get('/:id', requirePermission('fatura', 'read'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const faturaId = req.params.id;
@@ -41,7 +40,7 @@ faturasRouter.get('/:id', async (req: Request, res: Response, next) => {
   } catch (err) { next(err); }
 });
 
-faturasRouter.patch('/:id/emitir', async (req: Request, res: Response, next) => {
+faturasRouter.patch('/:id/emitir', requirePermission('fatura', 'create'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const faturaId = req.params.id;
@@ -57,7 +56,7 @@ export const AnularSchema = z.object({
   motivo: z.string().min(1, 'Motivo da anulação é obrigatório')
 });
 
-faturasRouter.patch('/:id/anular', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (req: Request, res: Response, next) => {
+faturasRouter.patch('/:id/anular', requirePermission('fatura', 'void'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const faturaId = req.params.id;
@@ -71,7 +70,7 @@ faturasRouter.patch('/:id/anular', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA
 });
 
 // Pagamentos associados a uma fatura
-faturasRouter.post('/:id/pagamentos', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (req: Request, res: Response, next) => {
+faturasRouter.post('/:id/pagamentos', requirePermission('pagamento', 'create'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const faturaId = req.params.id;
@@ -87,7 +86,7 @@ faturasRouter.post('/:id/pagamentos', requireRole([Papel.ADMIN, Papel.RECEPCIONI
 });
 
 // Ciclo de Seguro
-faturasRouter.patch('/pagamentos/:pagamentoId/submeter-seguro', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (req: Request, res: Response, next) => {
+faturasRouter.patch('/pagamentos/:pagamentoId/submeter-seguro', requirePermission('pagamento', 'create'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const { pagamentoId } = req.params;
@@ -96,11 +95,11 @@ faturasRouter.patch('/pagamentos/:pagamentoId/submeter-seguro', requireRole([Pap
   } catch (err) { next(err); }
 });
 
-faturasRouter.patch('/pagamentos/:pagamentoId/registar-resposta-seguro', requireRole([Papel.ADMIN, Papel.RECEPCIONISTA]), async (req: Request, res: Response, next) => {
+faturasRouter.patch('/pagamentos/:pagamentoId/registar-resposta-seguro', requirePermission('pagamento', 'create'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;
     const { pagamentoId } = req.params;
-    const data = req.body; // Ideally use a schema here
+    const data = req.body; 
     await faturasService.registarRespostaSeguro(pagamentoId!, clinicaId, data);
     res.json({ success: true });
   } catch (err) { next(err); }

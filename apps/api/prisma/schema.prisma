@@ -23,7 +23,12 @@ model Clinica {
   criadoEm            DateTime              @default(now())
   atualizadoEm        DateTime              @updatedAt
   subscricaoValidaAte DateTime?
-  subscricaoEstado    String?               @default("TRIAL")
+  subscricaoEstado    EstadoSubscricao      @default(TRIAL)
+  // migration_009: campos de suspensão e notas internas do super admin
+  suspensaEm          DateTime?             // null = activa
+  motivoSuspensao     String?
+  notasInternas       String?               // visíveis APENAS ao super admin
+  subscricoes         Subscricao[]
   agendamentos        Agendamento[]
   apiKeys             ApiKey[]
   configuracao        ConfiguracaoClinica?
@@ -33,17 +38,18 @@ model Clinica {
   exames              Exame[]
   Fatura              Fatura[]
   faturasAssinatura   FaturaAssinatura[]
+  impersonacoes       ImpersonationSession[]
   lembretes           LembreteAgendamento[]
   medicos             Medico[]
   pacientes           Paciente[]
   prontuarios         Prontuario[]
   receitas            Receita[]
-  subscricao          Subscricao?
   utilizadores        Utilizador[]
   waInstancias        WaInstancia[]
   webhooks            Webhook[]
 
   @@index([slug])
+  @@index([suspensaEm])  // para filtrar clinicas activas/suspensas
   @@map("clinicas")
 }
 
@@ -62,22 +68,28 @@ model ContactoClinica {
 }
 
 model Utilizador {
-  id            String                @id @default(cuid())
-  clinicaId     String?
-  nome          String
-  email         String
-  passwordHash  String
-  papel         Papel
-  ativo         Boolean               @default(true)
-  criadoEm      DateTime              @default(now())
-  atualizadoEm  DateTime              @updatedAt
-  medico        Medico?
-  notificacoes  Notificacao[]
-  paciente      Paciente?
-  refreshTokens RefreshToken[]
-  systemLogs    SystemLog[]
-  permissoes    UtilizadorPermissao[]
-  clinica       Clinica?              @relation(fields: [clinicaId], references: [id])
+  id                   String                @id @default(cuid())
+  clinicaId            String?
+  nome                 String
+  email                String
+  passwordHash         String
+  papel                Papel
+  ativo                Boolean               @default(true)
+  criadoEm             DateTime              @default(now())
+  atualizadoEm         DateTime              @updatedAt
+  // migration_009: MFA para SUPER_ADMIN (TOTP)
+  mfaSecret            String?               // secret TOTP encriptado com APP_SECRET
+  mfaPending           Boolean               @default(false) // true = setup iniciado mas não confirmado
+  mfaActivatedAt       DateTime?             // null = MFA não activado ainda
+  medico               Medico?
+  notificacoes         Notificacao[]
+  paciente             Paciente?
+  refreshTokens        RefreshToken[]
+  systemLogs           SystemLog[]
+  permissoes           UtilizadorPermissao[]
+  clinica              Clinica?              @relation(fields: [clinicaId], references: [id])
+  impersonacoesFeitas  ImpersonationSession[] @relation("SuperAdminImpersonations")
+  impersonacoesRecebidas ImpersonationSession[] @relation("ImpersonatedSessions")
 
   @@unique([clinicaId, email])
   @@index([clinicaId])
@@ -283,6 +295,7 @@ model ConfiguracaoClinica {
   iban              String?
   logoUrl           String?
   nif               String?
+  seguradoras       String[] @default(["ENSA", "AAA Seguros", "Medicel", "Codil", "Nossa Seguros", "SAS", "IMPAR"])
   clinica           Clinica  @relation(fields: [clinicaId], references: [id])
 
   @@map("configuracoes_clinica")
@@ -331,25 +344,50 @@ model GlobalSettings {
 
 model Subscricao {
   id                String            @id @default(cuid())
-  clinicaId         String            @unique
-  plano             Plano
-  alteradoPor       String            @default("SISTEMA")
-  criadoEm          DateTime          @default(now())
-  inicioEm          DateTime          @default(now())
-  notas             String?
-  planoAnterior     Plano?
-  razao             RazaoMudancaPlano @default(UPGRADE_MANUAL)
-  referenciaInterna String?
-  trialAte          DateTime?
-  validaAte         DateTime?
-  valorKz           Int?
-  atualizadoEm      DateTime          @updatedAt
-  canceladoEm       DateTime?
-  dataFim           DateTime?
-  estado            String            @default("TRIAL")
+  clinicaId         String
   clinica           Clinica           @relation(fields: [clinicaId], references: [id])
 
+  plano             Plano
+  estado            EstadoSubscricao  @default(TRIAL)
+
+  // Datas de validade
+  inicioEm          DateTime          @default(now())
+  validaAte         DateTime?         // data de expiração (null = não expira — ENTERPRISE vitalício)
+  trialAte          DateTime?         // só preenchido se estado = TRIAL
+
+  // Billing
+  valorKz           Int?              // valor pago em Kwanzas (null se gratuito/trial)
+  referenciaInterna String?           // ex: "INV-2026-0042" — referência da invoice gerada
+
+  // Histórico de mudança
+  razao             RazaoMudancaPlano @default(UPGRADE_MANUAL)
+  planoAnterior     Plano?            // null na primeira subscrição
+  alteradoPor       String            @default("SISTEMA")
+  notas             String?           // notas internas do Super Admin
+
+  criadoEm          DateTime          @default(now())
+  atualizadoEm      DateTime          @updatedAt
+  
+  notificacoes      SubscricaoNotificacao[]
+
+  @@index([clinicaId, estado])
+  @@index([clinicaId, criadoEm(sort: Desc)])
+  @@index([validaAte])             // para o job nocturno de expiração
   @@map("subscricoes")
+}
+
+// Notificações de renovação agendadas
+model SubscricaoNotificacao {
+  id           String   @id @default(cuid())
+  subscricaoId String
+  subscricao   Subscricao @relation(fields: [subscricaoId], references: [id])
+
+  tipo         String   // "AVISO_30D" | "AVISO_7D" | "AVISO_1D" | "EXPIROU" | "GRACE_END"
+  enviadoEm    DateTime?
+  erro         String?
+
+  @@unique([subscricaoId, tipo])
+  @@map("subscricao_notificacoes")
 }
 
 model FaturaAssinatura {
@@ -360,6 +398,7 @@ model FaturaAssinatura {
   moeda          String    @default("AOA")
   status         String    @default("PENDENTE")
   dataEmissao    DateTime  @default(now())
+
   dataPagamento  DateTime?
   dataVencimento DateTime
   urlPdf         String?
@@ -514,7 +553,7 @@ model Documento {
 
 model WaInstancia {
   id             String            @id @default(cuid())
-  clinicaId      String            @unique
+  clinicaId      String
   evolutionName  String            @unique
   evolutionToken String
   estado         WaEstadoInstancia @default(DESCONECTADO)
@@ -555,7 +594,7 @@ model WaAutomacao {
 model WaConversa {
   id               String           @id @default(cuid())
   instanciaId      String
-  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id])
+  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
   numeroWhatsapp   String
   pacienteId       String?
   paciente         Paciente?        @relation(fields: [pacienteId], references: [id])
@@ -586,7 +625,7 @@ model WaMensagem {
   entregue       Boolean    @default(false)
   lida           Boolean    @default(false)
   criadoEm       DateTime   @default(now())
-  conversa       WaConversa @relation(fields: [conversaId], references: [id])
+  conversa       WaConversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
 
   @@index([conversaId, criadoEm])
   @@map("wa_mensagens")
@@ -717,6 +756,60 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// ─── migration_009_superadmin ──────────────────────────────────────────────
+
+/// Sessões de impersonation: super admin entra como admin de uma clínica
+model ImpersonationSession {
+  id              String    @id @default(cuid())
+  superAdminId    String    // quem está a impersonar
+  targetClinicaId String
+  targetAdminId   String
+  token           String    @unique // SHA-256 do JWT raw token
+  criadoEm        DateTime  @default(now())
+  expiresAt       DateTime  // obrigatoriamente now() + 30min
+  terminadaEm     DateTime? // null = sessão ainda activa
+  ip              String
+  motivo          String    // obrigatório — min 10 chars — para audit trail
+
+  superAdmin    Utilizador @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id])
+  targetAdmin   Utilizador @relation("ImpersonatedSessions", fields: [targetAdminId], references: [id])
+  targetClinica Clinica    @relation(fields: [targetClinicaId], references: [id])
+
+  @@index([superAdminId])
+  @@index([targetClinicaId])
+  @@index([expiresAt])
+  @@map("impersonation_sessions")
+}
+
+/// Eventos de sistema para observabilidade por tenant
+model SistemaEvento {
+  id         String   @id @default(cuid())
+  clinicaId  String?  // null = evento global da plataforma
+  tipo       String   // API_ERROR | SLOW_QUERY | WEBHOOK_FAIL | PAYMENT_FAIL | LOGIN_FAIL | PLAN_LIMIT
+  severidade String   // INFO | WARN | ERROR | CRITICAL
+  mensagem   String
+  metadata   Json?    // { endpoint, latencyMs, statusCode, ... }
+  criadoEm  DateTime  @default(now())
+
+  @@index([clinicaId, criadoEm])
+  @@index([tipo, severidade, criadoEm])
+  @@index([criadoEm])
+  @@map("sistema_eventos")
+}
+
+/// Feature flags por plano ou por clínica específica
+model FeatureFlag {
+  id           String   @id @default(cuid())
+  codigo       String   @unique // ex: "whatsapp_bot", "ia_noshow"
+  descricao    String
+  activoPara   String   // "ALL" | "BASICO" | "PRO" | "ENTERPRISE" | "CLINICA_IDS"
+  clinicaIds   String[] @default([]) // preenchido quando activoPara = "CLINICA_IDS"
+  activo       Boolean  @default(false)
+  atualizadoEm DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
 enum Papel {
   PACIENTE
   RECEPCIONISTA
@@ -738,6 +831,14 @@ enum EstadoAgendamento {
   CONCLUIDO
   CANCELADO
   NAO_COMPARECEU
+}
+
+enum EstadoSubscricao {
+  TRIAL          // período experimental (14 dias por defeito)
+  ACTIVA         // paga e dentro da validade
+  GRACE_PERIOD   // expirou há menos de 7 dias — funcional com aviso
+  SUSPENSA       // expirou há mais de 7 dias — só leitura
+  CANCELADA      // cancelada pelo admin ou pelo cliente
 }
 
 enum TipoAgendamento {

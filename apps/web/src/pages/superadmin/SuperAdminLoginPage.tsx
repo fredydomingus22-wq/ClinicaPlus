@@ -6,12 +6,14 @@ import { type SuperAdminLoginInput } from '@clinicaplus/types';
 // Component HMR trigger for type cache
 import { useNavigate } from 'react-router-dom';
 
+import { useAuthStore } from '../../stores/auth.store';
+import { authApi } from '../../api/auth';
+
 const SuperAdminLoginSchema = z.object({
   email: z.string().min(1, 'Email obrigatório').email('Introduz um email válido'),
   password: z.string().min(1, 'Palavra-passe obrigatória'),
+  mfaToken: z.string().optional(),
 });
-import { useAuthStore } from '../../stores/auth.store';
-import { authApi } from '../../api/auth';
 import { Terminal, ShieldAlert, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -19,12 +21,14 @@ export function SuperAdminLoginPage() {
   const navigate = useNavigate();
   const { setSession } = useAuthStore();
   const [isSubmitError, setIsSubmitError] = useState(false);
-
+  const [requiresMfaStep, setRequiresMfaStep] = useState(false);
+  
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SuperAdminLoginInput>({
     resolver: zodResolver(SuperAdminLoginSchema),
     defaultValues: {
       email: '',
       password: '',
+      mfaToken: '',
     }
   });
 
@@ -38,9 +42,24 @@ export function SuperAdminLoginPage() {
     setIsSubmitError(false);
     try {
       const response = await authApi.loginSuperAdmin(data);
-      setSession(response.accessToken, response.utilizador);
-      toast.success('Acesso ROOT concedido');
-      navigate('/superadmin');
+
+      if (response.requiresMfaSetup) {
+        toast('É necessário configurar a autenticação de 2 fatores.');
+        navigate(`/superadmin/mfa-setup?token=${response.setupToken}`);
+        return;
+      }
+      
+      if (response.requiresMfa) {
+        setRequiresMfaStep(true);
+        toast.success('Credenciais válidas. Insira o código 2FA.');
+        return;
+      }
+
+      if (response.data) {
+        setSession(response.data.accessToken, response.data.utilizador);
+        toast.success('Acesso ROOT concedido');
+        navigate('/superadmin');
+      }
     } catch (error: unknown) {
       setIsSubmitError(true);
       // Disable ts checking for the generic error response property access as defined in the global API response shape
@@ -120,46 +139,66 @@ export function SuperAdminLoginPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2 group">
-              <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
-                E-mail de Administrador
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  {...register('email')}
-                  className={`w-full bg-[#111] border ${errors.email ? 'border-red-500/50' : isSubmitError ? 'border-red-500/50' : 'border-[#333] group-focus-within:border-white'} text-white px-4 py-3.5 outline-none transition-all duration-200 placeholder:text-neutral-600 rounded-sm font-sans`}
-                  placeholder="admin@clinicaplus.ao"
-                />
+            <div className={`space-y-6 ${requiresMfaStep ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="space-y-2 group">
+                <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
+                  E-mail de Administrador
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    {...register('email')}
+                    className={`w-full bg-[#111] border ${errors.email ? 'border-red-500/50' : isSubmitError ? 'border-red-500/50' : 'border-[#333] group-focus-within:border-white'} text-white px-4 py-3.5 outline-none transition-all duration-200 placeholder:text-neutral-600 rounded-sm font-sans`}
+                    placeholder="admin@clinicaplus.ao"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-red-400 text-xs flex items-center gap-1.5 mt-2 animate-[slide-in_0.2s_ease-out]">
+                    <span className="w-1 h-1 bg-red-400 rounded-full" />
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
-              {errors.email && (
-                <p className="text-red-400 text-xs flex items-center gap-1.5 mt-2 animate-[slide-in_0.2s_ease-out]">
-                  <span className="w-1 h-1 bg-red-400 rounded-full" />
-                  {errors.email.message}
-                </p>
-              )}
+
+              <div className="space-y-2 group">
+                <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
+                  Palavra-passe de Segurança
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    {...register('password')}
+                    className={`w-full bg-[#111] border ${errors.password ? 'border-red-500/50' : isSubmitError ? 'border-red-500/50' : 'border-[#333] group-focus-within:border-white'} text-white px-4 py-3.5 pr-10 outline-none transition-all duration-200 placeholder:text-neutral-600 rounded-sm font-sans`}
+                    placeholder="••••••••"
+                  />
+                  <KeyRound size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600" />
+                </div>
+                {errors.password && (
+                  <p className="text-red-400 text-xs flex items-center gap-1.5 mt-2 animate-[slide-in_0.2s_ease-out]">
+                    <span className="w-1 h-1 bg-red-400 rounded-full" />
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2 group">
-              <label className="text-xs uppercase tracking-widest font-bold text-neutral-500 group-focus-within:text-white transition-colors duration-200">
-                Palavra-passe de Segurança
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  {...register('password')}
-                  className={`w-full bg-[#111] border ${errors.password ? 'border-red-500/50' : isSubmitError ? 'border-red-500/50' : 'border-[#333] group-focus-within:border-white'} text-white px-4 py-3.5 pr-10 outline-none transition-all duration-200 placeholder:text-neutral-600 rounded-sm font-sans`}
-                  placeholder="••••••••"
-                />
-                <KeyRound size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600" />
+            {requiresMfaStep && (
+              <div className="space-y-2 group animate-[fade-in_0.4s_ease-out] mt-6">
+                <label className="text-xs uppercase tracking-widest font-bold text-sa-primary transition-colors duration-200">
+                  Token 2FA (TOTP)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    {...register('mfaToken')}
+                    autoFocus
+                    maxLength={6}
+                    className={`w-full bg-[#111] border border-sa-primary/50 focus:border-sa-primary text-white text-xl tracking-[0.5em] text-center px-4 py-3.5 outline-none transition-all duration-200 placeholder:text-neutral-700 rounded-sm font-mono`}
+                    placeholder="000000"
+                  />
+                </div>
               </div>
-              {errors.password && (
-                <p className="text-red-400 text-xs flex items-center gap-1.5 mt-2 animate-[slide-in_0.2s_ease-out]">
-                  <span className="w-1 h-1 bg-red-400 rounded-full" />
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
+            )}
 
             <div className="pt-4">
               <button

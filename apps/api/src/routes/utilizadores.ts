@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { permissaoService } from '../services/permissao.service';
+import { auditLogService } from '../services/auditLog.service';
 import { authenticate } from '../middleware/authenticate';
 import { tenantMiddleware } from '../middleware/tenant';
 import { requireRole } from '../middleware/requireRole';
@@ -104,6 +105,15 @@ router.put('/:id/permissoes/:codigo', authenticate, tenantMiddleware, requireRol
           permissaoId: permissao.id
         }
       });
+
+      await auditLogService.log({
+        actorId: req.user!.id,
+        clinicaId,
+        accao: 'RESET',
+        recurso: 'permissao',
+        recursoId: id,
+        metadata: { codigo }
+      });
     } else if (tipo === 'GRANT' || tipo === 'DENY') {
       await prisma.utilizadorPermissao.upsert({
         where: {
@@ -119,6 +129,15 @@ router.put('/:id/permissoes/:codigo', authenticate, tenantMiddleware, requireRol
           tipo,
           criadoPor: req.user!.id
         }
+      });
+
+      await auditLogService.log({
+        actorId: req.user!.id,
+        clinicaId,
+        accao: tipo, // GRANT | DENY
+        recurso: 'permissao',
+        recursoId: id,
+        metadata: { codigo }
       });
     } else {
       throw new AppError('Tipo de override inválido. Use GRANT, DENY ou RESET.', 400);

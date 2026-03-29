@@ -17,4 +17,4 @@ def start_scheduler():
     scheduler.add_job(retrain_noshow_job, CronTrigger(day_of_week='mon', hour=2, minute=0, timezone="Africa/Luanda"))
     
     scheduler.start()
-    print("⏰ Scheduler inicializado com 3 jobs activos.")
+    print("Scheduler inicializado com 3 jobs activos.")

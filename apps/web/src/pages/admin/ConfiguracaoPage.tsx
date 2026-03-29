@@ -49,7 +49,7 @@ export default function ConfiguracaoPage() {
   const { data: subStatus, isLoading: isLoadingSub } = useSubscriptionStatus();
   const { addToast } = useUIStore();
   
-  const [activeTab, setActiveTab] = useState<'geral' | 'localizacao' | 'contactos' | 'plano' | 'regras' | 'whatsapp' | 'avancado'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'localizacao' | 'contactos' | 'plano' | 'regras' | 'seguradoras' | 'whatsapp' | 'avancado'>('geral');
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const { mutate: updateContactos, isPending: isUpdatingContactos } = useUpdateClinicaContactos();
   const [localContactos, setLocalContactos] = useState<ContactoClinicaInput[]>([]);
@@ -96,6 +96,7 @@ export default function ConfiguracaoPage() {
     { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
     { id: 'plano', label: 'Plano & Faturação', icon: CreditCard },
     { id: 'regras', label: 'Regras & CRM', icon: Zap },
+    { id: 'seguradoras', label: 'Seguradoras', icon: ShieldAlert },
     { id: 'avancado', label: 'Avançado', icon: ShieldAlert },
   ] as const;
 
@@ -301,6 +302,65 @@ export default function ConfiguracaoPage() {
                  </div>
                ))}
             </div>
+          </div>
+        );
+
+       case 'seguradoras':
+        return (
+          <div className="space-y-6 animate-fade-in text-neutral-900">
+             <div className="flex items-center justify-between">
+                <div>
+                   <h3 className="text-sm font-bold uppercase tracking-widest">Gestão de Seguradoras</h3>
+                   <p className="text-xs text-neutral-500 mt-1 font-medium">Configure a lista de seguradoras aceites pela sua clínica.</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  className="font-bold gap-2"
+                  onClick={() => {
+                     const nova = window.prompt('Nome da Seguradora:');
+                     if (nova && clinica?.configuracao) {
+                        const lista = [...(clinica.configuracao.seguradoras || []), nova];
+                        updateClinica({ configuracao: { seguradoras: lista } });
+                     }
+                  }}
+                >
+                   <Plus className="w-4 h-4" /> Adicionar
+                </Button>
+             </div>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(clinica?.configuracao?.seguradoras || []).length === 0 ? (
+                   <div className="col-span-2 p-12 border-2 border-dashed border-neutral-100 rounded-2xl text-center">
+                      <ShieldAlert className="w-8 h-8 mx-auto mb-3 text-neutral-200" />
+                      <p className="text-sm font-medium text-neutral-400 italic">Nenhuma seguradora configurada.</p>
+                   </div>
+                ) : (
+                  (clinica?.configuracao?.seguradoras || []).map((seg, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-2xl hover:border-primary-100 transition-all">
+                       <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600 font-bold text-xs">
+                             {seg.charAt(0)}
+                          </div>
+                          <p className="text-sm font-bold">{seg}</p>
+                       </div>
+                       <Button 
+                         variant="ghost" 
+                         size="sm"
+                         className="text-danger-500 hover:bg-danger-50"
+                         onClick={() => {
+                            if (window.confirm(`Remover ${seg}?`)) {
+                               const lista = (clinica?.configuracao?.seguradoras || []).filter(s => s !== seg);
+                               updateClinica({ configuracao: { seguradoras: lista } });
+                            }
+                         }}
+                       >
+                          <Trash2 className="w-4 h-4" />
+                       </Button>
+                    </div>
+                  ))
+                )}
+             </div>
           </div>
         );
 

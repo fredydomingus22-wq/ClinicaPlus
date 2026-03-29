@@ -49,7 +49,7 @@ router.post('/',
   async (req, res, next) => {
     try {
       const data = EquipaCreateSchema.parse(req.body);
-      const result = await equipaService.create(data, req.clinica.id);
+      const result = await equipaService.create(data, req.clinica.id, req.user!.id, req.ip);
       res.status(201).json({ success: true, data: result });
     } catch (err) { next(err); }
   }
@@ -65,7 +65,7 @@ router.patch('/:id',
     try {
       const id = req.params.id as string;
       const data = UtilizadorUpdateSchema.parse(req.body);
-      const result = await equipaService.update(id, data, req.clinica.id);
+      const result = await equipaService.update(id, data, req.clinica.id, req.user!.id, req.ip);
       res.json({ success: true, data: result });
     } catch (err) { next(err); }
   }

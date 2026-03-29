@@ -31,6 +31,9 @@ class NLGGenerator:
         elif template_nome == "lista_horarios":
             return "Encontrei estes horários disponíveis. Por favor, escolha um:"
 
+        elif template_nome == "pergunta_data":
+            return "Para quando deseja marcar a consulta? (Ex: Hoje, Amanhã, ou uma data como 25/03)"
+
         # 5. Confirmações
         elif template_nome == "confirmacao_final":
             # Final message handled by WaFormatter, but keeping template for fallback/intro
@@ -60,6 +63,10 @@ class NLGGenerator:
         if template_nome == "lista_especialidades":
             opcoes = dados.get("opcoes", [])
             return "Para qual especialidade deseja marcar a consulta?", opcoes
+            
+        elif template_nome == "pergunta_data":
+            opcoes = dados.get("opcoes", ["Hoje", "Amanhã"])
+            return "Para que dia deseja marcar?", opcoes
             
         # Add other poll templates here if necessary
         return "", []

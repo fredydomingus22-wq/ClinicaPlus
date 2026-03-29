@@ -253,8 +253,10 @@ router.post('/fluxo/inicio',
   async (req, res, next) => {
     try {
       const clinicaId = req.clinica.id;
-      const { numero } = req.body;
-      const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+      const { numero, instanceName } = req.body;
+      const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+        where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+      });
       await waConversaService.etapaInicio(numero, clinicaId, instancia.evolutionName);
       return res.json({ success: true });
     } catch (error) { return next(error); }
@@ -278,7 +280,9 @@ router.post('/fluxo/especialidade', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS
   try {
     const clinicaId = req.clinica.id;
     const { numero, resposta, instanceName } = req.body;
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     await waConversaService.processarResposta(numero, clinicaId, instanceName || instancia.evolutionName, resposta);
     return res.json({ success: true });
   } catch (error) { return next(error); }
@@ -288,7 +292,9 @@ router.post('/fluxo/medico', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), asy
   try {
     const clinicaId = req.clinica.id;
     const { numero, resposta, instanceName } = req.body;
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     await waConversaService.processarResposta(numero, clinicaId, instanceName || instancia.evolutionName, resposta);
     return res.json({ success: true });
   } catch (error) { return next(error); }
@@ -298,7 +304,9 @@ router.post('/fluxo/horario', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), as
   try {
     const clinicaId = req.clinica.id;
     const { numero, resposta, instanceName } = req.body;
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     await waConversaService.processarResposta(numero, clinicaId, instanceName || instancia.evolutionName, resposta);
     return res.json({ success: true });
   } catch (error) { return next(error); }
@@ -308,7 +316,9 @@ router.post('/fluxo/confirmar', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), 
   try {
     const clinicaId = req.clinica.id;
     const { numero, resposta, instanceName } = req.body;
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     await waConversaService.processarResposta(numero, clinicaId, instanceName || instancia.evolutionName, resposta);
     return res.json({ success: true });
   } catch (error) { return next(error); }
@@ -324,7 +334,9 @@ router.post('/fluxo/enviar-lembrete', apiKeyAuth, requireScope('WRITE_AGENDAMENT
       where: { id: agendamentoId, clinicaId },
       include: { paciente: true, medico: true }
     });
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     const telefone = agendamento.paciente.telefone?.replace('+', '') ?? '';
     if (!telefone) return res.status(400).json({ message: 'Paciente sem telefone' });
 
@@ -346,7 +358,9 @@ router.post('/fluxo/boas-vindas', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS')
   try {
     const clinicaId = req.clinica.id;
     const { numero, instanceName, mensagem } = req.body;
-    const instancia = await prisma.waInstancia.findUniqueOrThrow({ where: { clinicaId } });
+    const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+      where: instanceName ? { evolutionName: instanceName, clinicaId } : { clinicaId } 
+    });
     // Verificar se número já tem conversa
     const existente = await prisma.waConversa.findFirst({
       where: { instanciaId: instancia.id, numeroWhatsapp: numero }

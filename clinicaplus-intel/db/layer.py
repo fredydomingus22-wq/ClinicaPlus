@@ -173,26 +173,78 @@ class ClinicaDB:
             return [dict(r) for r in rows]
         return []
 
-    async def slots_por_regra(self, clinicaId: str, medId: str, data_alvo: date, limite: int = 5) -> List[SlotDisponivel]:
+    async def slots_por_regra(self, clinicaId: str, medId: str, data_alvo: date, limite: int = 8) -> List[SlotDisponivel]:
+        """Calcula slots disponíveis baseando-se no horário do médico e agendamentos existentes."""
         async with conn() as c:
-            query = """
-                SELECT m.id as medico_id, m.nome as medico_nome, m.preco
-                FROM medicos m
-                WHERE m."clinicaId" = $1 AND (m.id = $2 OR $2 IS NULL)
-                AND m.ativo = true
-                LIMIT $3
-            """
-            params = [clinicaId, medId, limite]
-            rows = await c.fetch(query, *params)
-            # Mocking slots for testing
+            # 1. Buscar médico e seu horário
+            med_row = await c.fetchrow(
+                'SELECT id, nome, preco, horario, "duracaoConsulta" FROM medicos '
+                'WHERE id = $1 AND "clinicaId" = $2 AND ativo = true',
+                medId, clinicaId
+            )
+            if not med_row:
+                return []
+
+            horario = json.loads(med_row["horario"]) if isinstance(med_row["horario"], str) else med_row["horario"]
+            duracao = med_row["duracaoConsulta"] or 30
+            
+            # 2. Identificar dia da semana (pt)
+            dias_semana = ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]
+            dia_pt = dias_semana[data_alvo.weekday()]
+            
+            rule = horario.get(dia_pt)
+            if not rule or not rule.get("ativo"):
+                return []
+
+            # 3. Gerar slots teóricos
+            try:
+                h_ini, m_ini = map(int, rule["inicio"].split(":"))
+                h_fim, m_fim = map(int, rule["fim"].split(":"))
+            except (ValueError, KeyError):
+                return []
+
+            # 4. Buscar agendamentos ocupados no dia
+            occupied_rows = await c.fetch(
+                'SELECT "dataHora" FROM agendamentos '
+                'WHERE "medicoId" = $1 AND "dataHora"::date = $2 '
+                'AND estado NOT IN (\'CANCELADO\', \'REJEITADO\')',
+                medId, data_alvo
+            )
+            occupied_times = {r["dataHora"].replace(tzinfo=None) for r in occupied_rows}
+
             slots = []
-            for r in rows:
-                slots.append(SlotDisponivel(
-                    dataHora=datetime.combine(data_alvo, datetime.min.time()).replace(hour=10),
-                    medicoId=r["medico_id"],
-                    medicoNome=r["medico_nome"],
-                    preco=r["preco"]
-                ))
+            curr = datetime.combine(data_alvo, datetime.min.time()).replace(hour=h_ini, minute=m_ini)
+            end = datetime.combine(data_alvo, datetime.min.time()).replace(hour=h_fim, minute=m_fim)
+
+            agora = datetime.now() # Simplificado para comparação local
+            
+            while curr < end and len(slots) < limite:
+                # Filtrar slots passados e ocupados
+                if curr > agora and curr not in occupied_times:
+                    # Checar se não está na pausa (se houver)
+                    na_pausa = False
+                    if "pausaInicio" in rule and "pausaFim" in rule:
+                        p_ini = datetime.combine(data_alvo, datetime.min.time()).replace(
+                            hour=int(rule["pausaInicio"].split(":")[0]),
+                            minute=int(rule["pausaInicio"].split(":")[1])
+                        )
+                        p_fim = datetime.combine(data_alvo, datetime.min.time()).replace(
+                            hour=int(rule["pausaFim"].split(":")[0]),
+                            minute=int(rule["pausaFim"].split(":")[1])
+                        )
+                        if p_ini <= curr < p_fim:
+                            na_pausa = True
+                    
+                    if not na_pausa:
+                        slots.append(SlotDisponivel(
+                            dataHora=curr.replace(tzinfo=LUANDA),
+                            medicoId=med_row["id"],
+                            medicoNome=med_row["nome"],
+                            preco=med_row["preco"]
+                        ))
+                
+                curr += timedelta(minutes=duracao)
+
             return slots
         return []
 

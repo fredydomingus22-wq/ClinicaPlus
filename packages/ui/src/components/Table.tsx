@@ -19,6 +19,8 @@ interface TableProps<T> {
   onRowHover?: (item: T) => void;
   /** Render a full-width row below the main row (Master-Detail) */
   renderExpandedRow?: (item: T) => React.ReactNode;
+  tableTestId?: string;
+  itemTestId?: string | ((item: T) => string);
 }
 
 export function Table<T>({ 
@@ -30,10 +32,12 @@ export function Table<T>({
   emptyContent,
   className,
   onRowHover,
-  renderExpandedRow
+  renderExpandedRow,
+  tableTestId,
+  itemTestId
 }: TableProps<T>) {
   return (
-    <div className={cn("overflow-x-auto border", className)} style={{ backgroundColor: 'var(--table-bg)', borderColor: 'var(--table-border)' }}>
+    <div className={cn("overflow-x-auto border", className)} style={{ backgroundColor: 'var(--table-bg)', borderColor: 'var(--table-border)' }} data-testid={tableTestId}>
       <table className="w-full text-sm border-collapse">
         <thead className="border-b" style={{ backgroundColor: 'var(--table-header-bg)', borderColor: 'var(--table-border)' }}>
           <tr>
@@ -76,6 +80,7 @@ export function Table<T>({
                   className="transition-colors duration-200"
                   style={{ backgroundColor: 'var(--table-bg)' }}
                   onMouseEnter={onRowHover ? () => onRowHover(item) : undefined}
+                  data-testid={typeof itemTestId === 'function' ? itemTestId(item) : itemTestId}
                 >
                   {columns.map((col, idx) => (
                     <td key={idx} className={cn("px-5 py-4 font-medium", col.className)} style={{ color: 'var(--table-text)' }}>

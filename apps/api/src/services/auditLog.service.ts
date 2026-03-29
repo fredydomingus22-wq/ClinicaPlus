@@ -4,13 +4,14 @@ import { Prisma } from '@prisma/client';
 
 export interface AuditLogParams {
   actorId: string;
-  accao: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'REVOKE' | 'EXPORT';
+  accao: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'REVOKE' | 'EXPORT' | 'GRANT' | 'DENY' | 'RESET' | 'FAILED_LOGIN';
   recurso: string;
   recursoId?: string;
   antes?: unknown;
   depois?: unknown;
   clinicaId: string;
-  ip?: string;
+  ip?: string | null;
+  metadata?: unknown;
 }
 
 export const auditLogService = {
@@ -29,6 +30,7 @@ export const auditLogService = {
           antes: params.antes as Prisma.InputJsonValue,
           depois: params.depois as Prisma.InputJsonValue,
           ip: params.ip ?? null,
+          metadata: params.metadata as Prisma.InputJsonValue,
         }
       });
     } catch (err) {

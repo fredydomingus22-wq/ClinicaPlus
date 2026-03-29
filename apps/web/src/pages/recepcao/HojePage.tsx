@@ -128,6 +128,7 @@ export default function HojePage() {
           <Table<AgendamentoDTO>
             data={agendamentos || []}
             keyExtractor={(ag) => ag.id}
+            itemTestId="agendamento-card"
             columns={[
               {
                 header: 'Hora',
@@ -143,7 +144,12 @@ export default function HojePage() {
                   <div className="flex items-center gap-3 py-1">
                     <Avatar initials={ag.paciente?.nome.split(' ').map(n=>n[0]).join('')} size="sm" />
                     <div>
-                      <p className="text-sm font-semibold text-neutral-900">{ag.paciente?.nome}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-neutral-900">{ag.paciente?.nome}</p>
+                        {ag.canal === 'WHATSAPP' && (
+                          <Badge variant="success" className="px-1 py-0 h-4 text-[8px] font-black bg-green-500 text-white border-none rounded">WA</Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-neutral-600">ID: {ag.paciente?.numeroPaciente}</p>
                     </div>
                   </div>

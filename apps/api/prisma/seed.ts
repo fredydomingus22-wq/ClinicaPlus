@@ -141,12 +141,21 @@ async function main() {
       horasAntecedencia: 24,
       moedaSimbolo: 'Kz',
       fusoHorario: 'Africa/Luanda',
+      seguradoras: ["ENSA", "AAA Seguros", "Medicel", "Codil", "Nossa Seguros", "SAS", "IMPAR"]
     },
   });
 
   // 7. Limites de Plano
   const { seedPlanoLimites } = await import('../src/seeds/plano-limites.seed');
   await seedPlanoLimites(prisma);
+
+  // 8. Permissões RBAC
+  const { seedPermissoes } = await import('../src/seeds/permissoes.seed');
+  await seedPermissoes(prisma);
+
+  // 9. Feature Flags — migration_009_superadmin
+  const { seedFeatureFlags } = await import('./seeds/feature-flags');
+  await seedFeatureFlags();
 
   console.log('Seeding completed successfully.');
 }

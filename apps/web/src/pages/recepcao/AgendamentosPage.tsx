@@ -7,6 +7,7 @@ import {
   Card, 
   Table, 
   StatusBadge, 
+  Badge,
   Select, 
   Modal,
   ErrorMessage
@@ -89,7 +90,12 @@ export default function AgendamentosPage() {
       header: 'Paciente', 
       accessor: (ag: AgendamentoDTO) => (
         <div>
-          <p className="font-medium text-neutral-900">{ag.paciente?.nome}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-neutral-900">{ag.paciente?.nome}</p>
+            {ag.canal === 'WHATSAPP' && (
+              <Badge variant="success" className="px-1 py-0 h-4 text-[8px] font-black bg-green-500 text-white border-none rounded">WA</Badge>
+            )}
+          </div>
           <p className="text-xs text-neutral-600">{ag.paciente?.numeroPaciente}</p>
         </div>
       )

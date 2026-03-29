@@ -39,12 +39,45 @@ export const superAdminApi = {
   updateGlobalSettings: (data: Partial<GlobalSettingsDTO>) =>
     api.patch<{ data: GlobalSettingsDTO }>('/superadmin/settings', data).then((res: AxiosResponse) => res.data.data),
 
-  getClinicas: (params?: { q?: string | undefined; page?: number | undefined; limit?: number | undefined }) =>
+  getClinicas: (params?: { q?: string; page?: number; limit?: number; plano?: string; ativo?: string }) =>
     api.get<{ data: PaginatedResult<ClinicaDTO> }>('/superadmin/clinicas', { params }).then((res: AxiosResponse) => res.data.data),
+
+  getClinica: (id: string) =>
+    api.get<{ data: ClinicaDTO }>(`/superadmin/clinicas/${id}`).then((res: AxiosResponse) => res.data.data),
 
   updateClinica: (id: string, data: { ativo?: boolean; plano?: string }) =>
     api.patch<{ data: ClinicaDTO }>(`/superadmin/clinicas/${id}`, data).then((res: AxiosResponse) => res.data.data),
 
   provisionClinica: (data: ClinicaCreateInput) =>
-    api.post<{ data: ClinicaDTO }>('/superadmin/clinicas', data).then((res: AxiosResponse) => res.data.data)
+    api.post<{ data: ClinicaDTO }>('/superadmin/clinicas', data).then((res: AxiosResponse) => res.data.data),
+
+  getDashboard: () =>
+    api.get<{ data: unknown }>('/superadmin/dashboard').then((res: AxiosResponse) => res.data.data),
+
+  getHealthScores: () =>
+    api.get<{ data: { clinicaId: string; nome: string; score: string; erros24h: number }[] }>('/superadmin/observabilidade/saude').then((res: AxiosResponse) => res.data.data),
+
+  getInfraStatus: () =>
+    api.get<{ data: { services: { name: string; status: string; latency?: number; details?: string }[]; lastUpdate: string } }>('/superadmin/observabilidade/infraestrutura').then((res: AxiosResponse) => res.data.data),
+
+  getMRR: () =>
+    api.get<{ data: { current: number; previous: number; growth: number; trend: { month: string; value: number }[] } }>('/superadmin/financeiro/mrr').then((res: AxiosResponse) => res.data.data),
+
+  getPlans: () =>
+    api.get<{ data: { id: string; nome: string; preco: number; totalClinicas: number; revenue: number }[] }>('/superadmin/financeiro/planos').then((res: AxiosResponse) => res.data.data),
+
+  getCohorts: () =>
+    api.get<{ data: { month: string; data: number[] }[] }>('/superadmin/financeiro/cohorts').then((res: AxiosResponse) => res.data.data),
+
+  getFeatureFlags: () =>
+    api.get<{ data: { id: string; codigo: string; descricao: string; ativo: boolean }[] }>('/superadmin/sistema/feature-flags').then((res: AxiosResponse) => res.data.data),
+
+  updateFeatureFlag: (codigo: string, ativo: boolean) =>
+    api.patch<{ data: { codigo: string; ativo: boolean } }>(`/superadmin/sistema/feature-flags/${codigo}`, { ativo }).then((res: AxiosResponse) => res.data.data),
+
+  getImpersonationHistory: () =>
+    api.get<{ data: unknown[] }>('/superadmin/impersonar/historico').then((res: AxiosResponse) => res.data.data),
+
+  impersonar: (clinicaId: string, adminId: string, motivo: string) =>
+    api.post<{ data: { token: string; expiracao: string; clinicaNome: string } }>('/superadmin/impersonar', { clinicaId, adminId, motivo }).then((res: AxiosResponse) => res.data.data)
 };

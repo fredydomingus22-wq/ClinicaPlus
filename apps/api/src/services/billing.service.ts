@@ -30,8 +30,9 @@ export const billingService = {
    * Returns the current subscription status for a specific clinic.
    */
   async getSubscriptionStatus(clinicaId: string): Promise<SubscriptionStatusDTO> {
-    const subscricao = await prisma.subscricao.findUnique({
+    const subscricao = await prisma.subscricao.findFirst({
       where: { clinicaId },
+      orderBy: { criadoEm: 'desc' },
     });
 
     if (!subscricao) {

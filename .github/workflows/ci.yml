@@ -77,3 +77,36 @@ jobs:
 
       # Railway and Vercel deploy automatically via their GitHub integrations
       # after this job succeeds
+
+  e2e:
+    name: E2E Tests (Playwright)
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test
+        working-directory: apps/web
+        env:
+          E2E_BASE_URL: ${{ secrets.STAGING_URL }}
+
+  load-test:
+    name: Load Test (k6, semanal)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: grafana/k6-action@v0.3.1
+        with:
+          filename: k6/load-agendamentos.js
+        env:
+          BASE_URL: ${{ secrets.STAGING_API_URL }}

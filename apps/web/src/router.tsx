@@ -50,10 +50,16 @@ const FaturaDetalhe = React.lazy(() => import('./pages/financeiro/FaturaDetalhe'
 const SuperAdminLayout = React.lazy(() => import('./components/layout/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })));
 const SAOverviewPage = React.lazy(() => import('./pages/superadmin/OverviewPage').then(m => ({ default: m.OverviewPage })));
 const SAClinicasGestaoPage = React.lazy(() => import('./pages/superadmin/ClinicasGestaoPage').then(m => ({ default: m.ClinicasGestaoPage })));
+const SAClinicaDetalhePage = React.lazy(() => import('./pages/superadmin/ClinicaDetalhePage').then(m => ({ default: m.ClinicaDetalhePage })));
+const SAObservabilidadePage = React.lazy(() => import('./pages/superadmin/ObservabilidadePage').then(m => ({ default: m.ObservabilidadePage })));
+const SAFinanceiroPage = React.lazy(() => import('./pages/superadmin/FinanceiroPage').then(m => ({ default: m.FinanceiroPage })));
+const SASistemaPage = React.lazy(() => import('./pages/superadmin/SistemaPage').then(m => ({ default: m.SistemaPage })));
+const SASuportePage = React.lazy(() => import('./pages/superadmin/SuportePage').then(m => ({ default: m.SuportePage })));
 const SAUsersPage = React.lazy(() => import('./pages/superadmin/SAUsersPage').then(m => ({ default: m.SAUsersPage })));
 const SALogsPage = React.lazy(() => import('./pages/superadmin/SALogsPage').then(m => ({ default: m.SALogsPage })));
 const SASettingsPage = React.lazy(() => import('./pages/superadmin/SASettingsPage').then(m => ({ default: m.SASettingsPage })));
 const SuperAdminLoginPage = React.lazy(() => import('./pages/superadmin/SuperAdminLoginPage').then(m => ({ default: m.SuperAdminLoginPage })));
+const SuperAdminMFASetupPage = React.lazy(() => import('./pages/superadmin/SuperAdminMFASetupPage').then(m => ({ default: m.SuperAdminMFASetupPage })));
 
 const PacienteDashboard = React.lazy(() => import('./pages/paciente/DashboardPage'));
 const AgendarPage = React.lazy(() => import('./pages/paciente/AgendarPage'));
@@ -239,6 +245,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<div className="min-h-screen flex justify-center items-center bg-[#0A0A0A]"><div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" /></div>}>
         <SuperAdminLoginPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/superadmin/mfa-setup',
+    element: (
+      <Suspense fallback={<div className="min-h-screen flex justify-center items-center bg-[#050505]"><div className="h-6 w-6 animate-spin rounded-full border-2 border-sa-primary border-t-transparent" /></div>}>
+        <SuperAdminMFASetupPage />
       </Suspense>
     ),
   },
@@ -531,6 +545,26 @@ export const router = createBrowserRouter([
           {
             path: '/superadmin/clinicas',
             element: <SAClinicasGestaoPage />
+          },
+          {
+            path: '/superadmin/clinicas/:id',
+            element: <SAClinicaDetalhePage />
+          },
+          {
+            path: '/superadmin/observabilidade',
+            element: <SAObservabilidadePage />
+          },
+          {
+            path: '/superadmin/financeiro',
+            element: <SAFinanceiroPage />
+          },
+          {
+            path: '/superadmin/sistema',
+            element: <SASistemaPage />
+          },
+          {
+            path: '/superadmin/suporte',
+            element: <SASuportePage />
           },
           {
             path: '/superadmin/users',

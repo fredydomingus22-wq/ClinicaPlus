@@ -11,7 +11,7 @@ test.describe('Marcação de Consulta (Paciente)', () => {
     await page.waitForURL(/\/paciente/);
   });
 
-  test.skip('criar marcação end-to-end', async ({ page }) => {
+  test('criar marcação end-to-end', async ({ page }) => {
     // TODO: The actual UI flow needs to be confirmed. 
     // The "Marcar Consulta" wizard selectors might differ in the current implementation.
     await page.getByRole('link', { name: 'Marcar Consulta' }).click();

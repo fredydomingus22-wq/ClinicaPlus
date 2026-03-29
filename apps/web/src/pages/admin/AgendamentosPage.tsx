@@ -185,7 +185,12 @@ export default function AgendamentosPage() {
         <div className="flex items-center gap-3">
           <Avatar initials={getInitials(a.paciente?.nome || 'P')} size="sm" />
           <div className="max-w-[160px]">
-            <p className="font-semibold text-neutral-900 truncate" title={a.paciente?.nome}>{a.paciente?.nome}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-neutral-900 truncate" title={a.paciente?.nome}>{a.paciente?.nome}</p>
+              {a.canal === 'WHATSAPP' && (
+                <Badge variant="success" className="px-1 py-0 h-4 text-[8px] font-black bg-green-500 text-white border-none rounded">WA</Badge>
+              )}
+            </div>
             <p className="text-[10px] text-neutral-500">{a.paciente?.numeroPaciente}</p>
           </div>
         </div>

@@ -6,6 +6,8 @@ import { generatePatientNumber } from './patientNumber.service';
 import { AppError } from '../lib/AppError';
 import { config } from '../lib/config';
 import { logger } from '../lib/logger';
+import { auditLogService } from './auditLog.service';
+import { mfaService } from './mfa.service';
 import { Prisma } from '@prisma/client';
 import { UtilizadorDTO, MedicoDTO, PacienteCreateInput, UtilizadorUpdateInput } from '@clinicaplus/types';
 
@@ -21,7 +23,7 @@ export type UtilizadorWithRelations = Prisma.UtilizadorGetPayload<{
 }>;
 
 export const authService = {
-  async login(email: string, password: string, clinicaSlug: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
+  async login(email: string, password: string, clinicaSlug: string, ip?: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
     // 1. Find clinica by slug
     const clinica = await prisma.clinica.findUnique({ where: { slug: clinicaSlug } });
     if (!clinica || !clinica.ativo) {
@@ -47,14 +49,44 @@ export const authService = {
     // 3. Verify password
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      await auditLogService.log({
+        actorId: user.id,
+        clinicaId: clinica.id,
+        accao: 'FAILED_LOGIN',
+        recurso: 'auth',
+        ip: ip ?? null,
+        metadata: { email, reason: 'Invalid password' }
+      });
       throw new AppError('Credenciais inválidas', 401, 'INVALID_CREDENTIALS');
     }
 
     // 4. Issue tokens
-    return authService._issueTokens(user as UtilizadorWithRelations);
+    const result = await authService._issueTokens(user as UtilizadorWithRelations);
+
+    await auditLogService.log({
+      actorId: user.id,
+      clinicaId: clinica.id,
+      accao: 'LOGIN',
+      recurso: 'auth',
+      ip: ip ?? null,
+    });
+
+    return result;
   },
 
-  async loginSuperAdmin(email: string, password: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
+  async loginSuperAdmin(
+    email: string, 
+    password: string, 
+    ip?: string, 
+    mfaToken?: string
+  ): Promise<{ 
+    accessToken?: string; 
+    refreshToken?: string; 
+    utilizador?: UtilizadorDTO; 
+    requiresMfaSetup?: boolean; 
+    requiresMfa?: boolean; 
+    setupToken?: string 
+  }> {
     const normalizedEmail = email.trim().toLowerCase();
     
     // 1. Find user by email and role SUPER_ADMIN
@@ -76,11 +108,45 @@ export const authService = {
     // 2. Verify password
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      await auditLogService.log({
+        actorId: user.id,
+        clinicaId: user.clinicaId || 'SYSTEM',
+        accao: 'FAILED_LOGIN',
+        recurso: 'auth',
+        ip: ip ?? null,
+        metadata: { email, reason: 'Invalid password (SuperAdmin)' }
+      });
       throw new AppError('Credenciais inválidas', 401, 'INVALID_CREDENTIALS');
     }
 
-    // 3. Issue tokens
-    return authService._issueTokens(user as UtilizadorWithRelations);
+    // 3. MFA Check
+    if (user.mfaActivatedAt === null) {
+      // Retorna token temporário para setup
+      const setupToken = jwt.sign({ sub: user.id, intent: 'mfa_setup' }, config.JWT_SECRET, { expiresIn: '15m' });
+      return { requiresMfaSetup: true, setupToken };
+    }
+
+    if (user.mfaActivatedAt !== null && !mfaToken) {
+      return { requiresMfa: true };
+    }
+
+    if (mfaToken) {
+      const isValid = await mfaService.verify(user.id, mfaToken);
+      if (!isValid) throw new AppError('Código MFA inválido', 401, 'INVALID_MFA_TOKEN');
+    }
+
+    // 4. Issue tokens with 4h TTL for super admin
+    const result = await authService._issueTokens(user as UtilizadorWithRelations, { expiresIn: '4h' });
+
+    await auditLogService.log({
+      actorId: user.id,
+      clinicaId: user.clinicaId || 'SYSTEM',
+      accao: 'LOGIN',
+      recurso: 'auth',
+      ip: ip ?? null,
+    });
+
+    return result;
   },
 
   async refresh(rawToken: string): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
@@ -320,11 +386,11 @@ export const authService = {
     return this._issueTokens(newUser as UtilizadorWithRelations);
   },
 
-  async _issueTokens(user: UtilizadorWithRelations): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
+  async _issueTokens(user: UtilizadorWithRelations, options?: { expiresIn?: string }): Promise<{ accessToken: string; refreshToken: string; utilizador: UtilizadorDTO }> {
     const accessToken = jwt.sign(
       { sub: user.id, clinicaId: user.clinicaId, papel: user.papel },
       config.JWT_SECRET,
-      { expiresIn: ACCESS_TTL }
+      { expiresIn: options?.expiresIn || ACCESS_TTL } as jwt.SignOptions
     );
 
     const refreshToken = crypto.randomBytes(64).toString('hex');

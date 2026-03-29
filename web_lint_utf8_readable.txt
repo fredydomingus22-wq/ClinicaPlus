@@ -1,0 +1,93 @@
+﻿
+> clinicaplus@1.0.0 lint C:\Users\LENOVO\Documents\Projectos\ClinicaPlus
+> turbo lint "--filter=web"
+
+node.exe : ÔÇó turbo 2.8.13
+At C:\Users\LENOVO\AppData\
+Roaming\npm\pnpm.ps1:24 
+char:5
++     & "node$exe"  "$based
+ir/node_modules/pnpm/bin/pn
+pm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (ÔÇó  
+   turbo 2.8.13:String)    
+ [], RemoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+ÔÇó Packages in scope: web
+ÔÇó Running lint in 1 packages
+ÔÇó Remote caching enabled
+web:lint: cache miss, executing d9dd12cee38e5d57
+web:lint: 
+web:lint: > web@1.0.0 lint C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web
+web:lint: > eslint . --max-warnings 0
+web:lint: 
+web:lint: 
+web:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web\src\api\superadmin.ts
+web:lint:   61:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   64:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   67:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint: 
+web:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web\src\pages\superadmin\ClinicasGestaoPage.tsx
+web:lint:    21:71   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:    40:33   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:    41:48   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   107:109  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   157:36   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   252:45   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   283:90   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   284:49   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint: 
+web:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web\src\pages\superadmin\FinanceiroPage.tsx
+web:lint:     6:3   error  'ArrowUpRight' is defined but never used  @typescript-eslint/no-unused-vars
+web:lint:     8:15  error  'PieChartIcon' is defined but never used  @typescript-eslint/no-unused-vars
+web:lint:     9:15  error  'BarChartIcon' is defined but never used  @typescript-eslint/no-unused-vars
+web:lint:    10:3   error  'Calendar' is defined but never used      @typescript-eslint/no-unused-vars
+web:lint:    12:3   error  'Filter' is defined but never used        @typescript-eslint/no-unused-vars
+web:lint:    26:3   error  'BarChart' is defined but never used      @typescript-eslint/no-unused-vars
+web:lint:    27:3   error  'Bar' is defined but never used           @typescript-eslint/no-unused-vars
+web:lint:    28:3   error  'Legend' is defined but never used        @typescript-eslint/no-unused-vars
+web:lint:   151:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   163:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   193:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint: 
+web:lint: C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web\src\pages\superadmin\OverviewPage.tsx
+web:lint:    36:79  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   132:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   132:90  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   135:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   171:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint:   213:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+web:lint: 
+web:lint: Ô£û 28 problems (28 errors, 0 warnings)
+web:lint: 
+web:lint: ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.
+web:lint: ERROR: command 
+finished with error: 
+command (C:\Users\LENOVO\Do
+cuments\Projectos\ClinicaPl
+us\apps\web) C:\Users\LENOV
+O\AppData\Local\pnpm\.tools
+\pnpm\9.15.4\bin\pnpm.CMD 
+run lint exited (1)
+web#lint: command (C:\Users
+\LENOVO\Documents\Projectos
+\ClinicaPlus\apps\web) C:\U
+sers\LENOVO\AppData\Local\p
+npm\.tools\pnpm\9.15.4\bin\
+pnpm.CMD run lint exited 
+(1)
+
+ Tasks:    0 successful, 1 total
+Cached:    0 cached, 1 total
+  Time:    20.09s 
+Failed:    web#lint
+
+ ERROR  run failed: 
+command  exited (1)
+ÔÇëELIFECYCLEÔÇë Command failed with exit code 1.

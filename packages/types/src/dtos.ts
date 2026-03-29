@@ -42,6 +42,7 @@ export interface ClinicaDTO {
     horasAntecedencia: number;
     moedaSimbolo: string;
     fusoHorario: string;
+    seguradoras: string[];
   };
   contactos?: ContactoClinicaDTO[];
 }
@@ -132,6 +133,8 @@ export interface AgendamentoDTO {
   canceladoEm: string | null;
   criadoEm: string;
   atualizadoEm: string;
+  canal?: string | null;
+  confirmadoWa?: boolean;
   receita?: ReceitaDTO;
   prontuario?: ProntuarioDTO;
   exames?: ExameDTO[];

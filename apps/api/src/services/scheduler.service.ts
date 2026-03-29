@@ -48,16 +48,17 @@ export const schedulerService = {
       }
     });
 
-    // Run every hour to expire WhatsApp conversations
-    cron.schedule('0 * * * *', async () => {
+    // Monthly audit cleanup (archiving > 2 years) - Run on the 1st of every month at 03:00
+    cron.schedule('0 3 1 * *', async () => {
       try {
-        await this.processarConversasExpiradas();
+        const { runAuditCleanup } = await import('./jobs/audit-cleanup.job');
+        await runAuditCleanup();
       } catch (err) {
-        logger.error({ err }, 'Scheduler: Error in processarConversasExpiradas cycle');
+        logger.error({ err }, 'Scheduler: Error in runAuditCleanup cycle');
       }
     });
 
-    logger.info('Scheduler started (Reminders 5m, WA Expiry 1h)');
+    logger.info('Scheduler started (Reminders 5m, WA Expiry 1h, Audit Cleanup 1mo)');
   },
 
   /**

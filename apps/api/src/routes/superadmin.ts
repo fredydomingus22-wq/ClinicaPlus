@@ -2,8 +2,17 @@ import { Router } from 'express';
 import { requireRole } from '../middleware/requireRole';
 import { superAdminService } from '../services/superadmin.service';
 import { subscricaoService } from '../services/subscricao.service';
-import { ClinicaListQuerySchema, Papel, PlanoSchema, ClinicaCreateSchema, Plano, EstadoSubscricao, RazaoMudancaPlano } from '@clinicaplus/types';
+import { 
+  ClinicaListQuerySchema, 
+  Papel, 
+  PlanoSchema, 
+  ClinicaCreateSchema, 
+  Plano, 
+  EstadoSubscricao, 
+  RazaoMudancaPlano 
+} from '@clinicaplus/types';
 import { z } from 'zod';
+import { auditLogService } from '../services/auditLog.service';
 
 const router = Router();
 
@@ -11,8 +20,31 @@ const router = Router();
 router.use(requireRole([Papel.SUPER_ADMIN]));
 
 /**
- * GET /superadmin/clinicas
- * List all clinics with pagination and filters
+ * GET /api/superadmin/stats
+ */
+router.get('/stats', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getGlobalStats();
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * GET /api/superadmin/dashboard
+ */
+router.get('/dashboard', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getDashboardKPIs();
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * GET /api/superadmin/clinicas
  */
 router.get('/clinicas', async (req, res, next) => {
   try {
@@ -25,12 +57,11 @@ router.get('/clinicas', async (req, res, next) => {
 });
 
 /**
- * GET /superadmin/clinicas/:id
- * Get detail of any clinic
+ * GET /api/superadmin/clinicas/:id
  */
 router.get('/clinicas/:id', async (req, res, next) => {
   try {
-    const result = await superAdminService.getClinica(req.params.id as string);
+    const result = await superAdminService.getClinica(req.params.id);
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
@@ -38,8 +69,7 @@ router.get('/clinicas/:id', async (req, res, next) => {
 });
 
 /**
- * PATCH /superadmin/clinicas/:id
- * Update clinic plan or active status
+ * PATCH /api/superadmin/clinicas/:id
  */
 router.patch('/clinicas/:id', async (req, res, next) => {
   try {
@@ -47,9 +77,23 @@ router.patch('/clinicas/:id', async (req, res, next) => {
       plano: PlanoSchema.optional(),
       ativo: z.boolean().optional(),
     });
+    const body = updateSchema.parse(req.body);
+    const data: { plano?: string; ativo?: boolean } = {};
+    if (body.plano) data.plano = body.plano as string;
+    if (body.ativo !== undefined) data.ativo = body.ativo;
+
+    const result = await superAdminService.updateClinica(req.params.id, data);
     
-    const body = updateSchema.parse(req.body) as { plano?: "BASICO" | "PRO" | "ENTERPRISE"; ativo?: boolean | undefined };
-    const result = await superAdminService.updateClinica(req.params.id as string, body);
+    // Log action
+    await auditLogService.log({
+      actorId: req.user!.id,
+      clinicaId: req.params.id,
+      accao: 'UPDATE',
+      recurso: 'CLINICA',
+      metadata: body,
+      ip: req.ip || null
+    });
+
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
@@ -57,26 +101,13 @@ router.patch('/clinicas/:id', async (req, res, next) => {
 });
 
 /**
- * GET /superadmin/stats
- * Global system statistics including subscription revenue
- */
-router.get('/stats', async (req, res, next) => {
-  try {
-    const result = await superAdminService.getGlobalStats();
-    return res.json({ success: true, data: result });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-/**
- * POST /superadmin/clinicas
- * Provision a new tenant clinic
+ * POST /api/superadmin/clinicas
  */
 router.post('/clinicas', async (req, res, next) => {
   try {
     const body = ClinicaCreateSchema.parse(req.body);
-    const result = await superAdminService.provisionClinic(body, (req as unknown as { user: { id: string } }).user.id);
+    const userId = req.user!.id;
+    const result = await superAdminService.provisionClinic(body, userId);
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
@@ -84,12 +115,10 @@ router.post('/clinicas', async (req, res, next) => {
 });
 
 /**
- * GET /superadmin/users
- * Global system users list
+ * GET /api/superadmin/users
  */
 router.get('/users', async (req, res, next) => {
   try {
-    // Accept standard pagination and filters without strict schema to reuse frontend patterns easily
     const result = await superAdminService.listUsers(req.query as Record<string, string | undefined>);
     return res.json({ success: true, data: result });
   } catch (err) {
@@ -98,14 +127,24 @@ router.get('/users', async (req, res, next) => {
 });
 
 /**
- * PATCH /superadmin/users/:id
- * Suspend or activate a global user
+ * PATCH /api/superadmin/users/:id
  */
 router.patch('/users/:id', async (req, res, next) => {
   try {
     const schema = z.object({ ativo: z.boolean() });
     const { ativo } = schema.parse(req.body);
-    const result = await superAdminService.updateUserStatus(req.params.id as string, ativo);
+    const result = await superAdminService.updateUserStatus(req.params.id, ativo);
+    
+    // Log action
+    await auditLogService.log({
+      actorId: req.user!.id,
+      clinicaId: 'SYSTEM',
+      accao: 'UPDATE',
+      recurso: 'USER',
+      metadata: { status: ativo, userId: req.params.id },
+      ip: req.ip || null
+    });
+
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
@@ -113,8 +152,7 @@ router.patch('/users/:id', async (req, res, next) => {
 });
 
 /**
- * GET /superadmin/logs
- * Global system logs
+ * GET /api/superadmin/logs
  */
 router.get('/logs', async (req, res, next) => {
   try {
@@ -126,10 +164,9 @@ router.get('/logs', async (req, res, next) => {
 });
 
 /**
- * GET /superadmin/settings
- * Global system settings
+ * GET /api/superadmin/settings
  */
-router.get('/settings', async (req, res, next) => {
+router.get('/settings', async (_req, res, next) => {
   try {
     const result = await superAdminService.getGlobalSettings();
     return res.json({ success: true, data: result });
@@ -139,8 +176,7 @@ router.get('/settings', async (req, res, next) => {
 });
 
 /**
- * PATCH /superadmin/settings
- * Update global system settings
+ * PATCH /api/superadmin/settings
  */
 router.patch('/settings', async (req, res, next) => {
   try {
@@ -150,8 +186,33 @@ router.patch('/settings', async (req, res, next) => {
       maxUploadSizeMb: z.number().optional(),
       mensagemSistema: z.string().nullable().optional()
     });
-    const body = schema.parse(req.body);
+    
+    // Filtrar undefined para satisfazer exactOptionalPropertyTypes
+    const rawBody = schema.parse(req.body);
+    const body: {
+      modoManutencao?: boolean;
+      registoNovasClinicas?: boolean;
+      maxUploadSizeMb?: number;
+      mensagemSistema?: string | null;
+    } = {};
+    
+    if (rawBody.modoManutencao !== undefined) body.modoManutencao = rawBody.modoManutencao;
+    if (rawBody.registoNovasClinicas !== undefined) body.registoNovasClinicas = rawBody.registoNovasClinicas;
+    if (rawBody.maxUploadSizeMb !== undefined) body.maxUploadSizeMb = rawBody.maxUploadSizeMb;
+    if (rawBody.mensagemSistema !== undefined) body.mensagemSistema = rawBody.mensagemSistema;
+
     const result = await superAdminService.updateGlobalSettings(body);
+    
+    // Log action
+    await auditLogService.log({
+      actorId: req.user!.id,
+      clinicaId: 'SYSTEM',
+      accao: 'UPDATE',
+      recurso: 'SETTINGS',
+      metadata: body,
+      ip: req.ip || null
+    });
+
     return res.json({ success: true, data: result });
   } catch (err) {
     return next(err);
@@ -160,12 +221,10 @@ router.patch('/settings', async (req, res, next) => {
 
 // ─── Subscription Management ──────────────────────────────────────────
 
-/**
- * POST /api/superadmin/clinicas/:id/subscricao/upgrade
- */
 router.post('/clinicas/:id/subscricao/upgrade', async (req, res, next) => {
   try {
     const { plano, validaAte, valorKz, referenciaInterna, notas } = req.body;
+    const userId = req.user!.id;
     const sub = await subscricaoService.criarNovaSubscricao({
       clinicaId: req.params.id,
       plano: plano as Plano,
@@ -174,7 +233,7 @@ router.post('/clinicas/:id/subscricao/upgrade', async (req, res, next) => {
       ...(valorKz && { valorKz }),
       ...(referenciaInterna && { referenciaInterna }),
       razao: RazaoMudancaPlano.UPGRADE_MANUAL,
-      alteradoPor: req.user.id,
+      alteradoPor: userId,
       ...(notas && { notas }),
     });
     res.json({ success: true, data: sub });
@@ -183,18 +242,16 @@ router.post('/clinicas/:id/subscricao/upgrade', async (req, res, next) => {
   }
 });
 
-/**
- * POST /api/superadmin/clinicas/:id/subscricao/downgrade
- */
 router.post('/clinicas/:id/subscricao/downgrade', async (req, res, next) => {
   try {
     const { plano, notas } = req.body;
+    const userId = req.user!.id;
     const sub = await subscricaoService.criarNovaSubscricao({
       clinicaId: req.params.id,
       plano: plano as Plano,
       estado: EstadoSubscricao.ACTIVA,
       razao: RazaoMudancaPlano.DOWNGRADE_MANUAL,
-      alteradoPor: req.user.id,
+      alteradoPor: userId,
       ...(notas && { notas }),
     });
     res.json({ success: true, data: sub });
@@ -203,20 +260,16 @@ router.post('/clinicas/:id/subscricao/downgrade', async (req, res, next) => {
   }
 });
 
-/**
- * POST /api/superadmin/clinicas/:id/subscricao/reactivar
- */
 router.post('/clinicas/:id/subscricao/reactivar', async (req, res, next) => {
   try {
     const clinica = await subscricaoService.getActual(req.params.id);
+    const userId = req.user!.id;
     const sub = await subscricaoService.criarNovaSubscricao({
       clinicaId: req.params.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      plano: (clinica as any).plano,
+      plano: (clinica as { plano?: Plano })?.plano || Plano.BASICO,
       estado: EstadoSubscricao.ACTIVA,
       razao: RazaoMudancaPlano.REACTIVACAO,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      alteradoPor: (req.user as any).id,
+      alteradoPor: userId,
     });
     res.json({ success: true, data: sub });
   } catch (err) {
@@ -224,9 +277,6 @@ router.post('/clinicas/:id/subscricao/reactivar', async (req, res, next) => {
   }
 });
 
-/**
- * POST /api/superadmin/clinicas/:id/subscricao/suspender
- */
 router.post('/clinicas/:id/subscricao/suspender', async (req, res, next) => {
   try {
     await subscricaoService.suspender(req.params.id);
@@ -236,13 +286,102 @@ router.post('/clinicas/:id/subscricao/suspender', async (req, res, next) => {
   }
 });
 
-/**
- * GET /api/superadmin/subscricoes/a-expirar
- */
-router.get('/subscricoes/a-expirar', async (req, res, next) => {
+router.get('/subscricoes/a-expirar', async (_req, res, next) => {
   try {
     const clinicas = await subscricaoService.getExpiringSoon();
     res.json({ success: true, data: clinicas });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Impersonation ───
+
+router.post('/impersonar', async (req, res, next) => {
+  try {
+    const { clinicaId, adminId, motivo } = req.body;
+    const userId = req.user!.id;
+    const result = await superAdminService.createImpersonation(clinicaId, adminId, motivo, userId);
+    res.status(201).json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+router.get('/impersonar/historico', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getImpersonationHistory();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+// ─── Observabilidade ───
+
+router.get('/observabilidade/saude', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getHealthScores();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+router.get('/observabilidade/infraestrutura', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getInfrastructureStatus();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+// ─── Financeiro ───
+
+router.get('/financeiro/mrr', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getMRRStats();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+router.get('/financeiro/planos', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getPlansDistribution();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+router.get('/financeiro/cohorts', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getCohorts();
+    res.json({ success: true, data: result });
+  } catch(err) {
+    next(err);
+  }
+});
+
+// ─── Sistema ───
+
+router.get('/sistema/feature-flags', async (_req, res, next) => {
+  try {
+    const result = await superAdminService.getFeatureFlags();
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/sistema/feature-flags/:codigo', async (req, res, next) => {
+  try {
+    const { ativo } = req.body;
+    const result = await superAdminService.updateFeatureFlag(req.params.codigo, ativo);
+    res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

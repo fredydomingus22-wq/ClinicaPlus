@@ -48,6 +48,7 @@ class NLUResult:
     especialidade: Optional[str] = None
     medico_id: Optional[str] = None
     data_iso: Optional[str] = None
+    slotHorario: Optional[str] = None
     periodo: Optional[Dict[str, Any]] = None
     urgente: bool = field(default=False)
 
@@ -179,11 +180,18 @@ def analisar(texto: str, medicos: List[Dict] = None, especialidades: List[str] =
         else:
             especialidade = "Clínica Geral"
 
+    # 4. Time Extraction
+    slot_horario = None
+    time_match = re.search(r'\b(\d{2}:\d{2})\b', texto)
+    if time_match:
+        slot_horario = time_match.group(1)
+
     return NLUResult(
         intencao=intencao,
         especialidade=especialidade,
         medico_id=med_id,
         data_iso=get_data(texto_lower),
+        slotHorario=slot_horario,
         periodo=get_periodo(texto_lower),
         urgente=urgente
     )

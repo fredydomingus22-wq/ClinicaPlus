@@ -26,7 +26,10 @@ const getClinicaBase = (): Clinica => ({
   endereco: null,
   cidade: null,
   provincia: null,
-  subscricaoValidaAte: null
+  subscricaoValidaAte: null,
+  suspensaEm: null,
+  motivoSuspensao: null,
+  notasInternas: null
 });
 
 const getInstanciaBase = (): WaInstancia => ({

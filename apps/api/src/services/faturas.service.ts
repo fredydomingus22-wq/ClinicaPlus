@@ -171,7 +171,7 @@ export const faturasService = {
     }
 
     if (fatura.estado === EstadoFatura.ANULADA) {
-      throw new AppError('Esta fatura já se encontra anulada', 409);
+      throw new AppError('Esta fatura já se encontra anulada', 409, 'INVOICE_VOIDED');
     }
 
     const faturaAnulada = await prisma.fatura.update({
@@ -210,7 +210,7 @@ export const faturasService = {
     }
 
     if (fatura.estado === EstadoFatura.ANULADA) {
-      throw new AppError('Não é possível registar pagamentos em faturas anuladas', 409);
+      throw new AppError('Não é possível registar pagamentos em faturas anuladas', 409, 'INVOICE_VOIDED');
     }
     
     if (fatura.estado === EstadoFatura.RASCUNHO) {
@@ -456,7 +456,19 @@ function toFaturaDTO(fatura: any): FaturaDTO {
       metodo: p.metodo,
       valor: p.valor,
       referencia: p.referencia || null,
-      criadoEm: p.criadoEm.toISOString()
+      criadoEm: p.criadoEm.toISOString(),
+      seguro: p.seguro ? {
+        pagamentoId: p.seguro.pagamentoId,
+        seguradora: p.seguro.seguradora,
+        numeroBeneficiario: p.seguro.numeroBeneficiario,
+        numeroAutorizacao: p.seguro.numeroAutorizacao || undefined,
+        valorSolicitado: p.seguro.valorSolicitado,
+        valorAprovado: p.seguro.valorAprovado,
+        estado: p.seguro.estado,
+        dataSubmissao: p.seguro.dataSubmissao?.toISOString(),
+        dataResposta: p.seguro.dataResposta?.toISOString(),
+        notasSeguradora: p.seguro.notasSeguradora || undefined
+      } : undefined
     })) || []
   };
 
