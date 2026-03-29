@@ -9,7 +9,11 @@ import {
   Activity, 
   Settings, 
   LogOut,
-  X 
+  X,
+  TrendingUp,
+  Eye,
+  Server,
+  LifeBuoy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useUIStore } from '../../stores/ui.store';
@@ -74,6 +78,10 @@ export function SuperAdminLayout() {
     { to: '/superadmin', icon: Terminal, label: 'Visão Geral' },
     { to: '/superadmin/clinicas', icon: Building2, label: 'Gestão de Clínicas' },
     { to: '/superadmin/users', icon: Users, label: 'Utilizadores Globais' },
+    { to: '/superadmin/financeiro', icon: TrendingUp, label: 'Financeiro' },
+    { to: '/superadmin/observabilidade', icon: Eye, label: 'Observabilidade' },
+    { to: '/superadmin/sistema', icon: Server, label: 'Sistema' },
+    { to: '/superadmin/suporte', icon: LifeBuoy, label: 'Suporte' },
     { to: '/superadmin/logs', icon: Activity, label: 'Registos do Sistema' },
     { to: '/superadmin/settings', icon: Settings, label: 'Configurações' },
   ];
