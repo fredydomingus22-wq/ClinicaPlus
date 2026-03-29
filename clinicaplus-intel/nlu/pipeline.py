@@ -109,13 +109,22 @@ def get_periodo(texto: str) -> Optional[Dict[str, Any]]:
 
 def extrair_especialidade(texto: str, disponiveis: List[str] = None) -> Optional[str]:
     """Extracts specialty using direct aliases or fuzzy matching."""
-    texto = texto.lower()
+    texto_lower = texto.lower().strip()
+    
+    # 1. Check direct alias map first
     for alias, formal in ALIASES.items():
-        if re.search(r'\b' + re.escape(alias) + r'\b', texto):
+        if re.search(r'\b' + re.escape(alias) + r'\b', texto_lower):
             return formal
-            
+
+    # 2. Exact match against disponíveis (handles poll answers perfectly)
     if disponiveis:
-        match = process.extractOne(texto, disponiveis, scorer=fuzz.WRatio)
+        for esp in disponiveis:
+            if esp.lower() == texto_lower or esp.lower() in texto_lower:
+                return esp
+
+    # 3. Fuzzy fallback
+    if disponiveis:
+        match = process.extractOne(texto_lower, disponiveis, scorer=fuzz.WRatio)
         if match and match[1] >= THRESHOLD_ESPECIALIDADE:
             return match[0]
     return None
@@ -149,7 +158,7 @@ def analisar(texto: str, medicos: List[Dict] = None, especialidades: List[str] =
         return NLUResult(intencao="NEGACAO")
     if re.fullmatch(r'(ajuda|help|humano|atendente)', texto_lower):
         return NLUResult(intencao="AJUDA")
-    if len(texto.split()) <= 2 and re.search(r'\b(oi|olá|ola|iniciar|recomeçar|recomecar)\b', texto_lower):
+    if len(texto.split()) <= 3 and re.search(r'\b(oi|olá|ola|iniciar|recomeçar|recomecar|bom dia|boa tarde|boa noite)\b', texto_lower):
         return NLUResult(intencao="RESET")
 
     # 2. Main Intent Classification

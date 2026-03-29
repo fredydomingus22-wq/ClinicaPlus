@@ -48,7 +48,21 @@ def _extrair_voto_poll(update: dict) -> Optional[str]:
 async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia_nome: str, numero: str, texto: str, push_name: str, msg_raw: Optional[dict] = None):
     # 1. Fetch State
     conversa = await db.obter_conversa(clinica_id, instancia_id, numero)
-    estado = DialogueState() if not conversa else DialogueState(**conversa.contexto)
+    
+    if not conversa:
+        estado = DialogueState()
+        print(f"🆕 Novo utilizador {numero} — estado inicial")
+    else:
+        try:
+            ctx = conversa.contexto or {}
+            # Garantir que caminhoSlots é sempre lista
+            if "caminhoSlots" in ctx and not isinstance(ctx["caminhoSlots"], list):
+                ctx["caminhoSlots"] = []
+            estado = DialogueState.from_dict(ctx)
+            print(f"🧠 Estado carregado para {numero}: esp={estado.especialidade} data={estado.data_iso} slot={estado.slotHorario} turno={estado.turno} ultimaAccao={estado.ultimaAccao}")
+        except Exception as e:
+            print(f"⚠️ Erro ao reconstruir estado para {numero}: {e}. A resetar.")
+            estado = DialogueState()
 
     # 1.5 Cache Layer
     medicos = await get_medicos_activos(clinica_id)
@@ -61,13 +75,16 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         especialidades = await db.especialidades_activas(clinica_id)
         await set_especialidades(clinica_id, especialidades)
 
+    print(f"📋 Especialidades disponíveis: {especialidades}")
     opcoes_nlu = {"medicos": medicos, "especialidades": especialidades}
 
     # 2. NLU
     nlu_res = analisar(texto, medicos=medicos, especialidades=especialidades)
+    print(f"🔍 NLU: intencao={nlu_res.intencao} esp={nlu_res.especialidade} data={nlu_res.data_iso} slot={nlu_res.slotHorario}")
     
     # 3. DST
     novo_estado, accoes_dst = dst.actualizar(estado, nlu_res, opcoes_nlu)
+    print(f"📊 DST: accoes={accoes_dst} | estado_actual: esp={novo_estado.especialidade} data={novo_estado.data_iso} slot={novo_estado.slotHorario}")
     
     # 4. Policy (Dynamic slots)
     if novo_estado.proximo_slot_em_falta() == "slotHorario" and novo_estado.especialidade and novo_estado.data_iso:
@@ -87,8 +104,10 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
             slots.sort(key=lambda s: s.dataHora)
             
         opcoes_nlu["slots"] = slots
+        print(f"🕐 Slots encontrados: {len(slots)} para {novo_estado.especialidade} em {data_alvo}")
         
     decisao = policy.decidir(novo_estado, accoes_dst, None, opcoes_nlu)
+    print(f"🎯 Policy: accao={decisao.accao} template={decisao.template_mensagem}")
     
     # 5. NLG & Send
     template_nome = decisao.template_mensagem

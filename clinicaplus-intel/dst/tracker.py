@@ -31,6 +31,16 @@ class DialogueState:
         """Checks if all mandatory slots for an appointment are filled."""
         return all([self.especialidade, self.data_iso, self.slotHorario])
 
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "DialogueState":
+        """Safe reconstruction from a persisted JSON dict — ignores unknown keys, fixes types."""
+        known = {f.name for f in cls.__dataclass_fields__.values()}
+        clean = {k: v for k, v in d.items() if k in known}
+        # Ensure list fields are always lists
+        if "caminhoSlots" in clean and not isinstance(clean["caminhoSlots"], list):
+            clean["caminhoSlots"] = []
+        return cls(**clean)
+
 class DialogueStateTracker:
     def actualizar(
         self, 
