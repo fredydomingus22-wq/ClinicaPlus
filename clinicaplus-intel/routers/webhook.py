@@ -148,20 +148,25 @@ async def processar_mensagem(payload: dict):
             return
 
         if event == "messages.upsert":
-            # Evolution v2 sends 'messages' as an array in 'data'
-            messages = data.get("messages", [])
-            if not messages:
-                print(f"⚠️ Evento messages.upsert recebido mas array 'messages' está vazio.")
+            # Evolution API varies: some engines send a 'messages' array in 'data',
+            # others send the message object directly in 'data'.
+            msg = None
+            if isinstance(data, dict):
+                if "messages" in data and isinstance(data["messages"], list) and len(data["messages"]) > 0:
+                    msg = data["messages"][0]
+                elif "key" in data:
+                    msg = data
+            
+            if not msg:
+                print(f"⚠️ Evento messages.upsert recebido mas estrutura de mensagem não reconhecida. Chaves: {list(data.keys()) if isinstance(data, dict) else 'non-dict'}")
                 return
             
-            msg = messages[0]
             if msg.get("key", {}).get("fromMe"): return
             
-            # Use .get() to avoid KeyError if the message structure is unexpected
             key = msg.get("key", {})
             remote_id = key.get("remoteJid", "")
             if not remote_id:
-                print(f"⚠️ Mensagem sem 'remoteJid' (key structure: {key})")
+                print(f"⚠️ Mensagem sem 'remoteJid' (msg structure: {list(msg.keys()) if isinstance(msg, dict) else 'non-dict'})")
                 return
                 
             numero = remote_id.split("@")[0]
