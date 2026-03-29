@@ -69,7 +69,7 @@ class ClinicaDB:
                     id=row["id"], clinicaId=row["clinicaId"], instanciaId=row["instanciaId"],
                     numeroWhatsapp=row["numeroWhatsapp"], estado=row["estado"],
                     contexto=json.loads(row["contexto"]) if isinstance(row["contexto"], str) else row["contexto"],
-                    ultimaMensagemEm=row["ultimaMensagemEm"]
+                    ultimaMensagemEm=row["ultima_mensagem_em"]
                 )
         return None
 
@@ -78,10 +78,10 @@ class ClinicaDB:
         contexto_json = json.dumps(asdict(estado_obj))
         async with conn() as c:
             await c.execute(
-                """INSERT INTO wa_conversas (id, "clinicaId", "instanciaId", "numeroWhatsapp", estado, contexto, "ultimaMensagemEm", "expiraEm", "criadoEm")
+                """INSERT INTO wa_conversas (id, "clinicaId", "instanciaId", "numeroWhatsapp", estado, contexto, ultima_mensagem_em, expira_em, criado_em)
                    VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW(), NOW() + interval '24 hours', NOW())
                    ON CONFLICT ("instanciaId", "numeroWhatsapp") DO UPDATE 
-                   SET estado = $4, contexto = $5, "ultimaMensagemEm" = NOW(), "expiraEm" = NOW() + interval '24 hours'""",
+                   SET estado = $4, contexto = $5, ultima_mensagem_em = NOW(), expira_em = NOW() + interval '24 hours'""",
                 clinicaId, instanciaId, numero, estado_obj.ultimaAccao or "AGUARDA_INPUT", contexto_json
             )
 
@@ -167,7 +167,7 @@ class ClinicaDB:
                    WHERE a.estado = 'PENDENTE'
                    AND a."dataHora" > NOW() 
                    AND a."dataHora" <= NOW() + ($1 || ' hours')::interval
-                   AND a."confirmadoWa" = false""",
+                   AND a.confirmado_wa = false""",
                 str(horas_futuro)
             )
             return [dict(r) for r in rows]
