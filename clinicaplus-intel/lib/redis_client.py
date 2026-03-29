@@ -1,7 +1,7 @@
 import redis.asyncio as redis
 import os
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379").strip().strip('"').strip("'")
 
 class RedisClient:
     def __init__(self):

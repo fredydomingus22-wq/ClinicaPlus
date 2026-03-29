@@ -8,7 +8,7 @@ _pool: Optional[asyncpg.Pool] = None
 async def init_pool():
     global _pool
     if _pool is None:
-        dsn = os.environ.get("DATABASE_URL")
+        dsn = os.environ.get("DATABASE_URL", "").strip().strip('"').strip("'")
         if not dsn:
             raise ValueError("DATABASE_URL environment variable is not set")
         
