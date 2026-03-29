@@ -37,6 +37,13 @@ class DialoguePolicy:
                 template_mensagem="humano"
             )
 
+        # 3. AGRADECIMENTO
+        if "AGRADECIMENTO_DETECTADO" in accoes_dst:
+            return PolicyDecision(
+                accao="AGRADECIMENTO",
+                template_mensagem="agradecimento"
+            )
+
         # 3. RESET
         if "RESET_SOLICITADO" in accoes_dst:
             return PolicyDecision(

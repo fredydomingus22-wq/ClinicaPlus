@@ -15,6 +15,10 @@ class NLGGenerator:
         elif template_nome == "humano":
             return "Vou transferir o seu atendimento para a nossa equipa humana. Por favor, aguarde um momento."
 
+        # 2b. Agradecimento
+        elif template_nome == "agradecimento":
+            return "De nada! 😊 Se precisar de mais alguma coisa, estou aqui. Cuide-se!"
+
         # 3. Urgência
         elif template_nome == "urgencia":
             esp = dados.get("especialidade", "Clínica Geral")

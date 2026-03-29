@@ -158,6 +158,8 @@ def analisar(texto: str, medicos: List[Dict] = None, especialidades: List[str] =
         return NLUResult(intencao="NEGACAO")
     if re.fullmatch(r'(ajuda|help|humano|atendente)', texto_lower):
         return NLUResult(intencao="AJUDA")
+    if re.search(r'\b(obrigad[oa]|brigad[oa]|valeu|muito obrigad[oa]|great|thanks|thank you)\b', texto_lower):
+        return NLUResult(intencao="AGRADECIMENTO")
     if len(texto.split()) <= 3 and re.search(r'\b(oi|olá|ola|iniciar|recomeçar|recomecar|bom dia|boa tarde|boa noite)\b', texto_lower):
         return NLUResult(intencao="RESET")
 

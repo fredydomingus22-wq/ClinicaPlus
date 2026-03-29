@@ -61,10 +61,13 @@ class DialogueStateTracker:
         # 2. Handle immediate intent actions
         if nlu.intencao == "RESET":
             accoes.append("RESET_SOLICITADO")
-            # Don't return yet, let it clear if needed (Policy handles actual reset)
-            
+
         if nlu.intencao == "AJUDA":
             accoes.append("AJUDA_SOLICITADA")
+
+        if nlu.intencao == "AGRADECIMENTO":
+            accoes.append("AGRADECIMENTO_DETECTADO")
+            teve_progresso = True
             
         if nlu.intencao == "URGENTE" or nlu.urgente:
             if "URGENCIA_DETECTADA" not in accoes:
