@@ -215,7 +215,7 @@ class ClinicaDB:
             occupied_rows = await c.fetch(
                 'SELECT "dataHora" FROM agendamentos '
                 'WHERE "medicoId" = $1 AND "dataHora"::date = $2 '
-                'AND estado NOT IN (\'CANCELADO\', \'REJEITADO\')',
+                'AND estado != \'CANCELADO\'',
                 medId, data_alvo
             )
             occupied_times = {r["dataHora"].replace(tzinfo=None) for r in occupied_rows}
