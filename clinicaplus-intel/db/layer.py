@@ -130,7 +130,7 @@ class ClinicaDB:
     async def paciente_por_telefone(self, clinicaId: str, tel: str) -> Optional[Paciente]:
         async with conn() as c:
             row = await c.fetchrow(
-                'SELECT * FROM pacientes WHERE "clinicaId" = $1 AND (telefone = $2 OR "telefoneSecundario" = $2)',
+                'SELECT * FROM pacientes WHERE "clinicaId" = $1 AND (telefone = $2)',
                 clinicaId, tel
             )
             if row:
