@@ -21,5 +21,5 @@ COPY . .
 ENV PORT=8001
 EXPOSE $PORT
 
-# Comando para iniciar o FastAPI via Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Inicia o servico via main.py para respeitar a variavel $PORT do Railway
+CMD ["python", "main.py"]

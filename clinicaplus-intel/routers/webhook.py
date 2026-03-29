@@ -148,14 +148,26 @@ async def processar_mensagem(payload: dict):
             return
 
         if event == "messages.upsert":
-            # Evolution v2 often nest messages in 'messages' array
-            msg = data.get("messages", [{}])[0]
+            # Evolution v2 sends 'messages' as an array in 'data'
+            messages = data.get("messages", [])
+            if not messages:
+                print(f"⚠️ Evento messages.upsert recebido mas array 'messages' está vazio.")
+                return
+            
+            msg = messages[0]
             if msg.get("key", {}).get("fromMe"): return
             
-            numero = msg["key"]["remoteJid"].split("@")[0]
+            # Use .get() to avoid KeyError if the message structure is unexpected
+            key = msg.get("key", {})
+            remote_id = key.get("remoteJid", "")
+            if not remote_id:
+                print(f"⚠️ Mensagem sem 'remoteJid' (key structure: {key})")
+                return
+                
+            numero = remote_id.split("@")[0]
             message = msg.get("message", {})
             
-            # Extract text (handles multiple message types)
+            # Extract text safely (handles multiple message types)
             texto = (
                 message.get("conversation") or 
                 message.get("extendedTextMessage", {}).get("text") or
@@ -165,7 +177,7 @@ async def processar_mensagem(payload: dict):
             push_name = msg.get("pushName", "")
             
             if not texto: 
-                print(f"ℹ️ Mensagem sem texto de {numero}. Ignorando.")
+                print(f"ℹ️ Mensagem sem texto legível de {numero}. Tipo: {list(message.keys())}")
                 return
             
             msg_id = msg["key"]["id"]

@@ -37,6 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rotas basicas
+@app.get("/")
+async def root():
+    return {"message": "ClinicaPlus Intelligence API", "status": "online"}
+
 # Registar rotas
 app.include_router(webhook_router)
 app.include_router(health_router)
@@ -45,4 +50,4 @@ app.include_router(admin_router)
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", "8001"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
