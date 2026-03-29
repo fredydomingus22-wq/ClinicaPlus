@@ -4,19 +4,21 @@ from nlu.pipeline import NLUResult
 
 @dataclass
 class DialogueState:
-    especialidade:  Optional[str] = None
-    medicoId:       Optional[str] = None
-    medicoNome:     Optional[str] = None
-    data_iso:       Optional[str] = None
-    dataLabel:      Optional[str] = None
-    periodo:        Optional[Dict[str, Any]] = None
-    slotHorario:    Optional[str] = None
-    slotLabel:      Optional[str] = None
-    pacienteId:     Optional[str] = None
-    turno:          int = 0
-    erros:          int = 0
-    ultimaAccao:    Optional[str] = None
-    caminhoSlots:   List[str] = field(default_factory=list)
+    especialidade:    Optional[str] = None
+    medicoId:         Optional[str] = None
+    medicoNome:       Optional[str] = None
+    data_iso:         Optional[str] = None
+    dataLabel:        Optional[str] = None
+    periodo:          Optional[Dict[str, Any]] = None
+    slotHorario:      Optional[str] = None
+    slotLabel:        Optional[str] = None
+    pacienteId:       Optional[str] = None
+    pacienteNome:     Optional[str] = None          # ← NOVO: nome do paciente identificado
+    agendamentoAtivo: Optional[Dict[str, Any]] = None  # ← NOVO: próximo agendamento activo
+    turno:            int = 0
+    erros:            int = 0
+    ultimaAccao:      Optional[str] = None
+    caminhoSlots:     List[str] = field(default_factory=list)
 
     def proximo_slot_em_falta(self) -> Optional[str]:
         """Returns the first missing mandatory slot in order."""
@@ -69,6 +71,10 @@ class DialogueStateTracker:
             accoes.append("AGRADECIMENTO_DETECTADO")
             teve_progresso = True
             
+        if nlu.intencao == "REAGENDAR":
+            accoes.append("REAGENDAR")
+            teve_progresso = True
+
         if nlu.intencao == "URGENTE" or nlu.urgente:
             if "URGENCIA_DETECTADA" not in accoes:
                 accoes.append("URGENCIA_DETECTADA")

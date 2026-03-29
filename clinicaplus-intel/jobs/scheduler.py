@@ -10,8 +10,9 @@ def start_scheduler():
     # 1. Reset conversas (Diário às 03:00)
     scheduler.add_job(expirar_conversas_job, CronTrigger(hour=3, minute=0, timezone="Africa/Luanda"))
     
-    # 2. Lembretes proactivos (Diário às 08:00)
+    # 2. Lembretes proactivos (Diário às 08:00 e 18:00)
     scheduler.add_job(lembrete_proactivo_job, CronTrigger(hour=8, minute=0, timezone="Africa/Luanda"))
+    scheduler.add_job(lembrete_proactivo_job, CronTrigger(hour=18, minute=0, timezone="Africa/Luanda"))
     
     # 3. Retrain No-Show model (Semanal, Segunda às 02:00)
     scheduler.add_job(retrain_noshow_job, CronTrigger(day_of_week='mon', hour=2, minute=0, timezone="Africa/Luanda"))

@@ -181,6 +181,19 @@ class ClinicaDB:
             return [dict(r) for r in rows]
         return []
 
+    async def obter_agendamentos_para_lembrete(self, horas_futuro: int = 48) -> List[Dict[str, Any]]:
+        """Alias for obter_lembretes_pendentes to match job nomenclature."""
+        return await self.obter_lembretes_pendentes(horas_futuro)
+
+    async def confirmar_presenca_wa(self, agendamento_id: str) -> bool:
+        """Marca um agendamento como confirmado via WhatsApp."""
+        async with conn() as c:
+            res = await c.execute(
+                'UPDATE agendamentos SET confirmado_wa = true WHERE id = $1',
+                agendamento_id
+            )
+            return "UPDATE 1" in res
+
     async def slots_por_regra(self, clinicaId: str, medId: str, data_alvo: date, limite: int = 8) -> List[SlotDisponivel]:
         """Calcula slots disponíveis baseando-se no horário do médico e agendamentos existentes."""
         async with conn() as c:

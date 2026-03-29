@@ -55,14 +55,30 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     else:
         try:
             ctx = conversa.contexto or {}
-            # Garantir que caminhoSlots é sempre lista
-            if "caminhoSlots" in ctx and not isinstance(ctx["caminhoSlots"], list):
-                ctx["caminhoSlots"] = []
             estado = DialogueState.from_dict(ctx)
             print(f"🧠 Estado carregado para {numero}: esp={estado.especialidade} data={estado.data_iso} slot={estado.slotHorario} turno={estado.turno} ultimaAccao={estado.ultimaAccao}")
         except Exception as e:
             print(f"⚠️ Erro ao reconstruir estado para {numero}: {e}. A resetar.")
             estado = DialogueState()
+
+    # 1.2 Patient Recognition (if not already known)
+    if not estado.pacienteId:
+        paciente = await db.paciente_por_telefone(clinica_id, numero)
+        if paciente:
+            estado.pacienteId = paciente.id
+            estado.pacienteNome = paciente.nome
+            print(f"👤 Paciente reconhecido: {paciente.nome} ({paciente.id})")
+            
+            # Check for active appointments
+            agendamentos = await db.agendamentos_ativos_paciente(clinica_id, paciente.id)
+            if agendamentos:
+                from dataclasses import asdict
+                # We store the next active appointment in the state
+                estado.agendamentoAtivo = asdict(agendamentos[0])
+                # Convert datetime to string for JSON compatibility if needed (DialogueState from_dict/asdict handles it usually, but let's be safe)
+                if isinstance(estado.agendamentoAtivo.get("dataHora"), (datetime, date)):
+                    estado.agendamentoAtivo["dataHora"] = estado.agendamentoAtivo["dataHora"].isoformat()
+                print(f"📅 Agendamento ativo encontrado: {estado.agendamentoAtivo['id']}")
 
     # 1.5 Cache Layer
     medicos = await get_medicos_activos(clinica_id)
@@ -143,7 +159,32 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         msg_txt = nlg.gerar_resposta("confirmacao_final", dados_sucesso)
         await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
         print(f"📅 Agendamento criado para {numero}: {dados_sucesso}")
+
+    elif decisao.accao == "CONFIRMAR_PRESENCA":
+        ag_id = novo_estado.agendamentoAtivo.get("id")
+        if ag_id:
+            await db.confirmar_presenca_wa(ag_id)
+            print(f"✅ Presença confirmada via WA para agendamento {ag_id}")
         
+        msg_txt = nlg.gerar_resposta(template_nome, decisao.dados_extra)
+        await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
+        # Manter estado mas limpar agendamentoAtivo para não repetir a pergunta
+        novo_estado.agendamentoAtivo = None
+
+    elif decisao.accao == "REAGENDAR":
+        # Resetar slots para iniciar novo fluxo de marcação
+        ag_ativo = novo_estado.agendamentoAtivo
+        novo_estado.especialidade = ag_ativo.get("medicoEsp")
+        novo_estado.medicoId = ag_ativo.get("medicoId")
+        novo_estado.medicoNome = ag_ativo.get("medicoNome")
+        novo_estado.data_iso = None
+        novo_estado.slotHorario = None
+        novo_estado.agendamentoAtivo = None
+        
+        msg_txt = nlg.gerar_resposta(template_nome, decisao.dados_extra)
+        await evo_client.enviar_texto(instancia_nome, numero, msg_txt)
+        # O próximo turno pedirá a data (Policy fará isso)
+
     else:
         # Standard text message
         msg_txt = nlg.gerar_resposta(template_nome, decisao.dados_extra)

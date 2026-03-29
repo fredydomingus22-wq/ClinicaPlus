@@ -51,7 +51,39 @@ class DialoguePolicy:
                 template_mensagem="boas_vindas"
             )
 
-        # 4. CONFIRMATION HANDLING
+        # 5. PACIENTE RECONHECIDO COM AGENDAMENTO (Turno 0/1)
+        if estado.agendamentoAtivo and (estado.turno <= 1 or estado.ultimaAccao == "MOSTRAR_AGENDAMENTO_ATIVO"):
+            # Se o utilizador já respondeu ao agendamento ativo
+            if estado.ultimaAccao == "MOSTRAR_AGENDAMENTO_ATIVO":
+                if "CONFIRMACAO:AFIRMACAO" in accoes_dst:
+                    return PolicyDecision(
+                        accao="CONFIRMAR_PRESENCA",
+                        template_mensagem="confirmacao_presenca_sucesso",
+                        dados_extra={"agendamento": estado.agendamentoAtivo}
+                    )
+                if "REAGENDAR" in accoes_dst:
+                    return PolicyDecision(
+                        accao="REAGENDAR",
+                        template_mensagem="reagendar_inicio",
+                        dados_extra={"agendamento": estado.agendamentoAtivo}
+                    )
+                if "RESET_SOLICITADO" in accoes_dst:
+                    return PolicyDecision(
+                        accao="RESET",
+                        template_mensagem="boas_vindas"
+                    )
+
+            # Se é o primeiro contacto e tem agendamento, mostra-o
+            return PolicyDecision(
+                accao="MOSTRAR_AGENDAMENTO_ATIVO",
+                template_mensagem="agendamento_ativo",
+                dados_extra={
+                    "agendamento": estado.agendamentoAtivo,
+                    "nome": estado.pacienteNome or "Paciente"
+                }
+            )
+
+        # 4. CONFIRMATION HANDLING (Flow Normal)
         if estado.ultimaAccao == "AGUARDA_CONFIRMACAO":
             if "CONFIRMACAO:AFIRMACAO" in accoes_dst:
                 return PolicyDecision(

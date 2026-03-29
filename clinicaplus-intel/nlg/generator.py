@@ -53,22 +53,42 @@ class NLGGenerator:
                 f"Confirma este agendamento?"
             )
 
-        elif template_nome == "confirmacao_final":  # Booking foi criado com sucesso
+        elif template_nome == "confirmado" or template_nome == "confirmacao_final":
             esp = dados.get("especialidade", "")
-            medico = dados.get("medicoNome", "")
-            data_label = dados.get("dataLabel", "") or dados.get("data_iso", "")
-            hora_label = dados.get("slotLabel", "") or (dados.get("slotHorario", "")[:5] if dados.get("slotHorario") else "")
-            return (
-                f"✅ *Consulta Marcada com Sucesso!*\n\n"
-                f"🏥 {esp}\n"
-                f"👨‍⚕️ {medico}\n"
-                f"📅 {data_label} às {hora_label}\n\n"
-                f"Pedimos que chegue 15 min antes.\n"
-                f"Se precisar cancelar ou reagendar, contacte-nos. Até breve! 😊"
-            )
+            med = dados.get("medicoNome", "")
+            data = dados.get("dataLabel", "") or dados.get("data_iso", "")
+            hora = dados.get("slotLabel", "") or (dados.get("slotHorario", "")[:5] if dados.get("slotHorario") else "")
+            return (f"✅ *Consulta Marcada com Sucesso!*\n\n"
+                    f"🏥 Especialidade: *{esp}*\n"
+                    f"👨‍⚕️ Médico: *{med}*\n"
+                    f"📅 Data: *{data}*\n"
+                    f"🕐 Hora: *{hora}*\n\n"
+                    f"Chegue com 15 min de antecedência. Até lá! 👋")
 
-        elif template_nome == "confirmado":  # fallback genérico pós-confirmação
-            return "✅ Tudo confirmado! Receberá um lembrete em breve."
+        # 6. Paciente Reconhecido (Proactivo)
+        elif template_nome == "agendamento_ativo":
+            nome = dados.get("nome", "Paciente")
+            ag = dados.get("agendamento", {})
+            esp = ag.get("medicoEsp", "Consulta")
+            med = ag.get("medicoNome", "Médico")
+            try:
+                dt_obj = datetime.fromisoformat(ag.get("dataHora", ""))
+                dt_label = dt_obj.strftime("%d/%m às %H:%M")
+            except:
+                dt_label = ag.get("dataHora", "")
+            
+            return (f"Olá {nome}! 👋\n\n"
+                    f"Identifiquei que tem uma consulta marcada:\n"
+                    f"🏥 *{esp}*\n"
+                    f"👨‍⚕️ *{med}*\n"
+                    f"📅 *{dt_label}*\n\n"
+                    f"Como posso ajudar?")
+
+        elif template_nome == "confirmacao_presenca_sucesso":
+            return "Excelente! 👌 A sua presença foi confirmada no sistema. Esperamos por si!"
+
+        elif template_nome == "reagendar_inicio":
+            return "Com certeza. Vamos encontrar um novo horário. Para quando deseja reagendar?"
             
         elif template_nome == "confirmar_unico_slot":
             slot = dados.get("slot")

@@ -32,10 +32,14 @@ async def lembrete_proactivo_job():
             )
             opcoes = ["✅ Confirmar", "❌ Cancelar", "🔄 Reagendar"]
             
+            # Send text intro before poll for better context
+            intro = f"Olá {ag['paciente_nome']}! Estamos a passar para confirmar a sua consulta."
+            await evo.enviar_texto(ag["instancia_nome"], ag["telefone"], intro)
+            
             # Send poll (Evolution API)
             print(f"Enviando lembrete para {ag['telefone']} (Agendamento: {ag['id']})")
             await evo.enviar_poll(
-                instance=ag["instancia_nome"],
+                instancia_nome=ag["instancia_nome"],
                 numero=ag["telefone"],
                 pergunta=pergunta,
                 opcoes=opcoes
