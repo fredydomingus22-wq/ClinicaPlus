@@ -79,9 +79,9 @@ class ClinicaDB:
         async with conn() as c:
             await c.execute(
                 """INSERT INTO wa_conversas (id, "clinicaId", "instanciaId", "numeroWhatsapp", estado, contexto, ultima_mensagem_em, expira_em, criado_em)
-                   VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, NOW(), NOW() + interval '24 hours', NOW())
+                   VALUES (gen_random_uuid()::text, $1, $2, $3, $4::"WaEstadoConversa", $5::jsonb, NOW(), NOW() + interval '24 hours', NOW())
                    ON CONFLICT ("instanciaId", "numeroWhatsapp") DO UPDATE 
-                   SET estado = $4, contexto = $5, ultima_mensagem_em = NOW(), expira_em = NOW() + interval '24 hours'""",
+                   SET estado = $4::"WaEstadoConversa", contexto = $5::jsonb, ultima_mensagem_em = NOW(), expira_em = NOW() + interval '24 hours'""",
                 clinicaId, instanciaId, numero, estado_obj.ultimaAccao or "AGUARDA_INPUT", contexto_json
             )
 
