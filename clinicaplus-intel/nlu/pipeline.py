@@ -152,11 +152,15 @@ def analisar(texto: str, medicos: List[Dict] = None, especialidades: List[str] =
     texto_lower = texto.lower()
     
     # 1. Immediate Intents (Short messages)
-    if re.fullmatch(r'(sim|s|ok|claro|vá|tá|certo|confirmar|vambora)', texto_lower):
+    # Strip emojis and leading/trailing whitespace for clean matching (handles poll answers like "✅ Confirmar")
+    import unicodedata
+    texto_clean = ''.join(c for c in texto_lower if unicodedata.category(c) not in ('So', 'Mn')).strip()
+
+    if re.fullmatch(r'(sim|s|ok|claro|vá|tá|certo|confirmar|vambora)', texto_clean):
         return NLUResult(intencao="AFIRMACAO")
-    if re.fullmatch(r'(não|nao|n|no|nunca|negativo|cancelar)', texto_lower):
+    if re.fullmatch(r'(não|nao|n|no|nunca|negativo|cancelar)', texto_clean):
         return NLUResult(intencao="NEGACAO")
-    if re.fullmatch(r'(ajuda|help|humano|atendente)', texto_lower):
+    if re.fullmatch(r'(ajuda|help|humano|atendente)', texto_clean):
         return NLUResult(intencao="AJUDA")
     if re.search(r'\b(obrigad[oa]|brigad[oa]|valeu|muito obrigad[oa]|great|thanks|thank you)\b', texto_lower):
         return NLUResult(intencao="AGRADECIMENTO")
