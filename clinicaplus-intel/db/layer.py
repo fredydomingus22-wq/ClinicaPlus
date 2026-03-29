@@ -231,17 +231,23 @@ class ClinicaDB:
                 if curr > agora and curr not in occupied_times:
                     # Checar se não está na pausa (se houver)
                     na_pausa = False
-                    if "pausaInicio" in rule and "pausaFim" in rule:
-                        p_ini = datetime.combine(data_alvo, datetime.min.time()).replace(
-                            hour=int(rule["pausaInicio"].split(":")[0]),
-                            minute=int(rule["pausaInicio"].split(":")[1])
-                        )
-                        p_fim = datetime.combine(data_alvo, datetime.min.time()).replace(
-                            hour=int(rule["pausaFim"].split(":")[0]),
-                            minute=int(rule["pausaFim"].split(":")[1])
-                        )
-                        if p_ini <= curr < p_fim:
-                            na_pausa = True
+                    p_ini_raw = rule.get("pausaInicio", "")
+                    p_fim_raw = rule.get("pausaFim", "")
+                    if p_ini_raw and p_fim_raw and ":" in p_ini_raw and ":" in p_fim_raw:
+                        try:
+                            p_ini = datetime.combine(data_alvo, datetime.min.time()).replace(
+                                hour=int(p_ini_raw.split(":")[0]),
+                                minute=int(p_ini_raw.split(":")[1])
+                            )
+                            p_fim = datetime.combine(data_alvo, datetime.min.time()).replace(
+                                hour=int(p_fim_raw.split(":")[0]),
+                                minute=int(p_fim_raw.split(":")[1])
+                            )
+                            if p_ini <= curr < p_fim:
+                                na_pausa = True
+                        except (ValueError, IndexError):
+                            pass  # Formato inválido — ignorar pausa
+
                     
                     if not na_pausa:
                         slots.append(SlotDisponivel(
