@@ -179,6 +179,16 @@ async def processar_mensagem(payload: dict):
                 message.get("buttonsResponseMessage", {}).get("selectedButtonId") or
                 message.get("listResponseMessage", {}).get("singleSelectReply", {}).get("selectedRowId")
             )
+            
+            if not texto and message.get("pollUpdateMessage"):
+                # Handle poll update inside UPSERT
+                try:
+                    votes = message.get("pollUpdateMessage", {}).get("vote", {}).get("selectedOptions", [])
+                    if votes:
+                        texto = votes[0]
+                except:
+                    pass
+            
             push_name = msg.get("pushName", "")
             
             if not texto: 
