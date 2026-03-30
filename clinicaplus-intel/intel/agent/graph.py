@@ -7,6 +7,7 @@ from .nodes.intent_agent   import intent_node
 from .nodes.booking_agent  import booking_node
 from .nodes.info_agent     import info_node
 from .nodes.escalation_agent import escalation_node
+from .nodes.retrieval_node  import retrieval_node
 import os
 
 def _route_supervisor(state: ConversaState) -> str:
@@ -20,8 +21,9 @@ def build_graph() -> StateGraph:
     builder = StateGraph(ConversaState)
 
     # ── Nós ──────────────────────────────────────────────────────────────────
-    builder.add_node("supervisor",  supervisor_node)
     builder.add_node("intent",      intent_node)
+    builder.add_node("retrieval",   retrieval_node)
+    builder.add_node("supervisor",  supervisor_node)
     builder.add_node("booking",     booking_node)
     builder.add_node("info",        info_node)
     builder.add_node("escalation",  escalation_node)
@@ -30,8 +32,11 @@ def build_graph() -> StateGraph:
     # Começa sempre pelo intent (classificar o que o paciente quer)
     builder.add_edge(START, "intent")
 
-    # Intent → Supervisor (supervisor decide quem actua)
-    builder.add_edge("intent", "supervisor")
+    # Intent → Retrieval (buscar dados determinísticos)
+    builder.add_edge("intent", "retrieval")
+
+    # Retrieval → Supervisor (supervisor decide quem actua)
+    builder.add_edge("retrieval", "supervisor")
 
     # Supervisor → agente especialista (routing condicional)
     builder.add_conditional_edges(

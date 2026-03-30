@@ -24,6 +24,9 @@ class ConversaState(TypedDict):
     data_preferida: Optional[str]
     periodo:       Optional[str]
 
+    # Dados recuperados determinísticamente da DB (RAG estruturado)
+    clinica_dados:     Optional[dict]
+
     # Controlo de custos
     tokens_usados:     int
     custo_estimado_usd: float

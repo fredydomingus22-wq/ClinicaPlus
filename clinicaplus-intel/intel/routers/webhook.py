@@ -43,10 +43,16 @@ _redis = redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379"), d
 cost_tracker = CostTracker(_redis)
 
 async def get_clinica_nome(clinica_id: str) -> str:
-    """Helper para buscar nome da clínica."""
+    """Helper para buscar nome da clínica com log de erro."""
     async with db.conn() as c:
-        row = await c.fetchrow("SELECT nome FROM clinicas WHERE id = $1", clinica_id)
-        return row["nome"] if row else "Clínica"
+        try:
+            # Prisma mapeia para 'clinicas' minúsculo via @@map
+            row = await c.fetchrow('SELECT nome FROM clinicas WHERE id = $1', clinica_id)
+            if row: return row["nome"]
+            print(f"⚠️ Clínica {clinica_id} não encontrada.")
+        except Exception as e:
+            print(f"❌ Erro DB ao buscar nome da clínica {clinica_id}: {e}")
+        return "Clínica"
 
 async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia_nome: str, numero: str, texto: str, push_name: str, msg_raw: Optional[dict] = None):
     # 1. Thread ID único por conversa (LangGraph cuida do histórico no Redis)
@@ -59,12 +65,25 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     # 3. Obter o grafo (Singleton)
     graph = await get_graph()
 
-    # 4. Estado inicial e Compressão (LangGraph fará o merge se já existir histórico no Redis)
+    # 4. Estado inicial e Estabilização de Sessão
     clinica_nome = await get_clinica_nome(clinica_id)
     
-    # Compressão de Histórico (Regra 7)
+    # Lógica de resete: se inactividade > 30min, limpamos o histórico
+    last_act_key = f"last_activity:{thread_id}"
+    last_ts = await _redis.get(last_act_key)
+    agora = datetime.now().timestamp()
+    timeout = 1800 # 30 min
+    
+    force_reset = False
+    if last_ts and (agora - float(last_ts)) > timeout:
+        print(f"🔄 Sessão expirada para {numero} (>30min). Forçando resete.")
+        force_reset = True
+    
+    await _redis.set(last_act_key, str(agora))
+    
+    # Compressão de Histórico (Regra 7) — Só corre se não for reset
     existing_state = await graph.aget_state(config)
-    if existing_state and existing_state.values:
+    if existing_state and existing_state.values and not force_reset:
         mensagens_existentes = existing_state.values.get("messages", [])
         if len(mensagens_existentes) > 6:
             print(f"🗜️ Comprimindo histórico para {numero}...")
@@ -87,7 +106,15 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         "max_turnos":        10,
         "tokens_usados":     0,
         "custo_estimado_usd": 0.0,
+        "clinica_dados":     None, # Preenchido pelo retrieval_node
     }
+
+    if force_reset and existing_state and existing_state.values:
+        # Enviar RemoveMessage para todas as mensagens anteriores
+        old_msgs = existing_state.values.get("messages", [])
+        delete_cmds = [RemoveMessage(id=m.id) for m in old_msgs if getattr(m, "id", None)]
+        if delete_cmds:
+            await graph.aupdate_state(config, {"messages": delete_cmds})
 
     # 5. Invocar o grafo
     # Nota: LangGraph gere o histórico via AsyncRedisSaver configurado em graph.py
