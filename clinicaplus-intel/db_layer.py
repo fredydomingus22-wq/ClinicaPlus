@@ -111,21 +111,22 @@ class ClinicaDB:
     ) -> list[Medico]:
         """
         Retorna médicos activos de uma especialidade.
-        Índice usado: @@index([clinicaId, especialidade])
+        Índice usado: @@index([clinicaId, especialidadeId])
         """
         async with conn() as c:
             rows = await c.fetch("""
-                SELECT id, nome, especialidade, preco, ativo, clinica_id
-                FROM medicos
-                WHERE clinica_id = $1
-                  AND especialidade = $2
-                  AND ativo = true
-                ORDER BY nome
+                SELECT m.id, m.nome, e.nome AS especialidade_nome, m.preco, m.ativo, m."clinicaId"
+                FROM medicos m
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                WHERE m."clinicaId" = $1
+                  AND e.nome = $2
+                  AND m.ativo = true
+                ORDER BY m.nome
             """, clinicaId, especialidade)
 
         return [Medico(
-            id=r["id"], nome=r["nome"], especialidade=r["especialidade"],
-            preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinica_id"],
+            id=r["id"], nome=r["nome"], especialidade=r["especialidade_nome"],
+            preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinicaId"],
         ) for r in rows]
 
 
@@ -139,15 +140,16 @@ class ClinicaDB:
         """
         async with conn() as c:
             r = await c.fetchrow("""
-                SELECT id, nome, especialidade, preco, ativo, clinica_id
-                FROM medicos
-                WHERE clinica_id = $1 AND id = $2
+                SELECT m.id, m.nome, e.nome AS especialidade_nome, m.preco, m.ativo, m."clinicaId"
+                FROM medicos m
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                WHERE m."clinicaId" = $1 AND m.id = $2
             """, clinicaId, medicoId)
 
         if not r: return None
         return Medico(
-            id=r["id"], nome=r["nome"], especialidade=r["especialidade"],
-            preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinica_id"],
+            id=r["id"], nome=r["nome"], especialidade=r["especialidade_nome"],
+            preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinicaId"],
         )
 
 
@@ -158,12 +160,13 @@ class ClinicaDB:
         """
         async with conn() as c:
             rows = await c.fetch("""
-                SELECT DISTINCT especialidade
-                FROM medicos
-                WHERE clinica_id = $1 AND ativo = true
-                ORDER BY especialidade
+                SELECT DISTINCT e.nome
+                FROM medicos m
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                WHERE m."clinicaId" = $1 AND m.ativo = true
+                ORDER BY e.nome
             """, clinicaId)
-        return [r["especialidade"] for r in rows]
+        return [r["nome"] for r in rows]
 
 
     # ── Slots disponíveis ──────────────────────────────────────────────────────
@@ -172,136 +175,96 @@ class ClinicaDB:
         self,
         clinicaId:    str,
         medicoId:     str,
-        data_inicio:  Optional[date] = None,
-        data_fim:     Optional[date] = None,
-        hora_inicio:  Optional[int]  = None,  # ex: 7
-        hora_fim:     Optional[int]  = None,  # ex: 12
-        limite:       int = 5,
+        data_alvo:    Optional[date] = None,
+        periodo_ini:  Optional[int]  = None,
+        periodo_fim:  Optional[int]  = None,
+        limite:       int = 6,
     ) -> list[SlotDisponivel]:
         """
-        Slots livres de um médico com filtros opcionais de data e período.
-
-        Lógica de slot livre:
-            - slot existe na grelha de horários do médico (HorarioMedico)
-            - não existe agendamento com estado != CANCELADO nesse slot
+        Calcula slots disponíveis baseando-se no horário JSON do médico e agendamentos existentes.
+        Substitui a antiga query à tabela inexistente 'horarios_medico'.
+        """
+        target_date = data_alvo or datetime.now(LUANDA_TZ).date()
         
-        Índice usado: @@index([clinicaId, medicoId, dataHora]) — slot conflict check
-        """
-        agora  = datetime.now(LUANDA_TZ)
-        d_ini  = datetime(
-            data_inicio.year, data_inicio.month, data_inicio.day,
-            hora_inicio or 0, 0, 0, tzinfo=LUANDA_TZ,
-        ) if data_inicio else agora
-
-        d_fim_dt = None
-        if data_fim:
-            d_fim_dt = datetime(
-                data_fim.year, data_fim.month, data_fim.day,
-                hora_fim or 23, 59, 59, tzinfo=LUANDA_TZ,
-            )
-
         async with conn() as c:
-            # Query: slots da grelha que não têm agendamento activo
-            # Assume tabela horarios_medico { id, medico_id, clinica_id, data_hora, duracao_min }
-            # Se não tiveres esta tabela ainda, ver nota abaixo*
-            rows = await c.fetch("""
-                SELECT
-                    hm.data_hora,
-                    m.id       AS medico_id,
-                    m.nome     AS medico_nome,
-                    m.preco    AS preco
-                FROM horarios_medico hm
-                JOIN medicos m ON m.id = hm.medico_id
-                WHERE hm.clinica_id   = $1
-                  AND hm.medico_id    = $2
-                  AND hm.data_hora   >= $3
-                  AND ($4::timestamptz IS NULL OR hm.data_hora <= $4)
-                  AND ($5::int IS NULL OR EXTRACT(HOUR FROM hm.data_hora AT TIME ZONE 'Africa/Luanda') >= $5)
-                  AND ($6::int IS NULL OR EXTRACT(HOUR FROM hm.data_hora AT TIME ZONE 'Africa/Luanda') <  $6)
-                  AND NOT EXISTS (
-                      SELECT 1 FROM agendamentos a
-                      WHERE a.clinica_id = $1
-                        AND a.medico_id  = $2
-                        AND a.data_hora  = hm.data_hora
-                        AND a.estado NOT IN ('CANCELADO')
-                  )
-                ORDER BY hm.data_hora
-                LIMIT $7
-            """, clinicaId, medicoId, d_ini, d_fim_dt, hora_inicio, hora_fim, limite)
+            # 1. Buscar médico e sua regra de horário
+            med_row = await c.fetchrow("""
+                SELECT id, nome, preco, horario, "duracaoConsulta" 
+                FROM medicos 
+                WHERE id = $1 AND "clinicaId" = $2 AND ativo = true
+            """, medicoId, clinicaId)
+            
+            if not med_row: return []
 
-        return [SlotDisponivel(
-            dataHora=r["data_hora"],
-            medicoId=r["medico_id"],
-            medicoNome=r["medico_nome"],
-            preco=r["preco"],
-        ) for r in rows]
+            import json as _json
+            horario = _json.loads(med_row["horario"]) if isinstance(med_row["horario"], str) else med_row["horario"]
+            duracao = med_row["duracaoConsulta"] or 30
+            
+            # 2. Identificar dia da semana (pt)
+            dias_semana = ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]
+            dia_pt = dias_semana[target_date.weekday()]
+            
+            rule = horario.get(dia_pt)
+            if not rule or not rule.get("ativo"):
+                return []
 
-    # *NOTA: se não tiveres tabela horarios_medico ainda, alternativa simples:
-    # gerar slots a partir de regras (08:00-18:00, de 30 em 30 min)
-    # e excluir os que têm agendamento — ver slots_por_regra() abaixo
+            try:
+                h_ini, m_ini = map(int, rule["inicio"].split(":"))
+                h_fim, m_fim = map(int, rule["fim"].split(":"))
+            except:
+                return []
 
-    async def slots_por_regra(
-        self,
-        clinicaId:   str,
-        medicoId:    str,
-        data:        date,
-        hora_ini:    int = 8,
-        hora_fim:    int = 18,
-        intervalo:   int = 30,   # minutos
-        limite:      int = 5,
-        periodo_ini: Optional[int] = None,
-        periodo_fim: Optional[int] = None,
-    ) -> list[SlotDisponivel]:
-        """
-        Gera slots de forma programática (sem tabela de horários) e
-        exclui os ocupados via query.
-        Útil enquanto não há tabela horarios_medico.
-        """
-        # Gerar todos os slots do dia
-        slots_candidatos = []
-        base = datetime(data.year, data.month, data.day, hora_ini, 0, tzinfo=LUANDA_TZ)
-        fim  = datetime(data.year, data.month, data.day, hora_fim, 0, tzinfo=LUANDA_TZ)
-        agora = datetime.now(LUANDA_TZ)
+            # 3. Buscar agendamentos ocupados no dia
+            occupied_rows = await c.fetch("""
+                SELECT "dataHora" FROM agendamentos 
+                WHERE "medicoId" = $1 AND "dataHora"::date = $2 
+                AND estado NOT IN ('CANCELADO')
+            """, medicoId, target_date)
+            occupied_times = {r["dataHora"].replace(tzinfo=None) for r in occupied_rows}
 
-        while base < fim:
-            if base > agora:  # só slots futuros
-                h = base.hour
-                if (periodo_ini is None or h >= periodo_ini) and \
-                   (periodo_fim is None or h <  periodo_fim):
-                    slots_candidatos.append(base)
-            base += timedelta(minutes=intervalo)
+            # 4. Gerar slots e filtrar
+            slots = []
+            curr = datetime.combine(target_date, datetime.min.time()).replace(hour=h_ini, minute=m_ini)
+            end_limit = datetime.combine(target_date, datetime.min.time()).replace(hour=h_fim, minute=m_fim)
+            agora = datetime.now(LUANDA_TZ).replace(tzinfo=None)
 
-        if not slots_candidatos:
-            return []
+            while curr < end_limit and len(slots) < limite:
+                hour = curr.hour
+                if curr > agora and curr not in occupied_times:
+                    # Filtro de período (manhã/tarde)
+                    if (periodo_ini is None or hour >= periodo_ini) and \
+                       (periodo_fim is None or hour <  periodo_fim):
+                        
+                        # Checar pausa
+                        na_pausa = False
+                        p_ini_raw = rule.get("pausaInicio")
+                        p_fim_raw = rule.get("pausaFim")
+                        if p_ini_raw and p_fim_raw:
+                            try:
+                                ph_ini, pm_ini = map(int, p_ini_raw.split(":"))
+                                ph_fim, pm_fim = map(int, p_fim_raw.split(":"))
+                                pausa_ini = curr.replace(hour=ph_ini, minute=pm_ini)
+                                pausa_fim = curr.replace(hour=ph_fim, minute=pm_fim)
+                                if pausa_ini <= curr < pausa_fim:
+                                    na_pausa = True
+                            except: pass
 
-        # Buscar slots ocupados na DB
-        async with conn() as c:
-            ocupados = await c.fetch("""
-                SELECT data_hora FROM agendamentos
-                WHERE clinica_id = $1
-                  AND medico_id  = $2
-                  AND data_hora  = ANY($3::timestamptz[])
-                  AND estado NOT IN ('CANCELADO')
-            """, clinicaId, medicoId, slots_candidatos)
+                        if not na_pausa:
+                            slots.append(SlotDisponivel(
+                                dataHora=curr.replace(tzinfo=LUANDA_TZ),
+                                medicoId=medicoId,
+                                medicoNome=med_row["nome"],
+                                preco=med_row["preco"]
+                            ))
+                
+                curr += timedelta(minutes=duracao)
 
-        ocupados_set = {r["data_hora"] for r in ocupados}
+            return slots
 
-        # Médico
-        medico = await self.medico_por_id(clinicaId, medicoId)
-        if not medico:
-            return []
 
-        livres = [
-            SlotDisponivel(
-                dataHora=s,
-                medicoId=medicoId,
-                medicoNome=medico.nome,
-                preco=medico.preco,
-            )
-            for s in slots_candidatos
-            if s not in ocupados_set
-        ]
-        return livres[:limite]
+    async def slots_por_regra(self, *args, **kwargs) -> list[SlotDisponivel]:
+        """Alias para manter retrocompatibilidade com as ferramentas do agente."""
+        return await self.slots_disponiveis(*args, **kwargs)
 
 
     # ── Pacientes ──────────────────────────────────────────────────────────────
@@ -317,17 +280,17 @@ class ClinicaDB:
         """
         async with conn() as c:
             r = await c.fetchrow("""
-                SELECT id, nome, telefone, data_nascimento, alergias, clinica_id, origem
+                SELECT id, nome, telefone, "dataNascimento", alergias, "clinicaId", origem
                 FROM pacientes
-                WHERE clinica_id = $1 AND telefone = $2
+                WHERE "clinicaId" = $1 AND telefone = $2
                 LIMIT 1
             """, clinicaId, telefone)
 
         if not r: return None
         return Paciente(
             id=r["id"], nome=r["nome"], telefone=r["telefone"],
-            dataNascimento=r["data_nascimento"], alergias=r["alergias"],
-            clinicaId=r["clinica_id"], origem=r["origem"] or "DIRECTO",
+            dataNascimento=r["dataNascimento"], alergias=r["alergias"],
+            clinicaId=r["clinicaId"], origem=r["origem"] or "DIRECTO",
         )
 
 
@@ -338,16 +301,16 @@ class ClinicaDB:
     ) -> Optional[Paciente]:
         async with conn() as c:
             r = await c.fetchrow("""
-                SELECT id, nome, telefone, data_nascimento, alergias, clinica_id, origem
+                SELECT id, nome, telefone, "dataNascimento", alergias, "clinicaId", origem
                 FROM pacientes
-                WHERE clinica_id = $1 AND id = $2
+                WHERE "clinicaId" = $1 AND id = $2
             """, clinicaId, pacienteId)
 
         if not r: return None
         return Paciente(
             id=r["id"], nome=r["nome"], telefone=r["telefone"],
-            dataNascimento=r["data_nascimento"], alergias=r["alergias"],
-            clinicaId=r["clinica_id"], origem=r["origem"] or "DIRECTO",
+            dataNascimento=r["dataNascimento"], alergias=r["alergias"],
+            clinicaId=r["clinicaId"], origem=r["origem"] or "DIRECTO",
         )
 
 
@@ -361,28 +324,28 @@ class ClinicaDB:
     ) -> list[Agendamento]:
         """
         Próximas consultas do paciente (estado activo, data futura).
-        Índice: @@index([clinicaId, pacienteId])
         """
         agora = datetime.now(LUANDA_TZ)
         async with conn() as c:
             rows = await c.fetch("""
                 SELECT
-                    a.id, a.data_hora, a.estado, a.canal,
-                    m.nome AS medico_nome, m.especialidade AS medico_esp,
+                    a.id, a."dataHora", a.estado, a.canal,
+                    m.nome AS medico_nome, e.nome AS medico_esp,
                     p.nome AS paciente_nome
                 FROM agendamentos a
-                JOIN medicos  m ON m.id = a.medico_id
-                JOIN pacientes p ON p.id = a.paciente_id
-                WHERE a.clinica_id  = $1
-                  AND a.paciente_id = $2
-                  AND a.data_hora  >= $3
+                JOIN medicos   m ON m.id = a."medicoId"
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                JOIN pacientes p ON p.id = a."pacienteId"
+                WHERE a."clinicaId"  = $1
+                  AND a."pacienteId" = $2
+                  AND a."dataHora"  >= $3
                   AND a.estado NOT IN ('CANCELADO', 'NAO_COMPARECEU')
-                ORDER BY a.data_hora
+                ORDER BY a."dataHora"
                 LIMIT $4
             """, clinicaId, pacienteId, agora, limite)
 
         return [Agendamento(
-            id=r["id"], dataHora=r["data_hora"], estado=r["estado"],
+            id=r["id"], dataHora=r["dataHora"], estado=r["estado"],
             canal=r["canal"] or "PRESENCIAL",
             medicoNome=r["medico_nome"], medicoEsp=r["medico_esp"],
             pacienteNome=r["paciente_nome"], clinicaId=clinicaId,
@@ -400,21 +363,22 @@ class ClinicaDB:
         async with conn() as c:
             rows = await c.fetch("""
                 SELECT
-                    a.id, a.data_hora, a.estado, a.canal,
-                    m.nome AS medico_nome, m.especialidade AS medico_esp,
+                    a.id, a."dataHora", a.estado, a.canal,
+                    m.nome AS medico_nome, e.nome AS medico_esp,
                     p.nome AS paciente_nome
                 FROM agendamentos a
-                JOIN medicos   m ON m.id = a.medico_id
-                JOIN pacientes p ON p.id = a.paciente_id
-                WHERE a.clinica_id  = $1
-                  AND a.paciente_id = $2
-                  AND a.data_hora   < $3
-                ORDER BY a.data_hora DESC
+                JOIN medicos   m ON m.id = a."medicoId"
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                JOIN pacientes p ON p.id = a."pacienteId"
+                WHERE a."clinicaId"  = $1
+                  AND a."pacienteId" = $2
+                  AND a."dataHora"   < $3
+                ORDER BY a."dataHora" DESC
                 LIMIT $4
             """, clinicaId, pacienteId, agora, limite)
 
         return [Agendamento(
-            id=r["id"], dataHora=r["data_hora"], estado=r["estado"],
+            id=r["id"], dataHora=r["dataHora"], estado=r["estado"],
             canal=r["canal"] or "PRESENCIAL",
             medicoNome=r["medico_nome"], medicoEsp=r["medico_esp"],
             pacienteNome=r["paciente_nome"], clinicaId=clinicaId,
@@ -430,18 +394,19 @@ class ClinicaDB:
         async with conn() as c:
             r = await c.fetchrow("""
                 SELECT
-                    a.id, a.data_hora, a.estado, a.canal,
-                    m.nome AS medico_nome, m.especialidade AS medico_esp,
+                    a.id, a."dataHora", a.estado, a.canal,
+                    m.nome AS medico_nome, e.nome AS medico_esp,
                     p.nome AS paciente_nome
                 FROM agendamentos a
-                JOIN medicos   m ON m.id = a.medico_id
-                JOIN pacientes p ON p.id = a.paciente_id
-                WHERE a.clinica_id = $1 AND a.id = $2
+                JOIN medicos   m ON m.id = a."medicoId"
+                JOIN especialidades e ON e.id = m."especialidadeId"
+                JOIN pacientes p ON p.id = a."pacienteId"
+                WHERE a."clinicaId" = $1 AND a.id = $2
             """, clinicaId, agendamentoId)
 
         if not r: return None
         return Agendamento(
-            id=r["id"], dataHora=r["data_hora"], estado=r["estado"],
+            id=r["id"], dataHora=r["dataHora"], estado=r["estado"],
             canal=r["canal"] or "PRESENCIAL",
             medicoNome=r["medico_nome"], medicoEsp=r["medico_esp"],
             pacienteNome=r["paciente_nome"], clinicaId=clinicaId,
@@ -455,7 +420,6 @@ class ClinicaDB:
     ) -> dict:
         """
         Calcula taxa de no-show do paciente para o predictor.
-        Query única — evitar N+1.
         """
         async with conn() as c:
             r = await c.fetchrow("""
@@ -463,9 +427,9 @@ class ClinicaDB:
                     COUNT(*) FILTER (WHERE estado IN ('CONCLUIDO','NAO_COMPARECEU')) AS total,
                     COUNT(*) FILTER (WHERE estado = 'NAO_COMPARECEU')               AS no_shows,
                     COUNT(*) FILTER (WHERE estado = 'CANCELADO')                    AS cancelamentos,
-                    MAX(data_hora) FILTER (WHERE estado = 'CONCLUIDO')              AS ultima_concluida
+                    MAX("dataHora") FILTER (WHERE estado = 'CONCLUIDO')              AS ultima_concluida
                 FROM agendamentos
-                WHERE clinica_id  = $1 AND paciente_id = $2
+                WHERE "clinicaId"  = $1 AND "pacienteId" = $2
             """, clinicaId, pacienteId)
 
         total = r["total"] or 0
@@ -488,19 +452,18 @@ class ClinicaDB:
     ) -> list[Receita]:
         """
         Receitas activas (não expiradas) do paciente.
-        Índice: @@index([clinicaId, pacienteId])
         """
         async with conn() as c:
             rows = await c.fetch("""
                 SELECT
-                    r.id, r.criado_em,
+                    r.id, r."criadoEm",
                     m.nome AS medico_nome,
                     r.medicamentos
                 FROM receitas r
-                JOIN medicos m ON m.id = r.medico_id
-                WHERE r.clinica_id  = $1
-                  AND r.paciente_id = $2
-                ORDER BY r.criado_em DESC
+                JOIN medicos m ON m.id = r."medicoId"
+                WHERE r."clinicaId"  = $1
+                  AND r."pacienteId" = $2
+                ORDER BY r."criadoEm" DESC
                 LIMIT $3
             """, clinicaId, pacienteId, limite)
 
@@ -510,10 +473,11 @@ class ClinicaDB:
             meds = _json.loads(row["medicamentos"]) if isinstance(row["medicamentos"], str) else (row["medicamentos"] or [])
             result.append(Receita(
                 id=row["id"],
-                criadoEm=row["criado_em"],
+                criadoEm=row["criadoEm"],
                 medicoNome=row["medico_nome"],
                 medicamentos=meds,
             ))
+        return result
     # ── WhatsApp e Automações ──────────────────────────────────────────────────
     
     async def resolver_ids_por_instancia(self, evolution_name: str) -> Optional[dict]:
