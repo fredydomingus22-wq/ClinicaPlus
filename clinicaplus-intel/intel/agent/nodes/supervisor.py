@@ -1,7 +1,7 @@
 # intel/agent/nodes/supervisor.py
 from langchain_core.messages import SystemMessage, HumanMessage
 from intel.agent.state import ConversaState
-from intel.config.models import build_llm
+from intel.config.models import build_llm, calcular_custo, AGENT_MODELS
 from intel.config.prompts import SUPERVISOR_PROMPT
 
 _llm = build_llm("supervisor")
@@ -45,4 +45,15 @@ async def supervisor_node(state: ConversaState) -> dict:
     if next_agent not in ROUTING_OPTIONS:
         next_agent = "booking"  # fallback seguro
 
-    return {"next_agent": next_agent, "turno": state["turno"] + 1}
+    # Rastrear custo
+    usage = getattr(response, "usage_metadata", {})
+    input_t  = usage.get("input_tokens", 0)
+    output_t = usage.get("output_tokens", 0)
+    custo    = calcular_custo(AGENT_MODELS["supervisor"]["model"], input_t, output_t)
+
+    return {
+        "next_agent": next_agent, 
+        "turno": state["turno"] + 1,
+        "tokens_usados": state["tokens_usados"] + input_t + output_t,
+        "custo_estimado_usd": state["custo_estimado_usd"] + custo,
+    }

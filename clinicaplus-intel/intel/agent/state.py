@@ -1,11 +1,11 @@
 # intel/agent/state.py
 from typing import TypedDict, Annotated, Optional
 from langchain_core.messages import BaseMessage
-import operator
+from langgraph.graph.message import add_messages
 
 class ConversaState(TypedDict):
     # Mensagens da conversa (acumuladas pelo LangGraph)
-    messages: Annotated[list[BaseMessage], operator.add]
+    messages: Annotated[list[BaseMessage], add_messages]
 
     # Contexto da conversa
     clinica_id:    str

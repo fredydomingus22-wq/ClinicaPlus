@@ -6,9 +6,10 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Any
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, RemoveMessage
 from intel.agent.graph import get_graph
 from intel.cost.tracker import CostTracker
+from intel.cost.compressor import comprimir_historico
 from db_layer import db, LUANDA_TZ
 from lib.evolution_client import EvolutionClient
 from lib.session_lock import session_lock
@@ -58,11 +59,27 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     # 3. Obter o grafo (Singleton)
     graph = await get_graph()
 
-    # 4. Estado inicial (LangGraph fará o merge se já existir histórico no Redis)
+    # 4. Estado inicial e Compressão (LangGraph fará o merge se já existir histórico no Redis)
+    clinica_nome = await get_clinica_nome(clinica_id)
+    
+    # Compressão de Histórico (Regra 7)
+    existing_state = await graph.aget_state(config)
+    if existing_state and existing_state.values:
+        mensagens_existentes = existing_state.values.get("messages", [])
+        if len(mensagens_existentes) > 6:
+            print(f"🗜️ Comprimindo histórico para {numero}...")
+            messages_comprimidas = await comprimir_historico(mensagens_existentes, clinica_nome)
+            
+            # Limpar o histórico atual usando IDs (o checkpointer aceita RemoveMessage se tivermos add_messages reducer)
+            delete_msgs = [RemoveMessage(id=m.id) for m in mensagens_existentes if getattr(m, "id", None)]
+            
+            # Atualizar o State na DB: apagar todas + injetar o sumário e as recentes limpas
+            await graph.aupdate_state(config, {"messages": delete_msgs + messages_comprimidas})
+
     initial_state = {
         "messages":          [HumanMessage(content=texto)],
         "clinica_id":        clinica_id,
-        "clinica_nome":      await get_clinica_nome(clinica_id),
+        "clinica_nome":      clinica_nome,
         "numero_wa":         numero,
         "paciente_id":       paciente.id if paciente else None,
         "paciente_nome":     paciente.nome if paciente else push_name,
