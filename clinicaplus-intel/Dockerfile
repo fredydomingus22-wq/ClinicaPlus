@@ -4,9 +4,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Instalar dependências essenciais do sistema e compilação
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements primeiro para tirar partido de dependências cacheadas
 COPY requirements.txt .

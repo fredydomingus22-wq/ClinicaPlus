@@ -5,7 +5,7 @@ Elimina ~30% de chamadas redundantes ao LLM.
 """
 import langchain
 from langchain_community.cache import RedisSemanticCache
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 
 def setup_semantic_cache(redis_url: str):
@@ -15,10 +15,7 @@ def setup_semantic_cache(redis_url: str):
     retorna a resposta cacheada sem chamar a API.
     """
     # Embedding model leve para calcular similaridade
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-    )
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
     # Configurar cache global do LangChain
     langchain.llm_cache = RedisSemanticCache(
