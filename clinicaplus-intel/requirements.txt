@@ -9,16 +9,16 @@ redis>=5.0.1
 asyncpg>=0.28.0
 
 # LangGraph & Google AI Stack
-langchain>=0.3.0
-langchain-core>=0.3.0
-langchain-google-genai>=2.0.1
-langgraph>=0.2.14
-langgraph-checkpoint>=1.0.0
-langgraph-checkpoint-redis>=1.0.1
-langsmith>=0.1.125
-google-api-core>=2.15.0
-google-auth>=2.25.0
-google-ai-generativelanguage>=0.6.0
+langchain==0.3.25
+langchain-core==0.3.63
+langchain-google-genai==2.1.5
+langgraph==0.2.76
+langgraph-checkpoint==2.1.2
+langgraph-checkpoint-redis==0.1.3
+langsmith==0.2.11
+google-api-core==2.30.0
+google-auth==2.49.1
+google-ai-generativelanguage==0.6.18
 
 # Ferramentas Utilitárias
 # Se tiver job de scheduler, adicione APScheduler
