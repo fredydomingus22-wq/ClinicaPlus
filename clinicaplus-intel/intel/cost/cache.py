@@ -15,7 +15,7 @@ def setup_semantic_cache(redis_url: str):
     retorna a resposta cacheada sem chamar a API.
     """
     # Embedding model leve para calcular similaridade
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 
     # Configurar cache global do LangChain
     langchain.llm_cache = RedisSemanticCache(
