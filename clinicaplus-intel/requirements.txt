@@ -5,7 +5,7 @@ pydantic-settings>=2.0.3
 python-dotenv>=1.0.0
 
 # Database
-redis==4.6.10
+redis==4.6.0
 hiredis>=2.2.3
 asyncpg>=0.28.0
 
