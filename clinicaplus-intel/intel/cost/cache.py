@@ -4,28 +4,27 @@ Semantic cache com Redis + embeddings.
 Elimina ~30% de chamadas redundantes ao LLM.
 """
 import langchain
-from langchain_community.cache import RedisSemanticCache
+from langchain_redis import RedisSemanticCache
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 
 def setup_semantic_cache(redis_url: str):
     """
-    Configura o semantic cache do LangChain.
-    Quando uma query é semanticamente similar a uma anterior,
-    retorna a resposta cacheada sem chamar a API.
+    Configura o semantic cache do LangChain usando o novo pacote langchain-redis.
+    Isso resolve o conflito de versão com o Redis 5.x.
     """
     try:
         # Embedding model leve para calcular similaridade
         embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
         # Configurar cache global do LangChain
-        # NOTA: Requer que o Redis tenha o módulo RediSearch ativo
+        # NOTA: langchain-redis usa 'embeddings' em vez de 'embedding'
         langchain.llm_cache = RedisSemanticCache(
             redis_url=redis_url,
-            embedding=embeddings,
-            score_threshold=0.95,  # 0.95 = muito similar (conservador para saúde)
+            embeddings=embeddings,
+            distance_threshold=0.1,  # similar ao anterior (menor = melhor match)
         )
-        print("🚀 Semantic Cache (Redis) inicializado com sucesso.")
+        print("🚀 Semantic Cache (langchain-redis) inicializado com sucesso.")
     except (ImportError, Exception) as e:
         print(f"⚠️ AVISO: Falhou ao inicializar Semantic Cache: {str(e)}")
         print("ℹ️ Continuando sem cache semântico para garantir disponibilidade.")

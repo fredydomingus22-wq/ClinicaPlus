@@ -1,6 +1,6 @@
 # intel/agent/graph.py
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.redis import AsyncRedisSaver
+from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 from .state import ConversaState
 from .nodes.supervisor     import supervisor_node
 from .nodes.intent_agent   import intent_node
