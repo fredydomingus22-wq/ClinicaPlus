@@ -36,6 +36,13 @@ export const dashboardService = {
       prevTotalPacientes,
       prevTotalConsultas,
       prevTotalReceitas,
+      novosPacientes,
+      prevNovosPacientes,
+      totalMedicosAtivos,
+      agendamentosPeriodo,
+      agendamentosPrevPeriodo,
+      consultasPeriodo,
+      prevConsultasPeriodo
     ] = await prisma.$transaction([
       // Total patients
       prisma.paciente.count({ where: { clinicaId, ativo: true } }),
@@ -81,6 +88,44 @@ export const dashboardService = {
           criadoEm: { gte: prevStartDate, lt: startDate },
         },
       }),
+      // Novos pacientes no periodo atual
+      prisma.paciente.count({
+        where: { clinicaId, criadoEm: { gte: startDate, lte: now } }
+      }),
+      // Novos pacientes no periodo anterior
+      prisma.paciente.count({
+        where: { clinicaId, criadoEm: { gte: prevStartDate, lt: startDate } }
+      }),
+      // Medicos ativos para taxa de ocupacao
+      prisma.medico.count({ where: { clinicaId, ativo: true } }),
+      // Agendamentos detalhados para faturamento/especialidade no periodo
+      prisma.agendamento.findMany({
+        where: {
+          clinicaId,
+          dataHora: { gte: startDate, lte: now },
+          estado: { in: ['CONFIRMADO', 'CONCLUIDO'] },
+        },
+        include: {
+          medico: { include: { especialidade: true } }
+        }
+      }),
+      // Agendamentos detalhados do periodo anterior (para tendencia de faturamento)
+      prisma.agendamento.findMany({
+        where: {
+          clinicaId,
+          dataHora: { gte: prevStartDate, lt: startDate },
+          estado: { in: ['CONFIRMADO', 'CONCLUIDO'] },
+        },
+        include: { medico: true }
+      }),
+      // Consultas totais no período (para ocupação)
+      prisma.agendamento.count({
+        where: { clinicaId, dataHora: { gte: startDate, lte: now }, estado: { not: 'CANCELADO' } }
+      }),
+      // Consultas totais no período anterior (para tendencia de ocupação)
+      prisma.agendamento.count({
+        where: { clinicaId, dataHora: { gte: prevStartDate, lt: startDate }, estado: { not: 'CANCELADO' } }
+      })
     ]);
 
     const calculateTrend = (curr: number, prev: number): number => {
@@ -88,15 +133,42 @@ export const dashboardService = {
       return Math.round(((curr - prev) / prev) * 100);
     };
 
+    // Faturamento
+    const faturamentoEstimado = agendamentosPeriodo.reduce((acc, ag) => acc + (ag.medico?.preco || 0), 0);
+    const prevFaturamento = agendamentosPrevPeriodo.reduce((acc, ag) => acc + (ag.medico?.preco || 0), 0);
+
+    // Ocupação
+    const numDias = periodo === 'hoje' ? 1 : periodo === 'semana' ? 7 : 30;
+    const capacidadeTotal = totalMedicosAtivos * 16 * numDias;
+    const taxaOcupacao = capacidadeTotal > 0 ? Math.round((consultasPeriodo / capacidadeTotal) * 100) : 0;
+    const prevTaxaOcupacao = capacidadeTotal > 0 ? Math.round((prevConsultasPeriodo / capacidadeTotal) * 100) : 0;
+
+    // Distribuição por Especialidade
+    const distMap = new Map<string, number>();
+    agendamentosPeriodo.forEach(ag => {
+      const sp = ag.medico?.especialidade?.nome || 'Geral';
+      distMap.set(sp, (distMap.get(sp) || 0) + 1);
+    });
+    const distribuicaoEspecialidade = Array.from(distMap.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+
     return {
       totalPacientes,
       consultasHoje,
       consultasSemana,
       receitasAtivas,
+      faturamentoEstimado,
+      taxaOcupacao,
+      novosPacientes,
+      distribuicaoEspecialidade,
       tendencias: {
         pacientes: calculateTrend(totalPacientes, prevTotalPacientes),
         consultas: calculateTrend(consultasSemana, prevTotalConsultas),
         receitas: calculateTrend(receitasAtivas, prevTotalReceitas),
+        faturamento: calculateTrend(faturamentoEstimado, prevFaturamento),
+        ocupacao: Math.round(taxaOcupacao - prevTaxaOcupacao), // Variação em pontos percentuais
+        novosPacientes: calculateTrend(novosPacientes, prevNovosPacientes)
       },
     };
   },
