@@ -7,39 +7,39 @@ from langchain_core.language_models import BaseChatModel
 AGENT_MODELS: dict[str, dict] = {
     "supervisor": {
         "provider":    "google",
-        "model":       "gemini-1.5-flash",
+        "model":       "gemini-2.5-flash-lite",
         "temperature": 0.1,
         "max_tokens":  512,
     },
     "intent": {
         "provider":    "google",
-        "model":       "gemini-1.5-flash",
+        "model":       "gemini-2.5-flash-lite",
         "temperature": 0,
         "max_tokens":  512,
     },
     "booking": {
         "provider":    "google",
-        "model":       "gemini-1.5-flash",
+        "model":       "gemini-2.5-flash-lite",
         "temperature": 0.1,
         "max_tokens":  1024,
     },
     "info": {
         "provider":    "google",
-        "model":       "gemini-1.5-flash",
+        "model":       "gemini-2.5-flash-lite",
         "temperature": 0.2,
         "max_tokens":  512,
     },
     "escalation": {
         "provider":    "google",
-        "model":       "gemini-1.5-flash",
+        "model":       "gemini-2.5-flash-lite",
         "temperature": 0.1,
         "max_tokens":  256,
     },
 }
 
-# Preços por 1M tokens (input/output) — Gemini 1.5 Flash
+# Preços por 1M tokens (input/output) — Gemini 2.5 Flash-Lite
 PRICING_USD_PER_1M = {
-    "gemini-1.5-flash": {"input": 0.075, "output": 0.30},
+    "gemini-2.5-flash-lite": {"input": 0.03, "output": 0.10}, # Preços competitivos Feb/2026
 }
 
 
