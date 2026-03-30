@@ -203,11 +203,18 @@ export interface DashboardStats {
   consultasHoje: number;
   consultasSemana: number;
   receitasAtivas: number;
+  faturamentoEstimado: number;
+  taxaOcupacao: number;
+  novosPacientes: number;
+  distribuicaoEspecialidade: { label: string; value: number }[];
   aAguardar?: number; // Added for receptionist dashboard
   tendencias: {
     pacientes: number;
     consultas: number;
     receitas: number;
+    faturamento: number;
+    ocupacao: number;
+    novosPacientes: number;
   };
 }
 

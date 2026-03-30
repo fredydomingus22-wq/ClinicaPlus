@@ -144,43 +144,74 @@ export function AreaChart({
               />
             )}
 
-            {/* Data nodes */}
-            {points.map((p, i) => (
-              <g key={i}>
-                <rect 
-                  x={p.x - 3} 
-                  y={p.y - 3} 
-                  width="6" 
-                  height="6" 
-                  fill="#ffffff" 
-                  stroke="#1d4ed8" 
-                  strokeWidth="2" 
-                  className="transition-all cursor-crosshair z-20"
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                />
-                
-                {/* Labels at bottom */}
-                <text 
-                  x={p.x} 
-                  y={chartHeight - 2} 
-                  textAnchor="middle" 
-                  className="text-[9px] font-bold fill-[#737373] uppercase tracking-wider font-mono"
-                >
-                  {data[i]?.label}
-                </text>
-              </g>
-            ))}
+            {/* Data nodes & Hover Interaction Areas */}
+            {points.map((p, i) => {
+              const prevX = i > 0 ? (points[i - 1]?.x ?? paddingX) : paddingX;
+              const nextX = i < points.length - 1 ? (points[i + 1]?.x ?? chartWidth - paddingX) : chartWidth - paddingX;
+              const leftX = i === 0 ? paddingX : (prevX + p.x) / 2;
+              const rightX = i === points.length - 1 ? chartWidth - paddingX : (nextX + p.x) / 2;
 
-            {/* Tooltip Overlay */}
+              return (
+                <g key={`node-${i}`}>
+                   {/* Coluna invisível de hover para cobrir todo o espaço Y  */}
+                  <rect 
+                    x={leftX}
+                    y={0}
+                    width={Math.max(rightX - leftX, 0)}
+                    height={chartHeight}
+                    fill="transparent"
+                    className="cursor-crosshair z-30"
+                    onMouseEnter={() => setHoveredIdx(i)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                  />
+                  
+                  {hoveredIdx === i && (
+                     <line 
+                       x1={p.x} 
+                       y1={p.y} 
+                       x2={p.x} 
+                       y2={chartHeight - paddingY} 
+                       stroke="#1d4ed8" 
+                       strokeWidth="1" 
+                       strokeDasharray="4 4" 
+                       className="opacity-50 pointer-events-none z-10"
+                     />
+                  )}
+                  
+                  {/* O nó de dados visível */}
+                  <circle 
+                    cx={p.x}
+                    cy={p.y}
+                    r={hoveredIdx === i ? 5 : 3}
+                    fill="#ffffff" 
+                    stroke="#1d4ed8" 
+                    strokeWidth="2" 
+                    className="transition-all pointer-events-none z-20"
+                  />
+                  
+                  {/* Labels at bottom */}
+                  <text 
+                    x={p.x} 
+                    y={chartHeight - 2} 
+                    textAnchor="middle" 
+                    className="text-[9px] font-bold fill-[#737373] uppercase tracking-wider font-mono pointer-events-none"
+                  >
+                    {data[i]?.label}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Tooltip Overlay fix */}
             {hoveredIdx !== null && points[hoveredIdx] && (
               <foreignObject 
-                x={points[hoveredIdx].x - 40} 
-                y={points[hoveredIdx].y - 45} 
-                width="80" 
-                height="30"
+                x={Math.max(0, Math.min(points[hoveredIdx].x - 45, chartWidth - 90))} 
+                y={Math.max(0, points[hoveredIdx].y - 35)} 
+                width="90" 
+                height="35"
+                className="pointer-events-none z-50 overflow-visible"
               >
-                <div className="bg-[#1a1a1a] text-white text-[10px] font-bold py-1 px-2 border border-[#e5e5e5] text-center font-mono whitespace-nowrap">
+                <div className="bg-[#1a1a1a] text-white text-[10px] font-bold py-1.5 px-3 border border-[#333] rounded-sm text-center font-mono whitespace-nowrap shadow-lg">
                    {data[hoveredIdx]?.value}
                 </div>
               </foreignObject>
