@@ -11,6 +11,7 @@ asyncpg>=0.28.0
 # LangGraph & Google AI Stack
 langchain==0.3.25
 langchain-core==0.3.63
+langchain-community==0.3.25
 langchain-google-genai==2.1.5
 langgraph==0.2.76
 langgraph-checkpoint==2.1.2
