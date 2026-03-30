@@ -514,7 +514,44 @@ class ClinicaDB:
                 medicoNome=row["medico_nome"],
                 medicamentos=meds,
             ))
-        return result
+    # ── WhatsApp e Automações ──────────────────────────────────────────────────
+    
+    async def resolver_ids_por_instancia(self, evolution_name: str) -> Optional[dict]:
+        """
+        Mapeia o nome da instância da Evolution API (ex: 'clinica-a') 
+        para o clinicaId e instanciaId da base de dados.
+        """
+        async with conn() as c:
+            row = await c.fetchrow("""
+                SELECT id, "clinicaId" 
+                FROM wa_instancias 
+                WHERE "evolutionName" = $1
+                LIMIT 1
+            """, evolution_name)
+        
+        if not row: return None
+        return {
+            "instanciaId": row["id"],
+            "clinicaId":   row["clinicaId"],
+        }
+
+
+    async def is_ia_ativo(self, clinicaId: str, instanciaId: str) -> bool:
+        """
+        Verifica se o assistente de IA está activo para esta instância.
+        Tabela: wa_automacoes (tipo='IA_ASSISTANT')
+        """
+        async with conn() as c:
+            row = await c.fetchrow("""
+                SELECT ativo 
+                FROM wa_automacoes
+                WHERE "clinicaId" = $1 
+                  AND "waInstanciaId" = $2 
+                  AND tipo = 'IA_ASSISTANT'
+                LIMIT 1
+            """, clinicaId, instanciaId)
+        
+        return bool(row and row["ativo"])
 
 
 # ── Singleton ──────────────────────────────────────────────────────────────────
