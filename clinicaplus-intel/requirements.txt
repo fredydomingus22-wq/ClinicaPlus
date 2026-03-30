@@ -1,33 +1,38 @@
-fastapi>=0.100.0
-uvicorn>=0.23.0
-pydantic>=2.4.0
-pydantic-settings>=2.0.3
+# ============================================================
+# requirements.txt — Verificado e alinhado em 30 de Março 2026
+# ============================================================
+
+# Web Framework
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.4.0
 python-dotenv>=1.0.0
 
 # Database
-redis==7.4.0
-hiredis>=2.2.3
-langchain-redis==0.1.2
-asyncpg>=0.28.0
+redis>=7.0.0              # redis-py 7.x (Python >=3.10). Latest: 7.1.1
+hiredis>=2.3.2            # parser C opcional — acelera throughput
+langchain-redis>=0.2.5    # era 0.1.2 — breaking changes em 0.2.x (Redis Sentinel, ToolMessage fix)
+asyncpg>=0.29.0
 
 # LangGraph & Google AI Stack
-langchain==0.3.25
-langchain-core==0.3.83
-langchain-community==0.3.25
-langchain-google-genai==2.1.5
-langgraph==0.2.76
-langgraph-checkpoint==2.1.2
-langgraph-checkpoint-redis==0.2.2
-langsmith==0.3.45
-google-api-core==2.30.0
-google-auth==2.49.1
-google-ai-generativelanguage==0.6.18
+langchain>=1.2.0           # era 0.3.25 — major bump, nova API de agentes
+langchain-core>=1.2.0      # era 0.3.83 — alinhado com langchain>=1.x
+langchain-community>=0.4.0 # era 0.3.25 — alinhado com langchain>=1.x
+langchain-google-genai>=4.1.0  # era 2.1.5 — reescrita para Google Unified SDK (Gemini + Vertex)
+langgraph>=1.1.0           # era 0.2.76 — major release, API estável
+langgraph-checkpoint>=4.0.0    # era 2.1.2 — formato de armazenamento redesenhado
+langgraph-checkpoint-redis>=0.4.0  # era 0.2.2 — incompatível com langgraph>=1.0
+langsmith>=0.7.0           # era 0.3.45
+
+# Google Auth (dependências transitivas — não fixar manualmente)
+# google-api-core e google-auth são geridos por langchain-google-genai
+# google-ai-generativelanguage idem — remover para evitar conflitos de versão
 
 # Ferramentas Utilitárias
-# Se tiver job de scheduler, adicione APScheduler
-APScheduler==3.11.2
+APScheduler>=3.11.0
 
 # Test & Dev
 pytest>=7.4.3
-pytest-asyncio>=0.21.1
-httpx>=0.25.2
+pytest-asyncio>=0.23.0    # 0.21.x tem breaking change no modo asyncio
+httpx>=0.27.0
