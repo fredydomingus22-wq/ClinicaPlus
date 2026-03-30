@@ -17,7 +17,7 @@ async def buscar_slots(
 ) -> str:
     """
     Retorna slots de consulta disponíveis para um médico.
-    Chamar após o paciente escolher médico ou quando quer saber disponibilidade.
+    Obter medico_id a partir do mapeamento interno de nome. Nunca perguntar o ID ao paciente.
     """
     try:
         from datetime import date
@@ -82,8 +82,8 @@ async def criar_agendamento(
     notas:       str = "",
 ) -> str:
     """
-    Cria nova consulta. SÓ chamar após confirmação EXPLÍCITA do paciente.
-    Nunca chamar sem o paciente ter confirmado data, hora e médico.
+    Cria nova consulta. SÓ chamar após confirmação EXPLÍCITA do paciente (NOME, DATA, HORA).
+    NUNCA menciones o medico_id ao paciente. Mapeia o Nome para ID internamente.
     """
     try:
         async with httpx.AsyncClient() as client:
