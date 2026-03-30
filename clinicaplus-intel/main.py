@@ -11,7 +11,8 @@ from routers.health import router as health_router
 from routers.admin import router as admin_router
 from jobs.scheduler import start_scheduler
 from intel.cost.cache import setup_semantic_cache
-from intel.agent.graph import get_graph
+from intel.agent.graph import init_graph, get_graph
+from langgraph.checkpoint.redis import AsyncRedisSaver
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,10 +23,17 @@ async def lifespan(app: FastAPI):
     # Inicializar Agentes e Cache Semântico
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     setup_semantic_cache(redis_url)
-    await get_graph() # Pre-warm do grafo
     
-    start_scheduler() # Inicia o agendador de tarefas
-    yield
+    # Gerir o ciclo de vida do Checkpointer Redis
+    async with AsyncRedisSaver.from_conn_string(redis_url) as checkpointer:
+        await checkpointer.asetup()
+        await init_graph(checkpointer) # Inicializa grafo com persistência
+        
+        start_scheduler() # Inicia o agendador de tarefas
+        print("ClinicaPlus Intelligence pronta e persistente.")
+        
+        yield
+
     # Shutdown Events
     print("Fechando ClinicaPlus Intelligence...")
     await close_pool()

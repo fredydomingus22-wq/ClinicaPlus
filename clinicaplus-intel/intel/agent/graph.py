@@ -54,10 +54,8 @@ def build_graph() -> StateGraph:
     return builder
 
 
-# Compilar com checkpointer Redis para persistência entre sessões
-async def create_graph():
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-    checkpointer = await AsyncRedisSaver.from_conn_string(redis_url)
+# Compilar o grafo (com ou sem checkpointer)
+async def create_graph(checkpointer=None):
     graph = build_graph().compile(checkpointer=checkpointer)
     return graph
 
@@ -65,8 +63,16 @@ async def create_graph():
 # Singleton — uma instância por processo
 _graph = None
 
+async def init_graph(checkpointer):
+    """Inicializa o grafo global com um checkpointer já aberto."""
+    global _graph
+    _graph = await create_graph(checkpointer)
+    return _graph
+
 async def get_graph():
+    """Retorna a instância global do grafo. Se não existir, cria uma sem persistência (fallback)."""
     global _graph
     if _graph is None:
+        # Fallback para ambiente local se o lifespan não tiver inicializado (testes)
         _graph = await create_graph()
     return _graph
