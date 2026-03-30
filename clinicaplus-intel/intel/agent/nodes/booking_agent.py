@@ -6,6 +6,7 @@ from intel.config.prompts import BOOKING_PROMPT
 from intel.agent.tools.clinica_tools import INFO_TOOLS
 from intel.agent.tools.agendamento_tools import BOOKING_TOOLS
 import asyncio
+import json
 
 _llm = build_llm("booking").bind_tools(BOOKING_TOOLS + INFO_TOOLS)
 
@@ -21,6 +22,7 @@ async def booking_node(state: ConversaState) -> dict:
         paciente_id=state.get("paciente_id") or "desconhecido",
         intencao=state.get("intencao") or "marcar",
         especialidade=state.get("especialidade") or "não especificada",
+        clinica_dados=json.dumps(state.get("clinica_dados"), indent=2, ensure_ascii=False) if state.get("clinica_dados") else "Não há dados específicos pré-carregados."
     )
 
     response = await _llm.ainvoke([

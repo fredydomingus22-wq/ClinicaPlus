@@ -3,6 +3,7 @@ from langchain_core.messages import SystemMessage, AIMessage
 from intel.agent.state import ConversaState
 from intel.config.models import build_llm, calcular_custo, AGENT_MODELS
 from intel.config.prompts import INFO_PROMPT
+import json
 
 _llm = build_llm("info")
 
@@ -12,7 +13,8 @@ async def info_node(state: ConversaState) -> dict:
     Usa Google Gemini Flash para baixo custo em informações gerais.
     """
     system = INFO_PROMPT.format(
-        clinica_nome=state["clinica_nome"]
+        clinica_nome=state["clinica_nome"],
+        clinica_dados=json.dumps(state.get("clinica_dados"), indent=2, ensure_ascii=False) if state.get("clinica_dados") else "Nenhuns dados disponíveis."
     )
 
     response = await _llm.ainvoke([
