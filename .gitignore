@@ -43,3 +43,5 @@ __pycache__/
 venv/
 ENV/
 env/
+
+kit-agent/
