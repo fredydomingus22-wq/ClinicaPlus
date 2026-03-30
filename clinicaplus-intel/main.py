@@ -6,16 +6,24 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.pool import init_pool, close_pool
-from routers.webhook import router as webhook_router
+from intel.routers.webhook import router as webhook_router
 from routers.health import router as health_router
 from routers.admin import router as admin_router
 from jobs.scheduler import start_scheduler
+from intel.cost.cache import setup_semantic_cache
+from intel.agent.graph import get_graph
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup Events
     print("Iniciando ClinicaPlus Intelligence...")
     await init_pool()
+    
+    # Inicializar Agentes e Cache Semântico
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    setup_semantic_cache(redis_url)
+    await get_graph() # Pre-warm do grafo
+    
     start_scheduler() # Inicia o agendador de tarefas
     yield
     # Shutdown Events

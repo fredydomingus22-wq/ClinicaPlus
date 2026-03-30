@@ -1,0 +1,72 @@
+# intel/agent/graph.py
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.redis import AsyncRedisSaver
+from .state import ConversaState
+from .nodes.supervisor     import supervisor_node
+from .nodes.intent_agent   import intent_node
+from .nodes.booking_agent  import booking_node
+from .nodes.info_agent     import info_node
+from .nodes.escalation_agent import escalation_node
+import os
+
+def _route_supervisor(state: ConversaState) -> str:
+    """Edge function: routing decision do supervisor."""
+    next_agent = state.get("next_agent", "end")
+    if next_agent == "end":
+        return END
+    return next_agent
+
+def build_graph() -> StateGraph:
+    builder = StateGraph(ConversaState)
+
+    # ── Nós ──────────────────────────────────────────────────────────────────
+    builder.add_node("supervisor",  supervisor_node)
+    builder.add_node("intent",      intent_node)
+    builder.add_node("booking",     booking_node)
+    builder.add_node("info",        info_node)
+    builder.add_node("escalation",  escalation_node)
+
+    # ── Edges ─────────────────────────────────────────────────────────────────
+    # Começa sempre pelo intent (classificar o que o paciente quer)
+    builder.add_edge(START, "intent")
+
+    # Intent → Supervisor (supervisor decide quem actua)
+    builder.add_edge("intent", "supervisor")
+
+    # Supervisor → agente especialista (routing condicional)
+    builder.add_conditional_edges(
+        "supervisor",
+        _route_supervisor,
+        {
+            "booking":    "booking",
+            "info":       "info",
+            "escalation": "escalation",
+            "end":        END,
+            "intent":     "intent",  # reclassificação se necessário
+        }
+    )
+
+    # Todos os agentes terminam no END (1 resposta por turno)
+    builder.add_edge("booking",    END)
+    builder.add_edge("info",       END)
+    builder.add_edge("escalation", END)
+
+    return builder
+
+
+# Compilar com checkpointer Redis para persistência entre sessões
+async def create_graph():
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    checkpointer = await AsyncRedisSaver.from_conn_string(redis_url)
+    graph = build_graph().compile(checkpointer=checkpointer)
+    return graph
+
+
+# Singleton — uma instância por processo
+_graph = None
+
+async def get_graph():
+    global _graph
+    if _graph is None:
+        _graph = await create_graph()
+    return _graph
