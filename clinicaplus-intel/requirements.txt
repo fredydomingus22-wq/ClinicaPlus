@@ -5,7 +5,8 @@ pydantic-settings>=2.0.3
 python-dotenv>=1.0.0
 
 # Database
-redis>=5.0.1
+redis==4.6.10
+hiredis>=2.2.3
 asyncpg>=0.28.0
 
 # LangGraph & Google AI Stack
