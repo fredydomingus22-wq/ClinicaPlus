@@ -326,7 +326,7 @@ class ClinicaDB:
         """
         Próximas consultas do paciente (estado activo, data futura).
         """
-        agora = datetime.now(LUANDA_TZ)
+        agora = datetime.now(LUANDA_TZ).replace(tzinfo=None)
         async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT
@@ -360,7 +360,7 @@ class ClinicaDB:
         limite:     int = 5,
     ) -> list[Agendamento]:
         """Consultas passadas do paciente (para o perfil e no-show predictor)."""
-        agora = datetime.now(LUANDA_TZ)
+        agora = datetime.now(LUANDA_TZ).replace(tzinfo=None)
         async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT
