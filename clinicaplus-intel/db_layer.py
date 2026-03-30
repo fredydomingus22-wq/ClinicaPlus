@@ -40,11 +40,6 @@ async def get_pool() -> asyncpg.Pool:
     return _pool
 
 
-@asynccontextmanager
-async def conn():
-    pool = await get_pool()
-    async with pool.acquire() as c:
-        yield c
 
 
 # ── Tipos de resposta ──────────────────────────────────────────────────────────
@@ -102,6 +97,12 @@ class ClinicaDB:
     clinicaId é o primeiro parâmetro em TODOS os métodos — sem excepção.
     """
 
+    @asynccontextmanager
+    async def conn(self):
+        pool = await get_pool()
+        async with pool.acquire() as c:
+            yield c
+
     # ── Médicos ────────────────────────────────────────────────────────────────
 
     async def medicos_por_especialidade(
@@ -113,7 +114,7 @@ class ClinicaDB:
         Retorna médicos activos de uma especialidade.
         Índice usado: @@index([clinicaId, especialidadeId])
         """
-        async with conn() as c:
+        async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT m.id, m.nome, e.nome AS especialidade_nome, m.preco, m.ativo, m."clinicaId"
                 FROM medicos m
@@ -138,7 +139,7 @@ class ClinicaDB:
         """
         Busca um médico validando que pertence à clínica (prevenção de IDOR).
         """
-        async with conn() as c:
+        async with self.conn() as c:
             r = await c.fetchrow("""
                 SELECT m.id, m.nome, e.nome AS especialidade_nome, m.preco, m.ativo, m."clinicaId"
                 FROM medicos m
@@ -158,7 +159,7 @@ class ClinicaDB:
         Lista de especialidades com pelo menos 1 médico activo.
         Usada para montar a Poll inicial.
         """
-        async with conn() as c:
+        async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT DISTINCT e.nome
                 FROM medicos m
@@ -186,7 +187,7 @@ class ClinicaDB:
         """
         target_date = data_alvo or datetime.now(LUANDA_TZ).date()
         
-        async with conn() as c:
+        async with self.conn() as c:
             # 1. Buscar médico e sua regra de horário
             med_row = await c.fetchrow("""
                 SELECT id, nome, preco, horario, "duracaoConsulta" 
@@ -278,7 +279,7 @@ class ClinicaDB:
         Busca paciente pelo número de WhatsApp.
         Usado para identificar quem está a conversar.
         """
-        async with conn() as c:
+        async with self.conn() as c:
             r = await c.fetchrow("""
                 SELECT id, nome, telefone, "dataNascimento", alergias, "clinicaId", origem
                 FROM pacientes
@@ -299,7 +300,7 @@ class ClinicaDB:
         clinicaId:  str,
         pacienteId: str,
     ) -> Optional[Paciente]:
-        async with conn() as c:
+        async with self.conn() as c:
             r = await c.fetchrow("""
                 SELECT id, nome, telefone, "dataNascimento", alergias, "clinicaId", origem
                 FROM pacientes
@@ -326,7 +327,7 @@ class ClinicaDB:
         Próximas consultas do paciente (estado activo, data futura).
         """
         agora = datetime.now(LUANDA_TZ)
-        async with conn() as c:
+        async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT
                     a.id, a."dataHora", a.estado, a.canal,
@@ -360,7 +361,7 @@ class ClinicaDB:
     ) -> list[Agendamento]:
         """Consultas passadas do paciente (para o perfil e no-show predictor)."""
         agora = datetime.now(LUANDA_TZ)
-        async with conn() as c:
+        async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT
                     a.id, a."dataHora", a.estado, a.canal,
@@ -391,7 +392,7 @@ class ClinicaDB:
         agendamentoId: str,
     ) -> Optional[Agendamento]:
         """Busca um agendamento validando clinicaId (IDOR prevention)."""
-        async with conn() as c:
+        async with self.conn() as c:
             r = await c.fetchrow("""
                 SELECT
                     a.id, a."dataHora", a.estado, a.canal,
@@ -421,7 +422,7 @@ class ClinicaDB:
         """
         Calcula taxa de no-show do paciente para o predictor.
         """
-        async with conn() as c:
+        async with self.conn() as c:
             r = await c.fetchrow("""
                 SELECT
                     COUNT(*) FILTER (WHERE estado IN ('CONCLUIDO','NAO_COMPARECEU')) AS total,
@@ -453,7 +454,7 @@ class ClinicaDB:
         """
         Receitas activas (não expiradas) do paciente.
         """
-        async with conn() as c:
+        async with self.conn() as c:
             rows = await c.fetch("""
                 SELECT
                     r.id, r."criadoEm",
@@ -485,7 +486,7 @@ class ClinicaDB:
         Mapeia o nome da instância da Evolution API (ex: 'clinica-a') 
         para o clinicaId e instanciaId da base de dados.
         """
-        async with conn() as c:
+        async with self.conn() as c:
             row = await c.fetchrow("""
                 SELECT id, "clinicaId" 
                 FROM wa_instancias 
@@ -505,7 +506,7 @@ class ClinicaDB:
         Verifica se o assistente de IA está activo para esta instância.
         Tabela: wa_automacoes (tipo='IA_ASSISTANT')
         """
-        async with conn() as c:
+        async with self.conn() as c:
             row = await c.fetchrow("""
                 SELECT ativo 
                 FROM wa_automacoes
