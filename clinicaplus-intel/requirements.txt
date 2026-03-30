@@ -17,7 +17,7 @@ langchain-community==0.3.25
 langchain-google-genai==2.1.5
 langgraph==0.2.76
 langgraph-checkpoint==2.1.2
-langgraph-checkpoint-redis==0.4.0
+langgraph-checkpoint-redis==0.2.2
 langsmith==0.3.45
 google-api-core==2.30.0
 google-auth==2.49.1
