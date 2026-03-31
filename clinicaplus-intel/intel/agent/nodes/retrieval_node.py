@@ -25,8 +25,8 @@ async def retrieval_node(state: ConversaState) -> dict:
     if intencao == "marcar" and esp_nome:
         medicos = await db.medicos_por_especialidade(clinica_id, esp_nome)
         if medicos:
-            dados_recuperados["medicos_na_especialidade"] = [
-                {"id": m.id, "nome": m.nome, "preco": m.preco} for m in medicos
+            dados_recuperados["LISTA_MEDICOS_ESPECIALISTAS_DA_CLINICA"] = [
+                {"id": m.id, "nome_do_doutor": m.nome, "preco_consulta": m.preco} for m in medicos
             ]
             
             # Tentar buscar slots para o primeiro médico (ou sugerir se for vago)
@@ -42,8 +42,8 @@ async def retrieval_node(state: ConversaState) -> dict:
     if paciente_id:
         proximos = await db.proximos_agendamentos_paciente(clinica_id, paciente_id)
         if proximos:
-            dados_recuperados["agendamentos_paciente"] = [
-                {"id": a.id, "data": a.dataHora.isoformat(), "medico": a.medicoNome, "estado": a.estado}
+            dados_recuperados["CONSULTAS_MARCADAS_DESTE_PACIENTE"] = [
+                {"id": a.id, "data": a.dataHora.isoformat(), "nome_do_medico": a.medicoNome, "estado_agendamento": a.estado}
                 for a in proximos
             ]
             
