@@ -38,13 +38,18 @@ async def get_checkpointer():
     """
     Checkpointer persistente AsyncPostgresSaver.
     Configurado para compatibilidade máxima com PgBouncer (Transaction Mode):
-    - prepare_threshold=None: Desativa prepared statements (evita erro 'prepared statement does not exist').
-    - autocommit=True: Necessário para execução correcta em ambientes de pooler/proxy.
+    - prepare_threshold=None: Desativa prepared statements no psycopg3.
+    - autocommit=True: Necessário para o modo pipeline do LangGraph e poolers.
     """
-    conn_string = _get_postgres_url()
-    async with AsyncPostgresSaver.from_conn_string(
-        conn_string, 
+    import psycopg
+    conn_info = _get_postgres_url()
+    
+    # Criamos a conexão manualmente para ter controlo total sobre os parâmetros do psycopg3
+    # O from_conn_string do LangGraph não permite passar estes argumentos em algumas versões.
+    async with await psycopg.AsyncConnection.connect(
+        conn_info, 
         prepare_threshold=None, 
         autocommit=True
-    ) as checkpointer:
+    ) as conn:
+        checkpointer = AsyncPostgresSaver(conn)
         yield checkpointer
