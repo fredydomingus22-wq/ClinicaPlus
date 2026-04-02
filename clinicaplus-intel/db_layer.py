@@ -162,17 +162,21 @@ class ClinicaDB:
         Busca metadados e regras da clínica (configurações, convénios, etc).
         """
         async with self.conn() as c:
-            # 1. Configurações gerais
+            # 1. Nome da clínica
+            clinica = await c.fetchrow('SELECT nome FROM clinicas WHERE id = $1', clinicaId)
+            nome_clinica = clinica["nome"] if clinica else "Clínica"
+
+            # 2. Configurações gerais
             cfg = await c.fetchrow("""
                 SELECT "lembrete24h", "horasAntecedencia", "preTriagem", "seguradoras"
                 FROM configuracoes_clinica
                 WHERE "clinicaId" = $1
             """, clinicaId)
             
-            # 2. Especialidades activas
+            # 3. Especialidades activas
             especialidades = await self.especialidades_activas(clinicaId)
             
-            # 3. Médicos e preços base
+            # 4. Médicos e preços base
             medicos = await c.fetch("""
                 SELECT m.nome, e.nome as esp, m.preco
                 FROM medicos m
@@ -181,6 +185,7 @@ class ClinicaDB:
             """, clinicaId)
 
             return {
+                "name": nome_clinica,
                 "seguradoras": cfg["seguradoras"] if cfg else [],
                 "preTriagem": cfg["preTriagem"] if cfg else True,
                 "antecedencia_horas": cfg["horasAntecedencia"] if cfg else 24,

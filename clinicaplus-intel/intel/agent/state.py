@@ -14,8 +14,9 @@ class AgentState(TypedDict):
     patient_id: Optional[str]       
     patient_name: Optional[str]
     
-    # Contexto da clínica (injectado pelo tenant_loader)
+    # Contexto da clínica e paciente (injectado pelo tenant_loader)
     clinic_config: dict             
+    patient_data: Optional[dict]    
     llm_provider: str               
     
     # Intenção e slots

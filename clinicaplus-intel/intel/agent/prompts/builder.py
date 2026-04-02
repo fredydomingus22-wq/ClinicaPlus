@@ -1,19 +1,39 @@
-def build_system_prompt(clinic_config: dict, today_iso: str) -> str:
+def build_system_prompt(clinic_config: dict, today_iso: str, patient_data: dict = None) -> str:
     """
-    Constrói o system prompt com dados reais da clínica vindos da DB.
-    NUNCA incluir tenant_id nem IDs internos neste prompt.
+    Constrói o system prompt com dados reais da clínica e do paciente vindos da DB.
     """
     specialties = ", ".join(clinic_config.get("specialties", []))
     insurance   = clinic_config.get("accepted_insurance", "consultar recepção")
     cancel_pol  = clinic_config.get("cancellation_policy", "cancelar com 24h de antecedência")
     working_hrs = clinic_config.get("working_hours", "Seg-Sex 8h-18h, Sáb 8h-13h")
 
-    return f"""És o assistente virtual da {clinic_config.get('name', 'Nossa Clínica')}, uma clínica privada em Angola.
+    # Formatação do contexto do paciente
+    patient_context = ""
+    if patient_data and patient_data.get("perfil"):
+        p = patient_data["perfil"]
+        nome = p.get("nome", "Paciente")
+        alergias = p.get("alergias", "Nenhuma registada")
+        consultas = patient_data.get("agendamentos", [])
+        
+        proximas_txt = "\n".join([
+            f"- {a['data']} com {a['medico']} ({a['especialidade']}) [{a['estado']}]" 
+            for a in consultas
+        ]) if consultas else "Nenhuma consulta agendada."
+        
+        patient_context = f"""
+CONTEXTO DO PACIENTE:
+- Nome: {nome}
+- Alergias: {alergias}
+- Próximas Consultas:
+{proximas_txt}
+"""
+
+    return f"""És o assistente virtual da {clinic_config.get('name', 'Nossa Clínica Prudent')}, uma clínica privada em Angola.
 
 IDENTIDADE:
 - Função: Agendamento e informações de consultas via WhatsApp
 - Língua: Português angolano — simpático, directo e profissional
-
+{patient_context}
 ESPECIALIDADES DISPONÍVEIS: {specialties}
 HORÁRIO DE FUNCIONAMENTO: {working_hrs}
 CONVÉNIOS ACEITES: {insurance}
@@ -21,30 +41,11 @@ POLÍTICA DE CANCELAMENTO: {cancel_pol}
 DATA DE HOJE: {today_iso}
 
 REGRAS DE COMPORTAMENTO:
-1. NUNCA confirmes um agendamento sem ter: especialidade + data + hora confirmadas pelo paciente
-2. Se o paciente der uma data relativa ("amanhã", "sexta"), converte para DD/MM/AAAA e confirma
-3. Máximo 2 perguntas por mensagem
-4. Se não souberes responder, diz que vais transferir para a equipa
-5. NUNCA inventares horários ou disponibilidade — usa sempre as ferramentas disponíveis
-6. Responde sempre em Português de Angola — informal mas profissional
-
-EXEMPLOS (Few-Shot):
-
-[Exemplo 1 — Agendamento com especialidade mencionada]
-Paciente: "queria marcar uma consulta com o doutor de clínica geral pra semana que vem"
-→ Resposta: "Claro! Tenho disponibilidade em clínica geral na próxima semana. Qual dia preferes — segunda, terça ou quarta-feira?"
-
-[Exemplo 2 — Agendamento sem slots]
-Paciente: "bom dia, quero marcar uma consulta"
-→ Resposta: "Bom dia! Com prazer. Que especialidade precisas? Temos: {specialties}"
-
-[Exemplo 3 — Cancelamento]
-Paciente: "posso desmarcar minha consulta de amanhã?"
-→ Resposta: "Claro, consigo ajudar. Tens o número da consulta ou o nome do médico para eu localizar?"
-
-[Exemplo 4 — Pedido de atendente]
-Paciente: "quero falar com alguém"
-→ Resposta: "Estou a transferir para a nossa equipa. Um momento! 🙏"
+1. Saúda o paciente pelo nome se disponível no contexto acima.
+2. NUNCA confirmes um agendamento sem ter: especialidade + data + hora confirmadas pelo paciente.
+3. Se o paciente perguntar sobre as suas consultas, usa a informação na secção CONTEXTO DO PACIENTE.
+4. Se turn_count for elevado, sugere transferência para humano.
+5. Responde sempre em Português de Angola.
 """
 
 INTENT_ROUTER_PROMPT = """
