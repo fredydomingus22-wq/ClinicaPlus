@@ -11,7 +11,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       client={queryClient}
       persistOptions={{
         persister: idbPersister,
-        buster: 'v2',
+        buster: 'v5',
       }}
       onSuccess={() => {
         // Retomar mutações que foram pausadas enquanto offline e invalidar queries.

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Hexagon, Lock, KeyRound, Eye, EyeOff, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Lock, KeyRound, Eye, EyeOff, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 
 import { authApi } from '../../api/auth';
@@ -54,7 +54,7 @@ export const ResetPasswordPage = () => {
       <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 p-6">
         <div className="bg-white p-8 shadow-xl border border-slate-100 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-6">
-             <Hexagon size={32} />
+             <img src="/logo.png" alt="DocAgen" className="h-10 w-10 object-contain" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Token Inválido</h2>
           <p className="text-slate-500 mb-8">O link de recuperação está incompleto ou expirou. Por favor, solicite um novo link.</p>
@@ -84,9 +84,9 @@ export const ResetPasswordPage = () => {
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
             <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
-              <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
+              <img src="/logo.png" alt="DocAgen" className="h-8 w-8 object-contain" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
+            <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-semibold leading-[1.1] mb-6 text-white tracking-tight text-balance">
@@ -186,7 +186,7 @@ export const ResetPasswordPage = () => {
           )}
 
           <p className="text-center text-xs text-slate-500 mt-10 font-medium">
-            &copy; {new Date().getFullYear()} ClinicaPlus. Segurança Garantida.
+            &copy; {new Date().getFullYear()} DocAgen. Segurança Garantida.
           </p>
         </div>
       </div>

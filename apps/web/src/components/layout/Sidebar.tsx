@@ -29,7 +29,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-[#e5e5e5] shrink-0">
         <div className="mr-3 shrink-0 flex items-center justify-center">
-          <img src="/logo-source.png" alt="DocAgen" className="h-8 w-8 object-contain" />
+          <img src="/logo.png" alt="DocAgen" className="h-8 w-8 object-contain" />
         </div>
         {sidebarOpen && (
           <span className="font-black text-base tracking-tight whitespace-nowrap text-[#1a1a1a] font-mono uppercase">

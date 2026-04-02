@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Hexagon, User, ArrowLeft, Send } from 'lucide-react';
+import { User, ArrowLeft, Send } from 'lucide-react';
 import { z } from 'zod';
 
 import { authApi } from '../../api/auth';
@@ -56,9 +56,9 @@ export const ForgotPasswordPage = () => {
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
             <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
-              <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
+              <img src="/logo.png" alt="DocAgen" className="h-8 w-8 object-contain" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
+            <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-semibold leading-[1.1] mb-6 text-white tracking-tight text-balance">
@@ -108,7 +108,7 @@ export const ForgotPasswordPage = () => {
                     Identificador da Clínica
                   </label>
                   <div className="relative">
-                    <Hexagon className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+                    <img src="/logo.png" className="absolute left-3.5 top-3 h-5 w-5 object-contain" />
                     <input
                       id="clinicaSlug"
                       className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.clinicaSlug ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
@@ -133,7 +133,7 @@ export const ForgotPasswordPage = () => {
                   <User className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
                   <input
                     className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
-                    placeholder="nome@clinica.ao"
+                    placeholder="email@docagen.ao"
                     type="email"
                     {...register('email')}
                   />

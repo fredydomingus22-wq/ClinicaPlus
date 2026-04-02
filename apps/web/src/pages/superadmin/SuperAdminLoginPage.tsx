@@ -14,7 +14,7 @@ const SuperAdminLoginSchema = z.object({
   password: z.string().min(1, 'Palavra-passe obrigatória'),
   mfaToken: z.string().optional(),
 });
-import { Terminal, ShieldAlert, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { ShieldAlert, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export function SuperAdminLoginPage() {
@@ -79,12 +79,12 @@ export function SuperAdminLoginPage() {
         <div className="flex-1 flex flex-col justify-between relative z-10">
           <div>
             <div className="flex items-center gap-3 text-white mb-20 animate-[slide-in_0.5s_ease-out]">
-              <div className="bg-white text-black p-2 rounded-sm border-2 border-transparent">
-                <Terminal size={28} strokeWidth={2.5} />
+              <div className="bg-white p-2 rounded-sm border-2 border-transparent">
+                <img src="/logo.png" alt="DocAgen" className="w-8 h-8 object-contain" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight uppercase leading-none font-display">
-                  ClinicaPlus
+                  DocAgen
                 </h1>
                 <p className="text-[10px] tracking-widest text-neutral-400 font-bold uppercase mt-1">
                   Administração Global
@@ -120,12 +120,12 @@ export function SuperAdminLoginPage() {
         <div className="w-full max-w-md animate-[fade-in_0.6s_ease-out] relative z-10">
           
           <div className="md:hidden flex items-center gap-3 text-white mb-12">
-            <div className="bg-white text-black p-2 rounded-sm">
-              <Terminal size={24} strokeWidth={2.5} />
+            <div className="bg-white p-2 rounded-sm">
+              <img src="/logo.png" alt="DocAgen" className="w-6 h-6 object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight uppercase leading-none font-display">
-                ClinicaPlus
+                DocAgen
               </h1>
               <p className="text-[10px] tracking-widest text-neutral-400 font-bold uppercase mt-1">
                 Administração Global
@@ -149,7 +149,7 @@ export function SuperAdminLoginPage() {
                     type="email"
                     {...register('email')}
                     className={`w-full bg-[#111] border ${errors.email ? 'border-red-500/50' : isSubmitError ? 'border-red-500/50' : 'border-[#333] group-focus-within:border-white'} text-white px-4 py-3.5 outline-none transition-all duration-200 placeholder:text-neutral-600 rounded-sm font-sans`}
-                    placeholder="admin@clinicaplus.ao"
+                    placeholder="admin@docagen.ao"
                   />
                 </div>
                 {errors.email && (

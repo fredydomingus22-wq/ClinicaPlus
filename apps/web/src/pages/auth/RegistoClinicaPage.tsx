@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, User, KeyRound, Eye, EyeOff, Hexagon, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Building2, User, KeyRound, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
 
 import { authApi } from '../../api/auth';
@@ -55,9 +55,9 @@ export const RegistoClinicaPage = () => {
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
             <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
-              <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
+              <img src="/logo.png" alt="DocAgen" className="h-8 w-8 object-contain" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
+            <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
 
           <h1 className="text-5xl lg:text-5xl font-semibold leading-[1.1] mb-6 text-white tracking-tight text-balance">

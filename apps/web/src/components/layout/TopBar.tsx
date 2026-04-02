@@ -20,7 +20,7 @@ export function TopBar() {
         {/* Mobile Logo Branding */}
         <div className="md:hidden flex items-center mr-2">
           <div className="mr-2">
-            <img src="/logo-source.png" alt="DocAgen" className="h-6 w-6 object-contain" />
+            <img src="/logo.png" alt="DocAgen" className="h-6 w-6 object-contain" />
           </div>
           <span className="font-black text-sm tracking-tight text-[#1a1a1a] font-mono uppercase">
             DocAgen

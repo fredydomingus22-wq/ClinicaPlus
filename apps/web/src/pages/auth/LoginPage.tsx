@@ -127,7 +127,7 @@ export const LoginPage = () => {
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
             <div className="mr-4">
-              <img src="/logo-source.png" alt="DocAgen" className="h-12 w-12 object-contain" />
+              <img src="/logo.png" alt="DocAgen" className="h-12 w-12 object-contain" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
