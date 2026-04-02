@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ChevronRight, Home, ShieldCheck } from 'lucide-react';
+import { Bell, ChevronRight, Home } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../stores/ui.store';
 import { UserMenu } from './UserMenu';
@@ -19,11 +19,11 @@ export function TopBar() {
       <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
         {/* Mobile Logo Branding */}
         <div className="md:hidden flex items-center mr-2">
-          <div className="bg-[#1a1a1a] p-1.5 mr-2">
-            <ShieldCheck className="h-4 w-4 text-white" />
+          <div className="mr-2">
+            <img src="/logo-source.png" alt="DocAgen" className="h-6 w-6 object-contain" />
           </div>
           <span className="font-black text-sm tracking-tight text-[#1a1a1a] font-mono uppercase">
-            ClinicaPlus
+            DocAgen
           </span>
         </div>
 

@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   ChevronLeft, 
-  ShieldCheck,
   LogOut
 } from 'lucide-react';
 import { useUIStore } from '../../stores/ui.store';
@@ -28,13 +27,13 @@ export function Sidebar() {
       `}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b border-[#e5e5e5] shrink-0">
-        <div className="bg-[#1a1a1a] p-1.5 mr-3 shrink-0 flex items-center justify-center">
-          <ShieldCheck className="h-4 w-4 text-white" />
+      <div className="h-16 flex items-center px-4 border-b border-[#e5e5e5] shrink-0">
+        <div className="mr-3 shrink-0 flex items-center justify-center">
+          <img src="/logo-source.png" alt="DocAgen" className="h-8 w-8 object-contain" />
         </div>
         {sidebarOpen && (
-          <span className="font-black text-sm tracking-tight whitespace-nowrap text-[#1a1a1a] font-mono uppercase">
-            ClinicaPlus
+          <span className="font-black text-base tracking-tight whitespace-nowrap text-[#1a1a1a] font-mono uppercase">
+            DocAgen
           </span>
         )}
       </div>

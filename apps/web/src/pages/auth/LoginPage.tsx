@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Eye, EyeOff, Hexagon, Building2, User, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Building2, User, KeyRound } from 'lucide-react';
 
 import { LoginSchema, type LoginInput, Papel } from '@clinicaplus/types';
 import { getTenantSlugFromURL } from '@clinicaplus/utils';
@@ -126,8 +126,8 @@ export const LoginPage = () => {
 
         <div className="relative z-10 w-full max-w-2xl text-white animate-in slide-in-from-bottom-8 fade-in duration-1000">
           <div className="flex items-center gap-3 mb-8">
-            <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
-              <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
+            <div className="mr-4">
+              <img src="/logo-source.png" alt="DocAgen" className="h-12 w-12 object-contain" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
