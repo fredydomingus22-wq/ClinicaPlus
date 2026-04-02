@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Toaster } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from './api/auth';
 import { useAuthStore } from './stores/auth.store';
-import { queryClient, idbPersister } from './lib/queryClient';
 import { useSocket } from './hooks/useSocket';
 import { router } from './router';
 import { ConnectivityBadge } from './components/ConnectivityBadge';
@@ -32,6 +31,7 @@ function FullPageSpinner() {
 export function App() {
   const { isRestoring, setSession, setRestoring } = useAuthStore();
   const socket = useSocket();
+  const queryClient = useQueryClient();
   
   // PWA Sync Notifications (Sprint D)
   useSyncNotifications();
@@ -46,7 +46,7 @@ export function App() {
       };
     }
     return undefined;
-  }, [socket]);
+  }, [socket, queryClient]);
 
   useEffect(() => {
     // Attempt to restore session on mount
@@ -67,20 +67,7 @@ export function App() {
   }
 
   return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister: idbPersister,
-        buster: 'v2',
-      }}
-      onSuccess={() => {
-        // Retomar mutações que foram pausadas enquanto offline e invalidar queries.
-        // Assim garantimos que o estado está fresco após restauro do cache. (Sprint B/C)
-        queryClient.resumePausedMutations().then(() => {
-          queryClient.invalidateQueries();
-        });
-      }}
-    >
+    <>
       <ConnectivityBadge />
       <PendingSyncBadge />
       <MutationManager />
@@ -88,7 +75,7 @@ export function App() {
       <RouterProvider router={router} />
       <PwaUpdatePrompt />
       <Toaster position="top-right" reverseOrder={false} />
-    </PersistQueryClientProvider>
+    </>
   );
 }
 
