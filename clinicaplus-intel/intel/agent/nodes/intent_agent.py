@@ -21,30 +21,26 @@ async def intent_node(state: ConversaState) -> dict:
 
     ultima_msg = state["messages"][-1].content
 
-    # Preparar data atual formatada
+    # Preparar datas para o Few-Shot
     agora = datetime.now(LUANDA_TZ)
+    amanha_dt = agora + timedelta(days=1)
+    hoje = agora.strftime("%Y-%m-%d")
+    amanha = amanha_dt.strftime("%Y-%m-%d")
+    
     _MESES = ["","janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"]
-    data_hoje = f"{agora.day} de {_MESES[agora.month]} de {agora.year}"
+    data_hoje_extenso = f"{agora.day} de {_MESES[agora.month]} de {agora.year}"
 
-    system = INTENT_PROMPT.format(data_hoje=data_hoje)
+    # Injetar contexto no prompt do sistema
+    system = INTENT_PROMPT.format(
+        data_hoje=data_hoje_extenso,
+        hoje=hoje,
+        amanha=amanha,
+        clinic_config=json.dumps(state.get("clinic_config", {}), ensure_ascii=False)
+    )
 
-    prompt_classificacao = f"""
-Mensagem do paciente: "{ultima_msg}"
-
-Extrai em JSON:
-{{
-  "intencao": "marcar|cancelar|remarcar|consultar_consultas|info_clinica|urgencia|outro",
-  "especialidade": "nome ou null",
-  "nome_medico": "nome ou null",
-  "data_preferida": "YYYY-MM-DD ou null",
-  "periodo": "manha|tarde|null"
-}}
-
-Só JSON, sem texto.
-"""
     response = await _llm.ainvoke([
         SystemMessage(content=system),
-        HumanMessage(content=prompt_classificacao),
+        HumanMessage(content=f"Mensagem do paciente: \"{ultima_msg}\""),
     ])
 
     # Rastrear custo

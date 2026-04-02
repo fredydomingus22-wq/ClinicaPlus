@@ -154,20 +154,39 @@ class ClinicaDB:
         )
 
 
-    async def especialidades_activas(self, clinicaId: str) -> list[str]:
+        return [r["nome"] for r in rows]
+
+
+    async def buscar_config_clinica(self, clinicaId: str) -> dict:
         """
-        Lista de especialidades com pelo menos 1 médico activo.
-        Usada para montar a Poll inicial.
+        Busca metadados e regras da clínica (configurações, convénios, etc).
         """
         async with self.conn() as c:
-            rows = await c.fetch("""
-                SELECT DISTINCT e.nome
+            # 1. Configurações gerais
+            cfg = await c.fetchrow("""
+                SELECT "lembrete24h", "horasAntecedencia", "preTriagem", "seguradoras"
+                FROM configuracoes_clinica
+                WHERE "clinicaId" = $1
+            """, clinicaId)
+            
+            # 2. Especialidades activas
+            especialidades = await self.especialidades_activas(clinicaId)
+            
+            # 3. Médicos e preços base
+            medicos = await c.fetch("""
+                SELECT m.nome, e.nome as esp, m.preco
                 FROM medicos m
                 JOIN especialidades e ON e.id = m."especialidadeId"
                 WHERE m."clinicaId" = $1 AND m.ativo = true
-                ORDER BY e.nome
             """, clinicaId)
-        return [r["nome"] for r in rows]
+
+            return {
+                "seguradoras": cfg["seguradoras"] if cfg else [],
+                "preTriagem": cfg["preTriagem"] if cfg else True,
+                "antecedencia_horas": cfg["horasAntecedencia"] if cfg else 24,
+                "especialidades": especialidades,
+                "medicos": [{"nome": m["nome"], "especialidade": m["esp"], "preco": m["preco"]} for m in medicos]
+            }
 
 
     # ── Slots disponíveis ──────────────────────────────────────────────────────

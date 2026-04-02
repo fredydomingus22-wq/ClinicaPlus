@@ -97,7 +97,7 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
 
     initial_state = {
         "messages":          [HumanMessage(content=texto)],
-        "clinica_id":        clinica_id,
+        "tenant_id":         clinica_id,
         "clinica_nome":      clinica_nome,
         "numero_wa":         numero,
         "paciente_id":       paciente.id if paciente else None,
@@ -106,6 +106,7 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         "max_turnos":        10,
         "tokens_usados":     0,
         "custo_estimado_usd": 0.0,
+        "clinic_config":     {}, # Preenchido pelo config_node
         "clinica_dados":     None, # Preenchido pelo retrieval_node
     }
 

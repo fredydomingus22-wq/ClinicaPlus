@@ -15,14 +15,20 @@ async def booking_node(state: ConversaState) -> dict:
     Booking Agent: agente especialista em marcações.
     Tem acesso a ferramentas de DB. Conversa directamente com o paciente.
     """
+    config = state.get("clinic_config", {})
+    especialidades = config.get("especialidades", [])
+    seguradoras = config.get("seguradoras", [])
+    antecedencia = config.get("antecedencia_horas", 24)
+    pre_triagem = "Sim" if config.get("preTriagem") else "Não"
+
     system = BOOKING_PROMPT.format(
         clinica_nome=state["clinica_nome"],
         paciente_nome=state.get("paciente_nome") or "Paciente",
-        clinica_id=state["clinica_id"],
-        paciente_id=state.get("paciente_id") or "desconhecido",
-        intencao=state.get("intencao") or "marcar",
-        especialidade=state.get("especialidade") or "não especificada",
-        clinica_dados=json.dumps(state.get("clinica_dados"), indent=2, ensure_ascii=False) if state.get("clinica_dados") else "Não há dados específicos pré-carregados."
+        clinic_config=json.dumps(config, ensure_ascii=False) if config else "Não há configurações pré-carregadas.",
+        especialidades=", ".join(especialidades) if especialidades else "Não especificadas",
+        seguradoras=", ".join(seguradoras) if seguradoras else "Sem convénios listados",
+        antecedencia=antecedencia,
+        pre_triagem=pre_triagem
     )
 
     response = await _llm.ainvoke([
@@ -38,12 +44,12 @@ async def booking_node(state: ConversaState) -> dict:
         tasks    = []
         for tc in response.tool_calls:
             if tc["name"] in tool_map:
-                # Injectar clinica_id e paciente_id como contexto
+                # Injectar tenant_id e paciente_id como contexto (Tool Binding Seguro)
                 args = tc["args"].copy()
                 if "clinica_id" not in args:
-                    args["clinica_id"] = state["clinica_id"]
+                    args["clinica_id"] = state.get("tenant_id")
                 if "paciente_id" not in args and state.get("paciente_id"):
-                    args["paciente_id"] = state["paciente_id"]
+                    args["paciente_id"] = state.get("paciente_id")
                 tasks.append((tc["id"], tc["name"], tool_map[tc["name"]].ainvoke(args)))
 
         results = await asyncio.gather(*[t[2] for t in tasks], return_exceptions=True)

@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 from .state import ConversaState
 from .nodes.supervisor     import supervisor_node
+from .nodes.config_node    import config_node
 from .nodes.intent_agent   import intent_node
 from .nodes.booking_agent  import booking_node
 from .nodes.info_agent     import info_node
@@ -21,6 +22,7 @@ def build_graph() -> StateGraph:
     builder = StateGraph(ConversaState)
 
     # ── Nós ──────────────────────────────────────────────────────────────────
+    builder.add_node("config",      config_node)
     builder.add_node("intent",      intent_node)
     builder.add_node("retrieval",   retrieval_node)
     builder.add_node("supervisor",  supervisor_node)
@@ -29,10 +31,13 @@ def build_graph() -> StateGraph:
     builder.add_node("escalation",  escalation_node)
 
     # ── Edges ─────────────────────────────────────────────────────────────────
-    # Começa sempre pelo intent (classificar o que o paciente quer)
-    builder.add_edge(START, "intent")
+    # 1. Carregar configuração do tenant
+    builder.add_edge(START, "config")
 
-    # Intent → Retrieval (buscar dados determinísticos)
+    # 2. Classificar a intenção
+    builder.add_edge("config", "intent")
+
+    # 3. Extrair regras ou perfis do DB se necessário
     builder.add_edge("intent", "retrieval")
 
     # Retrieval → Supervisor (supervisor decide quem actua)

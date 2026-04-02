@@ -7,12 +7,15 @@ class ConversaState(TypedDict):
     # Mensagens da conversa (acumuladas pelo LangGraph)
     messages: Annotated[list[BaseMessage], add_messages]
 
-    # Contexto da conversa
-    clinica_id:    str
+    # Contexto da conversa e Multi-tenancy
+    tenant_id:     str            # ID da clínica (clinicaId no DB)
     clinica_nome:  str
-    numero_wa:     str
+    numero_wa:     str            # remoteJid (WhatsApp ID)
     paciente_id:   Optional[str]
     paciente_nome: Optional[str]
+    
+    # Configurações Dinâmicas e Regras de Negócio (Injetadas no início)
+    clinic_config: dict           # Especialidades, Horários, Regras de Cancelamento, Convénios
 
     # Routing interno
     next_agent:    Optional[str]  # "intent" | "booking" | "info" | "escalation" | "end"

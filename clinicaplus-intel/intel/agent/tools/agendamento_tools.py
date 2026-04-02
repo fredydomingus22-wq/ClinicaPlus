@@ -1,4 +1,5 @@
-from langchain_core.tools import tool
+from langchain_core.tools import tool, InjectedToolArg
+from typing import Annotated
 from db_layer import db
 from datetime import datetime, timezone, timedelta
 import json
@@ -9,7 +10,7 @@ LUANDA_TZ = timezone(timedelta(hours=1))
 
 @tool
 async def buscar_slots(
-    clinica_id:  str,
+    clinica_id:  Annotated[str, InjectedToolArg],
     medico_id:   str,
     data_inicio: str = None,   # YYYY-MM-DD, default: hoje
     data_fim:    str = None,   # YYYY-MM-DD, opcional
@@ -49,7 +50,10 @@ async def buscar_slots(
 
 
 @tool
-async def ver_consultas_paciente(clinica_id: str, paciente_id: str) -> str:
+async def ver_consultas_paciente(
+    clinica_id: Annotated[str, InjectedToolArg], 
+    paciente_id: Annotated[str, InjectedToolArg]
+) -> str:
     """
     Retorna as próximas consultas agendadas do paciente.
     Chamar quando pergunta sobre as suas consultas ou quer cancelar/remarcar.
@@ -75,8 +79,8 @@ async def ver_consultas_paciente(clinica_id: str, paciente_id: str) -> str:
 
 @tool
 async def criar_agendamento(
-    clinica_id:  str,
-    paciente_id: str,
+    clinica_id:  Annotated[str, InjectedToolArg],
+    paciente_id: Annotated[str, InjectedToolArg],
     medico_id:   str,
     data_hora:   str,  # ISO 8601
     notas:       str = "",

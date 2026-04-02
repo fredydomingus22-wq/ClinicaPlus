@@ -12,9 +12,15 @@ async def info_node(state: ConversaState) -> dict:
     Info Agent: responde a perguntas gerais sobre a clínica.
     Usa Google Gemini Flash para baixo custo em informações gerais.
     """
+    config = state.get("clinic_config", {})
+    especialidades = config.get("especialidades", [])
+    seguradoras = config.get("seguradoras", [])
+
     system = INFO_PROMPT.format(
         clinica_nome=state["clinica_nome"],
-        clinica_dados=json.dumps(state.get("clinica_dados"), indent=2, ensure_ascii=False) if state.get("clinica_dados") else "Nenhuns dados disponíveis."
+        clinic_config=json.dumps(config, indent=2, ensure_ascii=False) if config else "Nenhuns dados disponíveis.",
+        especialidades=", ".join(especialidades) if especialidades else "Não especificadas",
+        seguradoras=", ".join(seguradoras) if seguradoras else "Sem convénios listados",
     )
 
     response = await _llm.ainvoke([

@@ -1,4 +1,5 @@
-from langchain_core.tools import tool
+from langchain_core.tools import tool, InjectedToolArg
+from typing import Annotated
 from db_layer import db
 from datetime import datetime, timezone, timedelta
 import json
@@ -8,7 +9,7 @@ import httpx
 LUANDA_TZ = timezone(timedelta(hours=1))
 
 @tool
-async def buscar_especialidades(clinica_id: str) -> str:
+async def buscar_especialidades(clinica_id: Annotated[str, InjectedToolArg]) -> str:
     """
     Retorna as especialidades médicas disponíveis na clínica.
     Chamar quando o paciente não especifica especialidade.
@@ -21,7 +22,7 @@ async def buscar_especialidades(clinica_id: str) -> str:
 
 
 @tool
-async def buscar_medicos(clinica_id: str, especialidade: str = None, nome: str = None) -> str:
+async def buscar_medicos(clinica_id: Annotated[str, InjectedToolArg], especialidade: str = None, nome: str = None) -> str:
     """
     Retorna médicos disponíveis. Filtrar por especialidade e/ou nome.
     Chamar quando paciente menciona médico específico ou especialidade.
