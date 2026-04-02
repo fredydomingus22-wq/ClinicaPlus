@@ -89,11 +89,16 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
             print(f"🗜️ Comprimindo histórico para {numero}...")
             messages_comprimidas = await comprimir_historico(mensagens_existentes, clinica_nome)
             
-            # Limpar o histórico atual usando IDs (o checkpointer aceita RemoveMessage se tivermos add_messages reducer)
+            # Limpar o histórico atual usando IDs
             delete_msgs = [RemoveMessage(id=m.id) for m in mensagens_existentes if getattr(m, "id", None)]
             
-            # Atualizar o State na DB: apagar todas + injetar o sumário e as recentes limpas
-            await graph.aupdate_state(config, {"messages": delete_msgs + messages_comprimidas})
+            try:
+                # Atualizar o State na DB: apagar todas + injetar o sumário e as recentes limpas
+                await graph.aupdate_state(config, {"messages": delete_msgs + messages_comprimidas})
+            except Exception as e:
+                print(f"⚠️ Falha na compressão (IDs inválidos?): {e}")
+                # Fallback: tentar apenas injetar as mensagens comprimidas sem apagar (acumula, mas não crasha)
+                await graph.aupdate_state(config, {"messages": messages_comprimidas})
 
     initial_state = {
         "messages":          [HumanMessage(content=texto)],
@@ -117,7 +122,10 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         old_msgs = existing_state.values.get("messages", [])
         delete_cmds = [RemoveMessage(id=m.id) for m in old_msgs if getattr(m, "id", None)]
         if delete_cmds:
-            await graph.aupdate_state(config, {"messages": delete_cmds})
+            try:
+                await graph.aupdate_state(config, {"messages": delete_cmds})
+            except Exception as e:
+                print(f"⚠️ Falha ao resetar mensagens: {e}")
 
     # 5. Invocar o grafo
     # Nota: LangGraph gere o histórico via AsyncPostgresSaver (definido no lifespan do main.py)
