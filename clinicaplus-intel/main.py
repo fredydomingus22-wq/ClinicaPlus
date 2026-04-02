@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     
     # Gerir o ciclo de vida do Checkpointer Postgres
     async with get_checkpointer() as checkpointer:
-        await checkpointer.asetup()
+        checkpointer.setup()
         await init_graph(checkpointer) # Inicializa grafo com persistência
         
         start_scheduler() # Inicia o agendador de tarefas
