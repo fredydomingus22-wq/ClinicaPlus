@@ -1,10 +1,97 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
-  // Trigger Vite restart to clear deps cache
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      strategies: 'generateSW',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf}'],
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/webhook\//, /\.[a-z]+$/],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 365 * 24 * 60 * 60,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: 'DocAgen',
+        short_name: 'DocAgen',
+        description: 'Gestão de agendamento clínico profissional',
+        theme_color: '#2563eb',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait-primary',
+        start_url: '/admin/dashboard',
+        scope: '/',
+        lang: 'pt',
+        icons: [
+          {
+            src: '/pwa-64x64.png',
+            sizes: '64x64',
+            type: 'image/png',
+          },
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+        shortcuts: [
+          {
+            name: 'Hoje',
+            short_name: 'Hoje',
+            description: 'Ver agendamentos de hoje',
+            url: '/admin/agendamentos/hoje',
+            icons: [{ src: '/shortcut-hoje.png', sizes: '96x96' }],
+          },
+          {
+            name: 'Nova Marcação',
+            short_name: 'Marcar',
+            description: 'Marcar nova consulta',
+            url: '/admin/agendamentos/novo',
+            icons: [{ src: '/shortcut-novo.png', sizes: '96x96' }],
+          },
+        ],
+      },
+      devOptions: {
+        enabled: false,
+        type: 'module',
+        navigateFallback: 'index.html',
+      },
+    }),
+  ],
   server: {
     port: 5173,
     proxy: {
@@ -15,31 +102,18 @@ export default defineConfig({
     },
   },
   resolve: {
-    // Prevent duplicate React instances from monorepo packages
     dedupe: ['react', 'react-dom'],
     alias: {
-      // Point workspace packages directly to their source during dev/build
-      // so Vite processes them without needing a dist build first
       '@clinicaplus/ui': path.resolve(__dirname, '../../packages/ui/src/index.tsx'),
       '@clinicaplus/types': path.resolve(__dirname, '../../packages/types/src/index.ts'),
       '@clinicaplus/utils': path.resolve(__dirname, '../../packages/utils/src/index.ts'),
     },
   },
   optimizeDeps: {
-    // Force Vite to include these workspace packages in pre-bundling
     include: ['@clinicaplus/types', '@clinicaplus/utils'],
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'vendor-ui':    ['lucide-react'],
-        }
-      }
-    }
+    chunkSizeWarningLimit: 1000,
   },
   // @ts-ignore
   test: {
@@ -55,3 +129,4 @@ export default defineConfig({
     },
   },
 });
+

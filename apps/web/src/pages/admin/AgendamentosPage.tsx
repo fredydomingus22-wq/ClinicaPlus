@@ -23,7 +23,8 @@ import {
   X,
   CheckCircle,
   XCircle,
-  Eye
+  Eye,
+  Activity
 } from 'lucide-react';
 import { 
   formatShortDate, 
@@ -51,7 +52,7 @@ export default function AgendamentosPage() {
   });
   const [selectedAgendamento, setSelectedAgendamento] = useState<AgendamentoDTO | null>(null);
 
-  const { data, isLoading, error } = useListaAgendamentos({ 
+  const { data, isLoading, isFetching, error } = useListaAgendamentos({ 
     page, 
     limit: 15,
     medicoId: filtros.medicoId || undefined,
@@ -266,7 +267,15 @@ export default function AgendamentosPage() {
     <div className="max-w-screen-2xl mx-auto space-y-6 animate-fade-in pb-10 px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Gestão Global de Agendamentos</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Gestão Global de Agendamentos</h1>
+            {isFetching && !isLoading && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-50 text-primary-600 animate-pulse border border-primary-100">
+                <Activity className="h-3 w-3 animate-spin duration-1000" />
+                <span className="text-[10px] font-black uppercase tracking-wider">A Sincronizar...</span>
+              </div>
+            )}
+          </div>
           <p className="text-neutral-500 text-sm font-medium">Controlo administrativo de todas as marcações da clínica.</p>
         </div>
         <div className="flex items-center gap-3">

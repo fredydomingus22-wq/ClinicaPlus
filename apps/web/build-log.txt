@@ -1,0 +1,45 @@
+
+> web@1.0.0 prebuild C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web
+> cd ../.. && npx turbo run build --filter=@clinicaplus/types --filter=@clinicaplus/ui --filter=@clinicaplus/utils
+
+• turbo 2.8.13
+• Packages in scope: @clinicaplus/types, @clinicaplus/ui, @clinicaplus/utils
+• Running build in 3 packages
+• Remote caching enabled
+@clinicaplus/types:build: cache hit, replaying logs f3c627b98f727b54
+@clinicaplus/types:build: 
+@clinicaplus/types:build: > @clinicaplus/types@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\types
+@clinicaplus/types:build: > tsc
+@clinicaplus/types:build: 
+@clinicaplus/utils:build: cache hit, replaying logs b8e8e3bc826fc2e8
+@clinicaplus/utils:build: 
+@clinicaplus/utils:build: > @clinicaplus/utils@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\utils
+@clinicaplus/utils:build: > tsc
+@clinicaplus/utils:build: 
+@clinicaplus/ui:build: cache hit, replaying logs b21eb5c6ecc030c0
+@clinicaplus/ui:build: 
+@clinicaplus/ui:build: > @clinicaplus/ui@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\packages\ui
+@clinicaplus/ui:build: > tsc
+@clinicaplus/ui:build: 
+
+ Tasks:    3 successful, 3 total
+Cached:    3 cached, 3 total
+  Time:    335ms >>> FULL TURBO
+
+
+> web@1.0.0 build C:\Users\LENOVO\Documents\Projectos\ClinicaPlus\apps\web
+> tsc && vite build
+
+[36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+[33mWarning: Invalid output options (1 issue found)
+- For the "manualChunks". Invalid type: Expected Function but received Object. [0m
+[2Ktransforming...✓ 3594 modules transformed.
+<anonymous_script>:0
+
+
+TypeError: manualChunks is not a function
+    at name (file:///C:/Users/LENOVO/Documents/Projectos/ClinicaPlus/node_modules/.pnpm/rolldown@1.0.0-rc.12_@emnapi+core@1.9.2_@emnapi+runtime@1.9.2/node_modules/rolldown/dist/shared/rolldown-build-CPrIX9V6.mjs:3104:10)
+    at name (file:///C:/Users/LENOVO/Documents/Projectos/ClinicaPlus/node_modules/.pnpm/rolldown@1.0.0-rc.12_@emnapi+core@1.9.2_@emnapi+runtime@1.9.2/node_modules/rolldown/dist/shared/rolldown-build-CPrIX9V6.mjs:3115:54)
+
+Node.js v22.21.0
+ ELIFECYCLE  Command failed with exit code 1.

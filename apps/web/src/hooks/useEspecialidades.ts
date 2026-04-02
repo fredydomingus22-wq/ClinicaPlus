@@ -19,7 +19,9 @@ export function useEspecialidades(query: Partial<EspecialidadeListQuery> = {}) {
   return useQuery({
     queryKey: especialidadesKeys.list(query),
     queryFn: () => especialidadesApi.getList(query),
-    staleTime: 300_000, // 5 minutes (standard for settings)
+    staleTime: 1000 * 60 * 60, // 60 minutes
+    gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+    placeholderData: (prev) => prev,
   });
 }
 

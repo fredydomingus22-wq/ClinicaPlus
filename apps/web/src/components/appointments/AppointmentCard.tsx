@@ -1,6 +1,7 @@
 import React from 'react';
-import { Clock, User, Stethoscope, ChevronRight } from 'lucide-react';
+import { Clock, User, Stethoscope, ChevronRight, RefreshCw } from 'lucide-react';
 import { StatusBadge, Avatar } from '@clinicaplus/ui';
+import { useQueryClient } from '@tanstack/react-query';
 import type { AgendamentoDTO } from '@clinicaplus/types';
 
 interface AppointmentCardProps {
@@ -10,18 +11,34 @@ interface AppointmentCardProps {
 }
 
 export function AppointmentCard({ agendamento, onClick, showDoctor = false }: AppointmentCardProps) {
+  const queryClient = useQueryClient();
+  const isSyncing = queryClient
+    .getMutationCache()
+    .getAll()
+    .some(m => 
+      m.state.isPaused && 
+      (m.state.variables as Record<string, unknown>)?.id === agendamento.id
+    );
+
   const date = new Date(agendamento.dataHora);
   const time = date.toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' });
   const patientInitials = (agendamento.paciente?.nome || 'P').split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase();
 
   return (
     <div 
-      onClick={onClick}
+      onClick={isSyncing ? undefined : onClick}
       className={`
-        flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all
-        ${onClick ? 'hover:border-primary-300 hover:shadow-md cursor-pointer group' : ''}
+        flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl transition-all relative
+        ${onClick && !isSyncing ? 'hover:border-primary-300 hover:shadow-md cursor-pointer group' : ''}
+        ${isSyncing ? 'opacity-60 pointer-events-none' : ''}
       `}
     >
+      {isSyncing && (
+        <div className="absolute top-1 right-1 flex items-center gap-1 text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 animate-pulse tracking-tighter">
+          <RefreshCw className="h-2 w-2 animate-spin" />
+          Sincronizando...
+        </div>
+      )}
       {/* Time and Icon */}
       <div className="flex flex-col items-center justify-center min-w-[60px] border-r border-neutral-100 pr-4">
         <Clock className="h-4 w-4 text-neutral-400 mb-1" />

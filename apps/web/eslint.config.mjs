@@ -23,6 +23,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'vite.config.ts', 'eslint.config.mjs', 'postcss.config.js', 'tailwind.config.mjs', 'tailwind.config.js'],
+    ignores: ['dist/**', 'node_modules/**', 'vite.config.ts', 'eslint.config.mjs', 'postcss.config.js', 'tailwind.config.mjs', 'tailwind.config.js', 'src/__tests__/**', 'src/test/**'],
   }
 );

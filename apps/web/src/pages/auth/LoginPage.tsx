@@ -9,6 +9,13 @@ import { LoginSchema, type LoginInput, Papel } from '@clinicaplus/types';
 import { getTenantSlugFromURL } from '@clinicaplus/utils';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../stores/auth.store';
+import { queryClient } from '../../lib/queryClient';
+import { agendamentosKeys } from '../../hooks/useAgendamentos';
+import { agendamentosApi } from '../../api/agendamentos';
+import { medicosKeys } from '../../hooks/useMedicos';
+import { medicosApi } from '../../api/medicos';
+import { especialidadesKeys } from '../../hooks/useEspecialidades';
+import { especialidadesApi } from '../../api/especialidades';
 
 function getRedirectPath(papel: Papel, searchParams: URLSearchParams): string {
   const redirect = searchParams.get('redirect');
@@ -59,6 +66,25 @@ export const LoginPage = () => {
     mutationFn: authApi.login,
     onSuccess: (response) => {
       setSession(response.accessToken, response.utilizador);
+      
+      // Prefetch dados críticos para modo offline imediato (Sprint B5)
+      const medicoId = response.utilizador.papel === Papel.MEDICO ? response.utilizador.id : undefined;
+      
+      queryClient.prefetchQuery({
+        queryKey: agendamentosKeys.hoje(medicoId),
+        queryFn: () => agendamentosApi.getHoje(medicoId),
+      });
+
+      queryClient.prefetchQuery({
+        queryKey: medicosKeys.list({ page: 1, limit: 100 }),
+        queryFn: () => medicosApi.getList({ page: 1, limit: 100 }),
+      });
+
+      queryClient.prefetchQuery({
+        queryKey: especialidadesKeys.list({ page: 1, limit: 100 }),
+        queryFn: () => especialidadesApi.getList({ page: 1, limit: 100 }),
+      });
+
       const dest = getRedirectPath(response.utilizador.papel as Papel, searchParams);
       navigate(dest);
     },
@@ -103,7 +129,7 @@ export const LoginPage = () => {
             <div className="bg-white/10 backdrop-blur-md p-3 border border-white/10">
               <Hexagon size={32} className="text-teal-400 stroke-[1.5]" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white/90">ClinicaPlus</span>
+            <span className="text-2xl font-bold tracking-tight text-white/90">DocAgen</span>
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-semibold leading-[1.1] mb-6 text-white tracking-tight text-balance">
@@ -242,7 +268,7 @@ export const LoginPage = () => {
           </div>
 
           <p className="text-center text-xs text-slate-500 mt-8 font-medium">
-            &copy; {new Date().getFullYear()} ClinicaPlus. Sistema de Agendamentos.
+            &copy; {new Date().getFullYear()} DocAgen. Sistema de Agendamentos.
           </p>
         </div>
       </div>

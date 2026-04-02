@@ -16,7 +16,9 @@ export function useMedicos(query: MedicoListQuery) {
   return useQuery({
     queryKey: medicosKeys.list(query),
     queryFn:  () => medicosApi.getList(query),
-    staleTime: 300_000,
+    staleTime: 1000 * 60 * 30, // 30min
+    gcTime: 1000 * 60 * 60 * 24 * 7, // 7d
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -25,7 +27,8 @@ export function useMedico(id: string) {
     queryKey: medicosKeys.one(id),
     queryFn:  () => medicosApi.getOne(id),
     enabled:  !!id,
-    staleTime: 300_000,
+    staleTime: 1000 * 60 * 30, // 30min
+    gcTime: 1000 * 60 * 60 * 24 * 7, // 7d
   });
 }
 
@@ -60,7 +63,8 @@ export function useSlots(medicoId: string, data: string) {
     queryKey: medicosKeys.slots(medicoId, data),
     queryFn:  () => medicosApi.getSlots(medicoId, data),
     enabled:  !!medicoId && !!data,
-    staleTime: 0,
+    staleTime: 1000 * 60 * 1, // 1min
+    gcTime: 1000 * 60 * 60, // 1h
   });
 }
 

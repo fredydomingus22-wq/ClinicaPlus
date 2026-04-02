@@ -18,7 +18,7 @@ Confirma com: "Li os 5 ficheiros. A avançar para Sprint A."
 
 O ClinicaPlus é um SPA React + Vite para clínicas em Angola. Angola tem 12.7 Mbps de média — abaixo da mediana global. Recepcionistas perdem sinal sem aviso. O objectivo é carregamento < 100ms após primeira visita e shell offline funcional.
 
-Stack: React 18 · Vite (upgrade para v8 neste sprint) · TanStack Query v5 · Tailwind · pnpm monorepo
+Stack: React 19 · Vite (upgrade para v8 neste sprint) · TanStack Query v5 · Tailwind · pnpm monorepo
 
 ## Passo A1 — Upgrade Vite 8 (opcional mas recomendado)
 

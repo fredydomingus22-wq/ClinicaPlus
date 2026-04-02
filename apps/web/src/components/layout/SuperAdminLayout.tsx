@@ -15,7 +15,8 @@ import {
   Server,
   LifeBuoy
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { del } from 'idb-keyval';
+import { queryClient } from '../../lib/queryClient';
 import { useUIStore } from '../../stores/ui.store';
 import { StatTicker } from '../../pages/superadmin/components/StatTicker';
 import { CommandPalette } from '../../pages/superadmin/components/CommandPalette';
@@ -67,10 +68,15 @@ export function SuperAdminLayout() {
   const handleLogout = async () => {
     try {
       await authApi.logout();
+      // Limpa cache offline no logout (Sprint B7)
+      queryClient.clear();
+      await del('docagen-query-cache');
       clear();
       navigate('/login');
     } catch {
-      toast.error('Erro ao terminar sessão');
+      // Mesmo se a limpeza falhar, forçamos o clear do store e redirecionamento
+      clear();
+      navigate('/login');
     }
   };
 

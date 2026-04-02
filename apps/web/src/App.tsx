@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Toaster } from 'react-hot-toast';
 import { authApi } from './api/auth';
 import { useAuthStore } from './stores/auth.store';
-import { queryClient } from './lib/queryClient';
+import { queryClient, idbPersister } from './lib/queryClient';
 import { useSocket } from './hooks/useSocket';
 import { router } from './router';
+import { ConnectivityBadge } from './components/ConnectivityBadge';
+import { PendingSyncBadge } from './components/PendingSyncBadge';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+import { MutationManager } from './components/offline/MutationManager';
+import { ConflictResolverModal } from './components/offline/ConflictResolverModal';
+import { useSyncNotifications } from './hooks/useSyncNotifications';
 
 /**
  * Loading component for session restoration.
@@ -26,6 +32,9 @@ function FullPageSpinner() {
 export function App() {
   const { isRestoring, setSession, setRestoring } = useAuthStore();
   const socket = useSocket();
+  
+  // PWA Sync Notifications (Sprint D)
+  useSyncNotifications();
 
   useEffect(() => {
     if (socket) {
@@ -58,9 +67,28 @@ export function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: idbPersister,
+        buster: 'v2',
+      }}
+      onSuccess={() => {
+        // Retomar mutações que foram pausadas enquanto offline e invalidar queries.
+        // Assim garantimos que o estado está fresco após restauro do cache. (Sprint B/C)
+        queryClient.resumePausedMutations().then(() => {
+          queryClient.invalidateQueries();
+        });
+      }}
+    >
+      <ConnectivityBadge />
+      <PendingSyncBadge />
+      <MutationManager />
+      <ConflictResolverModal />
       <RouterProvider router={router} />
+      <PwaUpdatePrompt />
       <Toaster position="top-right" reverseOrder={false} />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
+

@@ -20,9 +20,12 @@
     "@clinicaplus/ui": "workspace:*",
     "@clinicaplus/utils": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
-    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/query-async-storage-persister": "^5.96.1",
+    "@tanstack/react-query": "^5.96.1",
+    "@tanstack/react-query-persist-client": "^5.96.1",
     "axios": "^1.13.6",
     "date-fns": "^3.0.0",
+    "idb-keyval": "^6.2.2",
     "lucide-react": "^0.576.0",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.4",
@@ -33,6 +36,7 @@
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.1",
     "socket.io-client": "^4.8.3",
+    "workbox-window": "^7.4.0",
     "zod": "^3.22.0",
     "zustand": "^5.0.11"
   },
@@ -45,7 +49,8 @@
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vite-pwa/assets-generator": "^1.0.2",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.16",
     "eslint": "^10.0.2",
     "jsdom": "^29.0.0",
@@ -53,7 +58,8 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^5.0.10",
+    "vite": "^8.0.3",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18"
   }
 }

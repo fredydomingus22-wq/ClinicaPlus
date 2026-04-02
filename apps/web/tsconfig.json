@@ -12,8 +12,11 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite-plugin-pwa/client"]
   },
   "include": ["src"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/__tests__"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
+

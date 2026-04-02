@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Shield } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth.store';
 import { Avatar } from '@clinicaplus/ui';
+import { del } from 'idb-keyval';
+import { queryClient } from '../../lib/queryClient';
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,9 +12,18 @@ export function UserMenu() {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
-    clear();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Limpa cache em memória e no IndexedDB (Sprint B7)
+      queryClient.clear();
+      await del('docagen-query-cache');
+      clear();
+      navigate('/login');
+    } catch {
+      // Prossegue com logout mesmo se falhar a limpeza do cache offline
+      clear();
+      navigate('/login');
+    }
   };
 
   const getInitials = (name: string) => {
