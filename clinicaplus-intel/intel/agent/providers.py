@@ -11,13 +11,12 @@ def get_llm(provider_name: str = "groq"):
     models = {
         "groq": ("llama-3.3-70b-versatile", "groq"),
         "groq_fast": ("llama-3.1-8b-instant", "groq"),
-        "cerebras": ("llama3.1-70b", "groq"), # Fallback p/ Groq enquanto Cerebras driver não é oficial
-        "gemini": ("gemini-1.5-flash", "google_genai"),
+        "gemini": ("gemini-2.5-flash", "google_genai"),
         "claude": ("claude-3-5-sonnet-20241022", "anthropic")
     }
     
     if provider_name not in models:
-        raise ValueError(f"O provider {provider_name} não é suportado pelo sistema.")
+        provider_name = "gemini" # Fallback global de segurança
         
     def _create_llm(p_name):
         model_name, provider = models[p_name]
@@ -25,12 +24,12 @@ def get_llm(provider_name: str = "groq"):
 
     primary_llm = _create_llm(provider_name)
     
-    # Aplicar fallbacks automáticos se o requestado principal for groq e falhar, etc.
-    if provider_name == "groq":
+    # Estratégia de Fallback Robusta:
+    # Se falhar Groq (Rate Limit), vai para Gemini.
+    if provider_name == "groq" or provider_name == "groq_fast":
         try:
-            fb1 = _create_llm("cerebras")
-            fb2 = _create_llm("gemini")
-            return primary_llm.with_fallbacks([fb1, fb2])
+            fb_gemini = _create_llm("gemini")
+            return primary_llm.with_fallbacks([fb_gemini])
         except Exception:
             return primary_llm
             
