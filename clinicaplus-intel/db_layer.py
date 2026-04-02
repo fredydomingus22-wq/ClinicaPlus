@@ -153,7 +153,16 @@ class ClinicaDB:
             preco=r["preco"], ativo=r["ativo"], clinicaId=r["clinicaId"],
         )
 
-
+    async def especialidades_activas(self, clinicaId: str) -> list[str]:
+        """Retorna lista de nomes de especialidades que têm médicos activos."""
+        async with self.conn() as c:
+            rows = await c.fetch("""
+                SELECT DISTINCT e.nome
+                FROM especialidades e
+                JOIN medicos m ON m."especialidadeId" = e.id
+                WHERE m."clinicaId" = $1 AND m.ativo = true
+                ORDER BY e.nome
+            """, clinicaId)
         return [r["nome"] for r in rows]
 
 
