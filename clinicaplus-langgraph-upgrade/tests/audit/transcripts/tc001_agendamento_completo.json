@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {"type": "Paciente", "content": "Quero marcar clínica geral para sexta às 10h"},
+    {"type": "IA", "content": "Consulta agendada para sexta-feira às 10h com clínica geral. Confirma?"},
+    {"type": "Paciente", "content": "Sim"},
+    {"type": "IA", "content": "✅ Consulta marcada com sucesso!"}
+  ],
+  "state": {
+    "tenant_id": "clinic_A",
+    "intent": "agendar",
+    "collected_slots": {"specialty": "clínica geral", "date": "sexta", "time": "10h", "confirmation": "sim"},
+    "missing_slots": [],
+    "turn_count": 2
+  }
+}

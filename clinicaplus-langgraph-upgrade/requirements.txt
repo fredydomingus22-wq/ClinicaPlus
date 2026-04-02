@@ -1,0 +1,28 @@
+# Verificado em: Abril 2026
+
+# LangGraph Core
+langgraph==1.1.2
+langgraph-checkpoint-postgres==3.0.5
+langgraph-checkpoint==4.0.1
+
+# LangChain Core
+langchain-core>=0.3.0
+langchain>=0.3.0
+
+# LLM Providers
+langchain-groq>=0.2.0          # groq.com free tier
+langchain-google-genai>=2.0.0  # aistudio.google.com free tier
+langchain-cerebras==0.7.0      # cloud.cerebras.ai free tier
+langchain-anthropic>=0.3.0     # anthropic.com (pago, melhor qualidade)
+
+# Database
+psycopg[binary]>=3.1.0         # OBRIGATÓRIO: psycopg3 (não psycopg2)
+asyncpg>=0.29.0
+
+# FastAPI
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Utils
+pydantic>=2.7.0
+python-dotenv>=1.0.0

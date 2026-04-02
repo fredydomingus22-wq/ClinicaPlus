@@ -98,16 +98,18 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     initial_state = {
         "messages":          [HumanMessage(content=texto)],
         "tenant_id":         clinica_id,
-        "clinica_nome":      clinica_nome,
-        "numero_wa":         numero,
-        "paciente_id":       paciente.id if paciente else None,
-        "paciente_nome":     paciente.nome if paciente else push_name,
-        "turno":             0,
-        "max_turnos":        10,
-        "tokens_usados":     0,
-        "custo_estimado_usd": 0.0,
-        "clinic_config":     {}, # Preenchido pelo config_node
-        "clinica_dados":     None, # Preenchido pelo retrieval_node
+        "whatsapp_number":   numero,
+        "patient_id":        paciente.id if paciente else None,
+        "patient_name":      paciente.nome if paciente else push_name,
+        "clinic_config":     {},
+        "intent":            None,
+        "collected_slots":   {},
+        "missing_slots":     [],
+        "turn_count":        0,
+        "handoff_reason":    None,
+        "last_action":       None,
+        "action_result":     None,
+        "error":             None
     }
 
     if force_reset and existing_state and existing_state.values:

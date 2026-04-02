@@ -1,0 +1,12 @@
+{
+  "messages": [
+    {"type": "Paciente", "content": "Olá quero falar com o doutor amanhã"},
+    {"type": "IA", "content": "Qual o seu médico?"}
+  ],
+  "state": {
+    "tenant_id": "clinic_B",
+    "intent": "agendar",
+    "clinic_config": {"name": "Clínica B"},
+    "collected_slots": {"date": "amanhã"}
+  }
+}

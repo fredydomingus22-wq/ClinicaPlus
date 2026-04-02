@@ -66,17 +66,5 @@ builder.add_edge("human_handoff",      "response_formatter")
 
 builder.add_edge("response_formatter", END)
 
-# Singleton
-_graph = None
-
-async def init_graph(checkpointer=None):
-    global _graph
-    _graph = builder.compile(checkpointer=checkpointer)
-    return _graph
-
-async def get_graph():
-    global _graph
-    if _graph is None:
-        _graph = builder.compile()
-    return _graph
-
+# Compilação ex:
+graph = builder.compile()
