@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 import sys
 import os
 from langchain_core.messages import SystemMessage
-from app.agent.state import AgentState
-from app.agent.prompts.builder import build_system_prompt
+from intel.agent.state import AgentState
+from intel.agent.prompts.builder import build_system_prompt
 
 # Adicionar root ao sys.path temporariamente para o db_layer
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))

@@ -1,7 +1,7 @@
 import json
 from langchain_core.messages import SystemMessage
-from app.agent.state import AgentState
-from app.agent.prompts.builder import INTENT_ROUTER_PROMPT
+from intel.agent.state import AgentState
+from intel.agent.prompts.builder import INTENT_ROUTER_PROMPT
 
 MAX_TURNS = 10
 
@@ -30,7 +30,7 @@ async def intent_router(state: AgentState) -> dict:
     provider = state.get("llm_provider", "groq")
     
     try:
-        from app.agent.providers import get_llm
+        from intel.agent.providers import get_llm
         llm = get_llm(provider)
         prompt = INTENT_ROUTER_PROMPT.format(patient_message=patient_message)
         resp = await llm.ainvoke([SystemMessage(content=prompt)])

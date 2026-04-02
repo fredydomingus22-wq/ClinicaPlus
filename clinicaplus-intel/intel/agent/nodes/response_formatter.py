@@ -1,4 +1,4 @@
-from app.agent.state import AgentState
+from intel.agent.state import AgentState
 from langchain_core.messages import AIMessage
 
 WHATSAPP_MAX_LENGTH = 4096

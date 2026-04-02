@@ -1,7 +1,7 @@
 import json
 from langchain_core.messages import SystemMessage, AIMessage
-from app.agent.state import AgentState
-from app.agent.prompts.builder import SLOT_COLLECTOR_PROMPT
+from intel.agent.state import AgentState
+from intel.agent.prompts.builder import SLOT_COLLECTOR_PROMPT
 
 SLOTS_BY_INTENT = {
     "agendar":  ["specialty", "date", "time", "confirmation"],
@@ -43,7 +43,7 @@ async def slot_collector(state: AgentState) -> dict:
     )
     
     try:
-        from app.agent.providers import get_llm
+        from intel.agent.providers import get_llm
         llm = get_llm(state.get("llm_provider", "groq"))
         resp = await llm.ainvoke([SystemMessage(content=prompt)])
         ai_message = resp

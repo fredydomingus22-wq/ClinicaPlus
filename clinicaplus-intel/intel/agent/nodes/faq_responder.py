@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage, AIMessage
-from app.agent.state import AgentState
-from app.agent.prompts.builder import FAQ_RESPONDER_PROMPT
+from intel.agent.state import AgentState
+from intel.agent.prompts.builder import FAQ_RESPONDER_PROMPT
 
 async def faq_responder(state: AgentState) -> dict:
     """Responde a perguntas e dúvidas com base nas configurações da clínica."""
@@ -20,7 +20,7 @@ async def faq_responder(state: AgentState) -> dict:
     
     provider = state.get("llm_provider", "groq")
     try:
-        from app.agent.providers import get_llm
+        from intel.agent.providers import get_llm
         llm = get_llm(provider)
         resp = await llm.ainvoke([SystemMessage(content=prompt)])
         ai_message = resp

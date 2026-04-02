@@ -1,5 +1,5 @@
 from langchain_core.messages import AIMessage
-from app.agent.state import AgentState
+from intel.agent.state import AgentState
 import httpx
 import traceback
 

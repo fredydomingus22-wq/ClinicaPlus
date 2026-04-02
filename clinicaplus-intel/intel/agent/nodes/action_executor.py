@@ -1,16 +1,14 @@
 from langgraph.prebuilt import ToolNode
 from langchain_core.messages import AIMessage
-from app.agent.state import AgentState
+from intel.agent.state import AgentState
 
 async def action_executor(state: AgentState) -> dict:
     """Instancia dinamicamente o ToolNode isolado do tenant e executa as acções requeridas."""
     tenant_id = state.get("tenant_id")
     
     try:
-        from app.agent.tools.binder import build_tools_for_tenant
-        import sys, os
-        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
-        from clinicaplus_intel.db_layer import db
+        from intel.agent.tools.binder import build_tools_for_tenant
+        from db_layer import db
         tools = build_tools_for_tenant(tenant_id, db)
     except Exception:
         # Stub para a Fase 3 (enquanto Fase 4 não existe)

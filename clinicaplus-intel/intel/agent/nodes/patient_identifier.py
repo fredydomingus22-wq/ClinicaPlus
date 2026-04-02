@@ -1,6 +1,6 @@
 import sys
 import os
-from app.agent.state import AgentState
+from intel.agent.state import AgentState
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
