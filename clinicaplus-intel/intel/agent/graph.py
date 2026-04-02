@@ -1,16 +1,6 @@
 from langgraph.graph import StateGraph, END, START
 from .state import AgentState
 
-def build_thread_id(remote_jid: str, tenant_id: str) -> str:
-    """
-    "244912345678@s.whatsapp.net" + "clinic_abc" -> "clinic_abc:244912345678"
-    """
-    number = remote_jid.split("@")[0].strip()
-    return f"{tenant_id}:{number}"
-
-from langgraph.graph import StateGraph, END, START
-from .state import AgentState
-
 # Importação dos nós reais compilados na Fase 3
 from .nodes.tenant_loader import tenant_loader
 from .nodes.patient_identifier import patient_identifier

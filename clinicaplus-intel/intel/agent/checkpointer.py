@@ -7,32 +7,30 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 def _get_postgres_url() -> str:
     """
     Retorna a URL de ligação Postgres compatível com psycopg3.
-    
-    O psycopg3 (usado pelo AsyncPostgresSaver) NÃO suporta o parâmetro
-    proprietário '?pgbouncer=true' do Supabase PgBouncer.
-    
-    Estratégia:
-    1. Usar DIRECT_URL (porta 5432, ligação directa) se disponível — preferido.
-    2. Fazer fallback para DATABASE_URL após remover '?pgbouncer=true'.
     """
-    # Preferência: DIRECT_URL (sem PgBouncer — port 5432)
+    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+    
+    # Prioridade 1: DIRECT_URL
     direct_url = os.environ.get("DIRECT_URL")
     if direct_url:
         return direct_url
 
-    # Fallback: DATABASE_URL com o parâmetro pgbouncer removido
-    db_url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://user:pass@localhost:5432/db"
-    )
-    # Remover parâmetros não suportados pelo psycopg3: pgbouncer, sslaccept, etc.
-    db_url = re.sub(r"[?&]pgbouncer=[^&]*", "", db_url)
-    db_url = re.sub(r"[?&]sslaccept=[^&]*", "", db_url)
-    # Limpar ? ou & sobrantes
-    db_url = re.sub(r"\?$", "", db_url)
-    db_url = re.sub(r"\?&", "?", db_url)
+    # Prioridade 2: DATABASE_URL modificada
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return "postgresql://user:pass@localhost:5432/db"
 
-    return db_url
+    # Remover parâmetros incompatíveis com psycopg3 (e.g. pgbouncer used by asyncpg)
+    u = urlparse(db_url)
+    query = parse_qs(u.query)
+    
+    # Parâmetros a remover
+    for param in ["pgbouncer", "sslaccept"]:
+        query.pop(param, None)
+    
+    # Reconstruir URL
+    u = u._replace(query=urlencode(query, doseq=True))
+    return urlunparse(u)
 
 
 @asynccontextmanager

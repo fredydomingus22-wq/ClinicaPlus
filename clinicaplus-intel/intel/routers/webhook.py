@@ -102,14 +102,14 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         "patient_id":        paciente.id if paciente else None,
         "patient_name":      paciente.nome if paciente else push_name,
         "clinic_config":     {},
+        "llm_provider":      "groq",  # Default provider
         "intent":            None,
         "collected_slots":   {},
         "missing_slots":     [],
+        "requires_human":    False,
+        "conversation_stage": "greeting",
         "turn_count":        0,
-        "handoff_reason":    None,
-        "last_action":       None,
-        "action_result":     None,
-        "error":             None
+        "last_activity_ts":  datetime.now(timezone.utc).isoformat()
     }
 
     if force_reset and existing_state and existing_state.values:
@@ -120,7 +120,7 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
             await graph.aupdate_state(config, {"messages": delete_cmds})
 
     # 5. Invocar o grafo
-    # Nota: LangGraph gere o histórico via AsyncRedisSaver configurado em graph.py
+    # Nota: LangGraph gere o histórico via AsyncPostgresSaver (definido no lifespan do main.py)
     resultado = await graph.ainvoke(initial_state, config=config)
 
     # 6. Extrair última mensagem do agente para enviar ao WhatsApp
