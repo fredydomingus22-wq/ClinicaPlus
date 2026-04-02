@@ -35,7 +35,10 @@ async def intent_router(state: AgentState) -> dict:
         prompt = INTENT_ROUTER_PROMPT.format(patient_message=patient_message)
         resp = await llm.ainvoke([SystemMessage(content=prompt)])
         data = json.loads(resp.content)
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"❌ ERRO no Intent Router: {str(e)}")
+        traceback.print_exc()
         # Fallback offline ou erro de parsing json
         data = {"intent": "duvida", "confidence": 1.0, "extracted_slots": {}}
         

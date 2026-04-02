@@ -18,13 +18,15 @@ async def faq_responder(state: AgentState) -> dict:
         patient_question=patient_message
     )
     
-    provider = state.get("llm_provider", "groq")
     try:
         from intel.agent.providers import get_llm
         llm = get_llm(provider)
         resp = await llm.ainvoke([SystemMessage(content=prompt)])
         ai_message = resp
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"❌ ERRO no FAQ Responder: {str(e)}")
+        traceback.print_exc()
         ai_message = AIMessage(content="Neste momento estou com problemas em acessar o meu sistema de informações. Recomendo contactar a recepção directamente.")
         
     return {

@@ -11,9 +11,9 @@ def get_llm(provider_name: str = "groq"):
     models = {
         "groq": ("llama-3.3-70b-versatile", "groq"),
         "groq_fast": ("llama-3.1-8b-instant", "groq"),
-        "cerebras": ("gpt-oss-120b", "cerebras"),
-        "gemini": ("gemini-2.5-flash", "google_genai"),
-        "claude": ("claude-sonnet-4-6", "anthropic")
+        "cerebras": ("llama3.1-70b", "groq"), # Fallback p/ Groq enquanto Cerebras driver não é oficial
+        "gemini": ("gemini-1.5-flash", "google_genai"),
+        "claude": ("claude-3-5-sonnet-20241022", "anthropic")
     }
     
     if provider_name not in models:

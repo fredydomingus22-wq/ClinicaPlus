@@ -47,7 +47,11 @@ async def slot_collector(state: AgentState) -> dict:
         llm = get_llm(state.get("llm_provider", "groq"))
         resp = await llm.ainvoke([SystemMessage(content=prompt)])
         ai_message = resp
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"❌ ERRO no Slot Collector: {str(e)}")
+        traceback.print_exc()
+        
         # Fallback caso falhe o envio
         text = f"Para prosseguir, necessito de saber: {next_missing}."
         if next_missing == "specialty":
