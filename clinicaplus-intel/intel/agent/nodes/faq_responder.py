@@ -18,6 +18,7 @@ async def faq_responder(state: AgentState) -> dict:
         patient_question=patient_message
     )
     
+    provider = state.get("llm_provider", "groq")
     try:
         from intel.agent.providers import get_llm
         llm = get_llm(provider)
