@@ -1,4 +1,4 @@
-# Runbook — Offline-First PWA
+# Runbook — Offline-First PWA (DocAgen)
 
 ## Diagnóstico rápido
 
@@ -10,6 +10,7 @@
 | Update não aplicado após deploy | SW antigo ainda activo | 4 |
 | Cache IndexedDB corrompido | Mudar `buster` ou limpar manualmente | 5 |
 | Mutations offline não sincronizam | `resumePausedMutations` não chamado | 6 |
+| Conflitos de dados (409) | Versão do servidor é diferente da local | 8 |
 
 ---
 
@@ -44,7 +45,7 @@ pnpm build --filter=web && pnpm preview --filter=web
 # networkMode: 'offlineFirst' na query
 
 # Verificar no browser:
-# DevTools → Application → IndexedDB → clinicaplus-query-cache
+# DevTools → Application → IndexedDB → docagen-query-cache
 # Se vazio: os dados nunca foram persistidos
 
 # Causas comuns:
@@ -104,9 +105,9 @@ pnpm build --filter=web && pnpm preview --filter=web
 # → invalida todos os caches persistidos automaticamente no próximo load
 
 # Se um utilizador específico tem problemas:
-# DevTools → Application → IndexedDB → clinicaplus → right-click → Clear
+# DevTools → Application → IndexedDB → docagen-query-cache → right-click → Clear
 # Ou via console:
-indexedDB.deleteDatabase('clinicaplus')
+indexedDB.deleteDatabase('docagen-query-cache')
 # → na próxima abertura, dados são carregados da rede
 
 # Em caso de emergência (bug de dados em produção):
@@ -149,6 +150,25 @@ queryClient.getMutationCache().getAll()
 # 7. Tentar criar agendamento → deve mostrar erro "Sem ligação"
 # 8. Confirmar agendamento → deve actualizar UI imediatamente (optimistic)
 # 9. Voltar online → mutation deve sincronizar automaticamente
+
+---
+
+## 8. Conflitos de dados (409) persistentes
+
+```bash
+# Sintoma: UI mostra toast de conflito e abre o Modal de Resolução.
+# Causa: O servidor rejeitou a mudança (409) porque o registo foi alterado por outro.
+
+# Acção recomendada:
+# 1. Utilizador deve clicar em "Descartar Minhas Alterações".
+# 2. A app limpa a mutação conflituosa e faz refetch do servidor.
+# 3. Se o modal não fechar:
+#    - Forçar limpeza via MutationManager (ícone de engrenagem no PendingSyncBadge).
+#    - Clicar em "Limpar Tudo" para resetar a queue.
+
+# Diagnóstico via código:
+useOfflineStore.getState().conflicts // deve mostrar o erro 409 capturado
+```
 
 # Lighthouse PWA Audit (Chrome DevTools → Lighthouse → Progressive Web App):
 # Todos os checks devem passar

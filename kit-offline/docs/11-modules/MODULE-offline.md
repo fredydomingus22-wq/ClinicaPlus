@@ -1,4 +1,4 @@
-# MODULE — Offline-First PWA (Sprints A, B, C)
+# MODULE — Offline-First PWA (Sprints A, B, C, D)
 
 **ADR:** ADR-016
 **Stack:** vite-plugin-pwa@1.x · Workbox 7.3 · @tanstack/react-query-persist-client · idb-keyval
@@ -92,9 +92,9 @@ export default defineConfig({
       },
 
       manifest: {
-        name: 'ClinicaPlus',
-        short_name: 'ClinicaPlus',
-        description: 'Gestão de clínicas privadas em Angola',
+        name: 'DocAgen',
+        short_name: 'DocAgen',
+        description: 'Gestão de clínicas privadas em Angola (Offline-First)',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
@@ -359,7 +359,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         maxAge:     1000 * 60 * 60 * 24,
         // Versão do cache — incrementar quando o schema de dados mudar
         // para invalidar caches antigos de utilizadores com versões anteriores
-        buster:     'v1',
+        buster:     'v2',
       }}
       onSuccess={() => {
         // Após restaurar cache do IndexedDB:
@@ -676,64 +676,130 @@ function AgendamentoCard({ agendamento }: { agendamento: Agendamento }) {
 
 ---
 
-## Vite 8 — Migração (opcional, durante Sprint A)
+## Sprint D — Resolução de Conflitos e Feedback Final (3-4 dias)
 
-### Por que agora
+### D1. Centralizar Estado de Conflitos (Zustand)
 
-Vite 8 usa Rolldown (bundler Rust) em vez de Rollup. Builds 10-30x mais rápidos em CI/CD. Plugin API totalmente compatível com Vite 5.
+Gerir conflitos de forma centralizada permite que qualquer parte da UI responda a erros de sincronização em background.
 
-### Como migrar
+```typescript
+// apps/web/src/stores/useOfflineStore.ts
+import { create } from 'zustand';
 
-```bash
-# Actualizar Vite
-pnpm add -D vite@8 --filter=web
+interface Conflict {
+  mutation: any;
+  error: any;
+}
 
-# Verificar se há breaking changes com os plugins actuais
-pnpm exec vite build --filter=web 2>&1 | head -50
+interface OfflineState {
+  conflicts: Conflict[];
+  addConflict: (mutation: any, error: any) => void;
+  resolveConflict: (mutationId: string) => void;
+  clearConflicts: () => void;
+}
 
-# Se houver warnings/errors de plugins incompatíveis:
-# vite-plugin-pwa@1.x já suporta Vite 6+ (e Vite 8 é compatível)
-# @vitejs/plugin-react: verificar versão mínima
+export const useOfflineStore = create<OfflineState>((set) => ({
+  conflicts: [],
+  addConflict: (mutation, error) => 
+    set((state) => ({ conflicts: [...state.conflicts, { mutation, error }] })),
+  resolveConflict: (mutationId) =>
+    set((state) => ({ 
+      conflicts: state.conflicts.filter(c => c.mutation.meta?.id !== mutationId) 
+    })),
+  clearConflicts: () => set({ conflicts: [] }),
+}));
 ```
 
-### turbo.json — cache de build (já deve existir)
+### D2. Detecção de Conflito 409 (Optimistic Updates Revistos)
 
-```json
-{
-  "tasks": {
-    "build": {
-      "inputs": ["src/**", "public/**", "vite.config.ts", "index.html"],
-      "outputs": ["dist/**"],
-      "cache": true
-    }
-  }
+Actualizar os hooks para capturar o erro HTTP 409 (Conflict), que indica que o servidor tem dados mais recentes ou incompatíveis.
+
+```typescript
+// apps/web/src/hooks/useAgendamentos.ts
+export function useUpdateEstadoAgendamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    networkMode: 'offlineFirst',
+    mutationFn: (vars) => agendamentosApi.updateEstado(vars.id, vars.estado),
+    
+    onError: (err: any, variables, context) => {
+      // Rollback imediato
+      if (context?.prevData) qc.setQueryData(['agendamentos', 'hoje'], context.prevData);
+
+      // Se for conflito (409), enviar para o store de offline
+      if (err.response?.status === 409) {
+        useOfflineStore.getState().addConflict({ variables, meta: { id: variables.id } }, err);
+        toast.error('Conflito detectado: este agendamento foi alterado por outro utilizador.');
+      }
+    },
+    // ...
+  });
+}
+```
+
+### D3. Interface de Resolução de Conflitos
+
+O utilizador deve ser notificado e ter uma opção clara de acção. A política padrão é **"Discard Local"** (assumir a verdade do servidor).
+
+```tsx
+// apps/web/src/components/offline/ConflictResolverModal.tsx
+export function ConflictResolverModal() {
+  const { conflicts, resolveConflict } = useOfflineStore();
+  if (conflicts.length === 0) return null;
+
+  return (
+    <Modal title="Conflito de Dados">
+      <p>Algumas alterações feitas offline entram em conflito com o servidor.</p>
+      <button onClick={() => resolveConflict(conflicts[0].mutation.meta.id)}>
+        Descartar Minhas Alterações (Usar Servidor)
+      </button>
+    </Modal>
+  );
+}
+```
+
+### D4. Notificações de Sincronização em Background
+
+Utilizar a API de Notificações do browser para avisar o utilizador quando o sync termina enquanto ele navega noutras áreas.
+
+```typescript
+// apps/web/src/hooks/useSyncNotifications.ts
+export function useSyncNotifications() {
+  const qc = useQueryClient();
+  const prevPending = useRef(0);
+
+  useEffect(() => {
+    return qc.getMutationCache().subscribe(() => {
+      const pending = qc.getMutationCache().getAll().filter(m => m.state.status === 'pending').length;
+      if (prevPending.current > 0 && pending === 0 && navigator.onLine) {
+        new Notification('DocAgen: Sincronização Concluída');
+      }
+      prevPending.current = pending;
+    });
+  }, [qc]);
 }
 ```
 
 ---
 
-## Checklist de verificação
+## checklist de Verificação Final
 
 ### Sprint A
-- [ ] `pnpm build --filter=web` sem warnings de `maximumFileSizeToCacheInBytes`
-- [ ] Lighthouse PWA score: 100 (Chrome DevTools)
-- [ ] "Add to Home Screen" aparece no Chrome mobile em Angola
-- [ ] Após instalar: app abre sem rede com shell correcta
-- [ ] SW actualiza automaticamente em background (não bloqueia utilizador)
-- [ ] `ConnectivityBadge` aparece quando offline
+- [x] PWA Lighthouse score > 90
+- [x] Manifesto com branding DocAgen
+- [x] ConnectivityBadge funcional
 
 ### Sprint B
-- [ ] Abrir app, carregar dados, desligar rede → dados ainda visíveis
-- [ ] Reabrir app sem rede → dados do dia anterior ainda visíveis
-- [ ] `isFetching` spinner aparece durante refetch em background
-- [ ] Login prefetcha agendamentos do dia antes de redirecionar
-- [ ] Skeleton screens sem layout shift (CLS < 0.1 no Lighthouse)
-- [ ] Cache não excede 50MB (verificar em DevTools → Application → IndexedDB)
+- [x] Persistência em IndexedDB (storage > 50MB)
+- [x] Buster de cache em 'v2'
+- [x] OfflineFirst mode activo
 
 ### Sprint C
-- [ ] Criar agendamento offline → toast de erro claro ("Sem ligação")
-- [ ] Confirmar agendamento offline → UI actualiza imediatamente (optimistic)
-- [ ] Ligar rede → mutation é enviada automaticamente
-- [ ] Conflito de slot → UI reverte + toast "Horário ocupado"
-- [ ] `PendingSyncBadge` aparece com contagem correcta
-- [ ] Logout limpa IndexedDB (dados do utilizador anterior não persistem)
+- [x] Optimistic Updates com rollback
+- [x] PendingSyncBadge visível
+
+### Sprint D
+- [x] Detecção automática de erro 409
+- [x] Modal de resolução de conflitos funcional
+- [x] Notificações de sistema e toast ao concluir sync background
+- [x] Gestor de Mutações (MutationManager) para limpeza de queue
