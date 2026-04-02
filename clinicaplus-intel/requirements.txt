@@ -22,7 +22,9 @@ langchain-community>=0.4.0 # era 0.3.25 — alinhado com langchain>=1.x
 langchain-google-genai>=4.1.0  # era 2.1.5 — reescrita para Google Unified SDK (Gemini + Vertex)
 langgraph>=1.1.0           # era 0.2.76 — major release, API estável
 langgraph-checkpoint>=4.0.0    # era 2.1.2 — formato de armazenamento redesenhado
-langgraph-checkpoint-redis>=0.4.0  # era 0.2.2 — incompatível com langgraph>=1.0
+langgraph-checkpoint-postgres>=2.0.0  # Persistência LangGraph via Postgres
+langgraph-checkpoint-redis>=0.4.0  # era 0.2.2 — mantido para compatibilidade (cost tracking)
+psycopg[binary,pool]>=3.1.0    # Driver async Postgres requerido pelo checkpoint-postgres
 langsmith>=0.7.0           # era 0.3.45
 
 # Google Auth (dependências transitivas — não fixar manualmente)
