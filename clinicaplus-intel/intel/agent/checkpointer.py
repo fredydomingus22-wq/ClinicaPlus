@@ -37,9 +37,14 @@ def _get_postgres_url() -> str:
 async def get_checkpointer():
     """
     Checkpointer persistente AsyncPostgresSaver.
-    Usa DIRECT_URL (port 5432) se disponível, caso contrário strips o pgbouncer
-    do DATABASE_URL para garantir compatibilidade com psycopg3.
+    Configurado para compatibilidade máxima com PgBouncer (Transaction Mode):
+    - prepare_threshold=None: Desativa prepared statements (evita erro 'prepared statement does not exist').
+    - autocommit=True: Necessário para execução correcta em ambientes de pooler/proxy.
     """
     conn_string = _get_postgres_url()
-    async with AsyncPostgresSaver.from_conn_string(conn_string) as checkpointer:
+    async with AsyncPostgresSaver.from_conn_string(
+        conn_string, 
+        prepare_threshold=None, 
+        autocommit=True
+    ) as checkpointer:
         yield checkpointer
