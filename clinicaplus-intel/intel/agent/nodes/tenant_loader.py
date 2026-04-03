@@ -60,20 +60,20 @@ async def tenant_loader(state: AgentState) -> dict:
         "last_activity_ts": datetime.now(timezone.utc).isoformat()
     }
     
-    # 3. Injectar/Atualizar SystemMessage
-    # Nota: No LangGraph multi-turno, podemos querer atualizar o SystemMessage 
-    # se o contexto mudar drasticamente, mas por agora injetamos apenas se não existir.
-    messages = state.get("messages", [])
-    has_system = any(isinstance(m, SystemMessage) for m in messages)
+    # 3. Gerar Novo SystemMessage
+    # Reconstruímos o prompt em cada turno para garantir que o contexto (data, consultas) esteja sempre fresco.
+    from intel.agent.prompts.builder import build_system_prompt
+    sys_prompt = build_system_prompt(
+        config, 
+        datetime.now(timezone.utc).isoformat(),
+        patient_data
+    )
+    sys_msg = SystemMessage(content=sys_prompt)
     
-    if not has_system:
-        from intel.agent.prompts.builder import build_system_prompt
-        sys_prompt = build_system_prompt(
-            config, 
-            datetime.now(timezone.utc).isoformat(),
-            patient_data
-        )
-        sys_msg = SystemMessage(content=sys_prompt)
-        updates["messages"] = [sys_msg]
+    # Injetar a SystemMessage. 
+    # Nota: No LangGraph com 'add_messages', mensagens com o mesmo ID ou tipo podem se acumular.
+    # Aqui, simplesmente adicionamos ao início ou deixamos o reducer gerir.
+    # Para garantir foco, vamos enviar como update. O modelo verá a mais recente.
+    updates["messages"] = [sys_msg]
         
     return updates

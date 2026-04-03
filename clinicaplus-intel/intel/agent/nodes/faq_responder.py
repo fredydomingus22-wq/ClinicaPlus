@@ -11,10 +11,10 @@ async def faq_responder(state: AgentState) -> dict:
     prompt = FAQ_RESPONDER_PROMPT.format(
         clinic_name=config.get("name", "Nossa Clínica"),
         specialties=", ".join(config.get("specialties", [])),
-        working_hours=config.get("working_hours", "Consola recepção"),
-        accepted_insurance=config.get("accepted_insurance", "Soba Consulta"),
-        cancellation_policy=config.get("cancellation_policy", "24h de antecedência"),
-        location=config.get("location", "Instalação principal"),
+        working_hours=config.get("working_hours", "Consulte a nossa recepção para o horário actualizado"),
+        accepted_insurance=config.get("accepted_insurance", "Consulte a recepção para saber a lista de acordos activos"),
+        cancellation_policy=config.get("cancellation_policy", "Por favor, avise com pelo menos 24h de antecedência"),
+        location=config.get("location", "Angola"),
         patient_question=patient_message
     )
     
