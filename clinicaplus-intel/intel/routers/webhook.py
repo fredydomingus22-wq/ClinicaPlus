@@ -100,22 +100,28 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
                 # Fallback: tentar apenas injetar as mensagens comprimidas sem apagar (acumula, mas não crasha)
                 await graph.aupdate_state(config, {"messages": messages_comprimidas})
 
-    initial_state = {
-        "messages":          [HumanMessage(content=texto)],
-        "tenant_id":         clinica_id,
-        "whatsapp_number":   numero,
-        "patient_id":        paciente.id if paciente else None,
-        "patient_name":      paciente.nome if paciente else push_name,
-        "clinic_config":     {},
-        "llm_provider":      "groq",  # Default provider
-        "intent":            None,
-        "collected_slots":   {},
-        "missing_slots":     [],
-        "requires_human":    False,
-        "conversation_stage": "greeting",
-        "turn_count":        0,
-        "last_activity_ts":  datetime.now(timezone.utc).isoformat()
+    state_update = {
+        "messages": [HumanMessage(content=texto)],
+        "last_activity_ts": datetime.now(timezone.utc).isoformat()
     }
+
+    # Só injetamos o estado completo no primeiro turno ou num force_reset.
+    # Caso contrário, o LangGraph fará OVERWRITE das chaves (apagando slots e intenção da memória pesistida).
+    if not existing_state or not existing_state.values or force_reset:
+        state_update.update({
+            "tenant_id":         clinica_id,
+            "whatsapp_number":   numero,
+            "patient_id":        paciente.id if paciente else None,
+            "patient_name":      paciente.nome if paciente else push_name,
+            "clinic_config":     {},
+            "llm_provider":      "groq",  # Default provider
+            "intent":            None,
+            "collected_slots":   {},
+            "missing_slots":     [],
+            "requires_human":    False,
+            "conversation_stage": "greeting",
+            "turn_count":        0,
+        })
 
     if force_reset and existing_state and existing_state.values:
         # Enviar RemoveMessage para todas as mensagens anteriores
@@ -129,7 +135,7 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
 
     # 5. Invocar o grafo
     # Nota: LangGraph gere o histórico via AsyncPostgresSaver (definido no lifespan do main.py)
-    resultado = await graph.ainvoke(initial_state, config=config)
+    resultado = await graph.ainvoke(state_update, config=config)
 
     # 6. Extrair última mensagem do agente para enviar ao WhatsApp
     mensagens_ai = [
