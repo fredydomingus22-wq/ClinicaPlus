@@ -31,15 +31,26 @@ async def intent_router(state: AgentState) -> dict:
     
     try:
         from intel.agent.providers import get_llm
+        from pydantic import BaseModel, Field
+        
+        # O Pydantic actua como schema no native tool calling de Extração (Strict Mode compatível)
+        class IntentExtraction(BaseModel):
+            intent: str = Field(description="A intenção principal do utilizador (agendar, cancelar, humano, ou duvida se for apenas responder FAQs/Outros).")
+            confidence: float = Field(description="Nível de confiança de 0.0 a 1.0.")
+            extracted_slots: dict = Field(default_factory=dict, description="As entidades extraídas: specialty, date, time (em dict).")
+
         llm = get_llm(provider)
+        structured_llm = llm.with_structured_output(IntentExtraction)
+        
         prompt = INTENT_ROUTER_PROMPT.format(patient_message=patient_message)
-        resp = await llm.ainvoke([SystemMessage(content=prompt)])
-        data = json.loads(resp.content)
+        resp = await structured_llm.ainvoke([SystemMessage(content=prompt)])
+        data = resp.model_dump()
+        
     except Exception as e:
         import traceback
         print(f"❌ ERRO no Intent Router: {str(e)}")
         traceback.print_exc()
-        # Fallback offline ou erro de parsing json
+        # Fallback offline ou erro de chamada
         data = {"intent": "duvida", "confidence": 1.0, "extracted_slots": {}}
         
     intent = data.get("intent", "duvida")

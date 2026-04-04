@@ -60,20 +60,10 @@ async def tenant_loader(state: AgentState) -> dict:
         "last_activity_ts": datetime.now(timezone.utc).isoformat()
     }
     
-    # 3. Gerar Novo SystemMessage
-    # Reconstruímos o prompt em cada turno para garantir que o contexto (data, consultas) esteja sempre fresco.
-    from intel.agent.prompts.builder import build_system_prompt
-    sys_prompt = build_system_prompt(
-        config, 
-        datetime.now(timezone.utc).isoformat(),
-        patient_data
-    )
-    sys_msg = SystemMessage(content=sys_prompt)
-    
-    # Injetar a SystemMessage. 
-    # Nota: No LangGraph com 'add_messages', mensagens com o mesmo ID ou tipo podem se acumular.
-    # Aqui, simplesmente adicionamos ao início ou deixamos o reducer gerir.
-    # Para garantir foco, vamos enviar como update. O modelo verá a mais recente.
-    updates["messages"] = [sys_msg]
+    # 3. Gerar Novo SystemMessage de Contexto Global
+    # Nota: Os nós a jusante constroem os seus próprios prompts dedicados usando clinic_config e patient_data.
+    # Não devemos NUNCA injectar o SystemMessage na lista "messages", porque isso empurra 
+    # a mensagem real do utilizador (HumanMessage) para penúltimo lugar, partindo a lógica 
+    # de leitura `messages[-1]` nos nós de roteamento e interacção!
         
     return updates
