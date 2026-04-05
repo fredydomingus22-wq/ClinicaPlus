@@ -20,6 +20,7 @@ class AgentState(TypedDict):
     llm_provider: str               
     
     # Intenção e slots
+    reasoning_context: Optional[str]
     intent: Optional[str]           
     collected_slots: dict           
     missing_slots: list[str]        
