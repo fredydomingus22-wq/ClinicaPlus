@@ -171,9 +171,11 @@ class ClinicaDB:
         Busca metadados e regras da clínica (configurações, convénios, etc).
         """
         async with self.conn() as c:
-            # 1. Nome da clínica
-            clinica = await c.fetchrow('SELECT nome FROM clinicas WHERE id = $1', clinicaId)
+            # 1. Dados base da clínica
+            clinica = await c.fetchrow('SELECT nome, endereco, cidade, telefone FROM clinicas WHERE id = $1', clinicaId)
             nome_clinica = clinica["nome"] if clinica else "Clínica"
+            location = f"{clinica['endereco']}, {clinica['cidade']}" if clinica and clinica["endereco"] else "Luanda, Angola"
+            telefone = clinica["telefone"] if clinica else ""
 
             # 2. Configurações gerais
             cfg = await c.fetchrow("""
@@ -185,7 +187,7 @@ class ClinicaDB:
             # 3. Especialidades activas
             especialidades = await self.especialidades_activas(clinicaId)
             
-            # 4. Médicos e preços base
+            # 4. Médicos e preços base (para FAQs)
             medicos = await c.fetch("""
                 SELECT m.nome, e.nome as esp, m.preco
                 FROM medicos m
@@ -195,10 +197,13 @@ class ClinicaDB:
 
             return {
                 "name": nome_clinica,
+                "location": location,
+                "phone": telefone,
+                "working_hours": "Seg-Sex 8h-18h, Sáb 8h-13h", # Padrão industrial Angolano
                 "seguradoras": cfg["seguradoras"] if cfg else [],
                 "preTriagem": cfg["preTriagem"] if cfg else True,
                 "antecedencia_horas": cfg["horasAntecedencia"] if cfg else 24,
-                "especialidades": especialidades,
+                "specialties": especialidades, # Mapeado para o código NLU
                 "medicos": [{"nome": m["nome"], "especialidade": m["esp"], "preco": m["preco"]} for m in medicos]
             }
 
