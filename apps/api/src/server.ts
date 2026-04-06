@@ -46,6 +46,7 @@ import auditLogsRouter from './routes/audit-logs';
 import utilizadoresRouter from './routes/utilizadores';
 import subscricoesRouter from './routes/subscricoes';
 import whatsappRouter from './routes/whatsapp';
+import configTratamentosRouter from './routes/config-tratamentos.routes';
 
 const app = express();
 
@@ -216,6 +217,7 @@ app.use('/api/audit-logs', authenticate, tenantMiddleware, auditLogsRouter);
 app.use('/api/utilizadores', utilizadoresRouter);
 app.use('/api/api-keys', authenticate, tenantMiddleware, apiKeysRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/config-tratamentos', configTratamentosRouter);
 
 // Global Error Handler
 app.use(errorHandler);

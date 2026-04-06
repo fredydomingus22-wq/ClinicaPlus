@@ -9,6 +9,7 @@ export const JobNames = {
   REPORT_GENERATE: 'cp-reports-generate',
   WHATSAPP_MESSAGE: 'cp-whatsapp-message',
   WHATSAPP_MAINTENANCE: 'cp-whatsapp-maintenance',
+  TRATAMENTO_GERAR_SESSOES: 'cp-tratamento-gerar-sessoes',
 } as const;
 
 export interface WhatsappMessageJob {
@@ -41,4 +42,9 @@ export interface ReportJob {
   tipo: 'receita' | 'ocupacao';
   parametros: Record<string, unknown>;
   requestedBy: string;
+}
+
+export interface TratamentoGerarSessoesJob {
+  planoId: string;
+  clinicaId: string;
 }

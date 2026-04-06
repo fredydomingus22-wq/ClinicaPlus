@@ -13,6 +13,7 @@ from jobs.scheduler import start_scheduler
 from intel.cost.cache import setup_semantic_cache
 from intel.agent.graph import init_graph, get_graph
 from intel.agent.checkpointer import get_checkpointer
+from intel.agent.store import get_store
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,13 +25,16 @@ async def lifespan(app: FastAPI):
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     setup_semantic_cache(redis_url)
     
-    # Gerir o ciclo de vida do Checkpointer Postgres
-    async with get_checkpointer() as checkpointer:
-        await checkpointer.setup()  # cria tabelas checkpoints se não existirem
-        await init_graph(checkpointer) # Inicializa grafo com persistência
+    # Gerir o ciclo de vida do Checkpointer e Store Postgres
+    async with get_checkpointer() as checkpointer, get_store() as store:
+        await checkpointer.setup()  # cria tabelas checkpoints
+        await store.setup()         # cria tabelas store (memória long-term)
+        
+        # Inicializa o grafo com ambos os motores de persistência
+        await init_graph(checkpointer, store) 
         
         start_scheduler() # Inicia o agendador de tarefas
-        print("ClinicaPlus Intelligence pronta e persistente via LangGraph-Postgres.")
+        print("ClinicaPlus Intelligence pronta e persistente via LangGraph-Postgres (Checkpoints + Store).")
         
         yield
 

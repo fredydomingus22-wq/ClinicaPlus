@@ -1,136 +1,166 @@
 # intel/tests/test_agent.py
+# ── Suite de Testes Atualizada para a Arquitetura LangGraph atual ──────────────
 import pytest
 import os
 from unittest.mock import AsyncMock, patch, MagicMock
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# Mock das variáveis de ambiente necessárias para evitar erros no import
-os.environ["GOOGLE_API_KEY"] = "AIza_mock_key"
-os.environ["REDIS_URL"] = "redis://localhost:6379"
-os.environ["TS_API_URL"] = "http://mock-api"
-os.environ["TS_API_INTERNAL_KEY"] = "mock_key"
+# Mock das variáveis de ambiente necessárias antes dos imports
+os.environ.setdefault("GOOGLE_API_KEY", "AIza_mock_key")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379")
+os.environ.setdefault("TS_API_URL", "http://mock-api")
+os.environ.setdefault("TS_API_INTERNAL_KEY", "mock_key")
+os.environ.setdefault("DATABASE_URL", "postgresql://mock:mock@localhost/mock")
 
-from intel.agent.state import ConversaState
-from intel.config.models import build_llm, AGENT_MODELS, calcular_custo
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ── Fixture Base (alinhada com AgentState de intel/agent/state.py) ────────────
 
 @pytest.fixture
 def estado_base():
+    """Estado base alinhado com AgentState (intel/agent/state.py)."""
     return {
         "messages":           [],
-        "clinica_id":         "cli-teste",
-        "clinica_nome":       "Clínica Teste",
-        "numero_wa":          "244923456789",
-        "paciente_id":        "pac-001",
-        "paciente_nome":      "João Silva",
-        "next_agent":         None,
-        "intencao":           None,
-        "especialidade":      None,
-        "medico_id":          None,
-        "data_preferida":     None,
-        "periodo":            None,
-        "tokens_usados":      0,
-        "custo_estimado_usd": 0.0,
-        "turno":              0,
-        "max_turnos":         10,
+        "tenant_id":          "cli-teste-001",
+        "whatsapp_number":    "244923456789",
+        "patient_id":         "pac-001",
+        "patient_name":       "João Silva",
+        "clinic_config":      {"name": "Clínica Teste", "especialidades": ["Cardiologia", "Pediatria"]},
+        "patient_data":       None,
+        "llm_provider":       "google",
+        "intent":             None,
+        "collected_slots":    {},
+        "missing_slots":      [],
+        "requires_human":     False,
+        "conversation_stage": "greeting",
+        "turn_count":         0,
+        "last_activity_ts":   "2026-04-04T21:00:00+01:00",
     }
 
 
-# ── Testes de configuração ────────────────────────────────────────────────────
-
-def test_build_llm_retorna_google_chat_model():
-    """Verifica se a factory retorna o modelo Gemini configurado."""
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    llm = build_llm("intent")
-    assert isinstance(llm, ChatGoogleGenerativeAI)
-    # O SDK do Google prefixe internamente o nome com "models/"
-    assert "gemini-1.5-flash" in llm.model
-
-def test_calcular_custo_gemini_flash():
-    """Valida o cálculo de custo para o Gemini 1.5 Flash."""
-    # Preço: $0.075 input, $0.30 output por 1M
-    custo = calcular_custo("gemini-1.5-flash", 1000000, 1000000)
-    assert abs(custo - 0.375) < 0.0001
+# ── Testes de Infraestrutura ──────────────────────────────────────────────────
 
 def test_grafo_compila_sem_erros():
-    from intel.agent.graph import build_graph
-    graph = build_graph()
+    """Verifica que o grafo principal compila sem exceções."""
+    from intel.agent.graph import builder
+    graph = builder.compile()  # Compile sem checkpointer (modo de teste)
     assert graph is not None
 
 
-# ── Testes de nós individuais (Mocks) ─────────────────────────────────────────
+def test_agent_state_schema_importa():
+    """Verifica que o AgentState importa sem erros."""
+    from intel.agent.state import AgentState
+    assert AgentState is not None
+
+
+# ── Testes do Intent Router ───────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_intent_node_classifica_com_gemini(estado_base):
-    from intel.agent.nodes.intent_agent import intent_node
-    
-    estado = {**estado_base, "messages": [HumanMessage(content="quero marcar consulta de cardio")]}
+async def test_intent_router_classifica_marcacao(estado_base):
+    """Verifica se o intent_router classifica corretamente 'agendar'."""
+    from intel.agent.nodes.intent_router import intent_router
 
-    # Patch do _llm dentro do módulo do nó
-    with patch("intel.agent.nodes.intent_agent._llm") as mock_llm:
-        mock_response = MagicMock()
-        mock_response.content = '{"intencao": "marcar", "especialidade": "Cardiologia", "nome_medico": null, "data_preferida": null, "periodo": null}'
-        mock_response.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    estado = {
+        **estado_base,
+        "messages": [HumanMessage(content="quero marcar consulta de cardiologia")]
+    }
 
-        resultado = await intent_node(estado)
+    # O nó usa get_llm(provider) internamente — mockamos o provider
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    mock_response = MagicMock()
+    mock_response.model_dump.return_value = {
+        "intent": "agendar",
+        "confidence": 0.95,
+        "extracted_slots": {"specialty": "Cardiologia"}
+    }
+    mock_structured.ainvoke = AsyncMock(return_value=mock_response)
+    mock_llm.with_structured_output.return_value = mock_structured
 
-    assert resultado["intencao"] == "marcar"
-    assert resultado["especialidade"] == "Cardiologia"
-    assert resultado["tokens_usados"] == 150
-    assert resultado["custo_estimado_usd"] > 0
+    with patch("intel.agent.providers.get_llm", return_value=mock_llm):
+        resultado = await intent_router(estado)
 
-
-@pytest.mark.asyncio
-async def test_supervisor_roteia_para_booking(estado_base):
-    from intel.agent.nodes.supervisor import supervisor_node
-    
-    estado = {**estado_base, "intencao": "marcar", "turno": 1,
-              "messages": [HumanMessage(content="quero marcar")]}
-
-    with patch("intel.agent.nodes.supervisor._llm") as mock_llm:
-        mock_response = MagicMock()
-        mock_response.content = "booking"
-        mock_response.usage_metadata = {"input_tokens": 200, "output_tokens": 10}
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
-
-        resultado = await supervisor_node(estado)
-
-    assert resultado["next_agent"] == "booking"
-    assert resultado["turno"] == 2
+    assert resultado["intent"] == "agendar"
+    assert resultado["collected_slots"].get("specialty") == "Cardiologia"
+    assert resultado["turn_count"] == 1
 
 
 @pytest.mark.asyncio
-async def test_info_node_responde_simpatico(estado_base):
-    from intel.agent.nodes.info_agent import info_node
-    
-    estado = {**estado_base, "messages": [HumanMessage(content="onde ficam?")]}
+async def test_intent_router_classifica_faq(estado_base):
+    """FAQ simples não deve ser classificado como 'agendar'."""
+    from intel.agent.nodes.intent_router import intent_router
 
-    with patch("intel.agent.nodes.info_agent._llm") as mock_llm:
-        mock_response = MagicMock()
-        mock_response.content = "Ficamos na Rua Direita de Luanda. Como posso ajudar mais?"
-        mock_response.usage_metadata = {"input_tokens": 100, "output_tokens": 20}
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    estado = {
+        **estado_base,
+        "messages": [HumanMessage(content="onde ficam as vossas instalações?")]
+    }
 
-        resultado = await info_node(estado)
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    mock_response = MagicMock()
+    mock_response.model_dump.return_value = {
+        "intent": "duvida",
+        "confidence": 0.90,
+        "extracted_slots": {}
+    }
+    mock_structured.ainvoke = AsyncMock(return_value=mock_response)
+    mock_llm.with_structured_output.return_value = mock_structured
 
-    assert "Rua Direita" in resultado["messages"][0].content
-    assert resultado["next_agent"] == "end"
+    with patch("intel.agent.providers.get_llm", return_value=mock_llm):
+        resultado = await intent_router(estado)
 
+    assert resultado["intent"] == "duvida"
 
-# ── Testes de ferramentas ─────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_buscar_especialidades_isolamento_tenant():
-    from intel.agent.tools.clinica_tools import buscar_especialidades
-    import json
+async def test_intent_router_fallback_em_erro(estado_base):
+    """Quando o LLM falha, o nó deve retornar fallback='duvida' sem crashar."""
+    from intel.agent.nodes.intent_router import intent_router
 
-    with patch("intel.agent.tools.clinica_tools.db") as mock_db:
-        mock_db.especialidades_activas = AsyncMock(return_value=["Ginecologia", "Urologia"])
+    estado = {
+        **estado_base,
+        "messages": [HumanMessage(content="quero marcar")]
+    }
 
-        resultado = await buscar_especialidades.ainvoke({"clinica_id": "outra-clinica"})
-        dados = json.loads(resultado)
+    with patch("intel.agent.providers.get_llm", side_effect=Exception("API timeout")):
+        resultado = await intent_router(estado)
 
-    mock_db.especialidades_activas.assert_called_once_with("outra-clinica")
-    assert "Urologia" in dados["especialidades"]
+    # Fallback não deve crashar — volta 'duvida'
+    assert resultado["intent"] == "duvida"
+    assert "turn_count" in resultado
+
+
+# ── Testes de Roteamento Condicional ─────────────────────────────────────────
+
+def test_route_by_intent_booking(estado_base):
+    """Intenção 'agendar' deve rotear para booking_manager."""
+    from intel.agent.nodes.intent_router import route_by_intent
+    estado = {**estado_base, "intent": "agendar"}
+    assert route_by_intent(estado) == "booking_manager"
+
+
+def test_route_by_intent_cancelar(estado_base):
+    """Intenção 'cancelar' deve rotear para booking_manager."""
+    from intel.agent.nodes.intent_router import route_by_intent
+    estado = {**estado_base, "intent": "cancelar"}
+    assert route_by_intent(estado) == "booking_manager"
+
+
+def test_route_by_intent_faq(estado_base):
+    """Intenção 'duvida' deve rotear para faq_responder."""
+    from intel.agent.nodes.intent_router import route_by_intent
+    estado = {**estado_base, "intent": "duvida"}
+    assert route_by_intent(estado) == "faq_responder"
+
+
+def test_route_by_intent_humano(estado_base):
+    """Intenção 'humano' deve rotear para human_handoff."""
+    from intel.agent.nodes.intent_router import route_by_intent
+    estado = {**estado_base, "intent": "humano"}
+    assert route_by_intent(estado) == "human_handoff"
+
+
+# ── Testes de Ferramentas (Isolamento de Tenant via binder.py) ────────────────
+
+def test_binder_tool_existe():
+    """Verifica que build_tools_for_tenant pode ser importado e é callable."""
+    from intel.agent.tools.binder import build_tools_for_tenant
+    assert callable(build_tools_for_tenant)

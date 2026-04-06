@@ -6,6 +6,7 @@ import { emailWorker } from './workers/email.worker';
 import { reminderWorker } from './workers/reminder.worker';
 import { webhookWorker } from './workers/webhook.worker';
 import { reportWorker } from './workers/report.worker';
+import { criarSessoesWorker } from './workers/criarSessoes.worker';
 import { schedulerService } from './services/scheduler.service';
 
 async function main() {
@@ -36,6 +37,7 @@ async function main() {
       reminderWorker.close(),
       webhookWorker.close(),
       reportWorker.close(),
+      criarSessoesWorker.close(),
     ]);
 
     await redis.quit();

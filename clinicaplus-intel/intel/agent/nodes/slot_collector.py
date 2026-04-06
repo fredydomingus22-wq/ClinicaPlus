@@ -1,5 +1,5 @@
 import json
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from intel.agent.state import AgentState
 from intel.agent.prompts.builder import SLOT_COLLECTOR_PROMPT
 
@@ -26,18 +26,44 @@ async def slot_collector(state: AgentState) -> dict:
     
     turn_count = state.get("turn_count", 0)
     messages = state.get("messages", [])
-    recent_msgs = [m for m in messages if getattr(m, "content", "")]
-    recent_text = "\n".join([f"{'Paciente' if m.type=='human' else 'IA'}: {m.content}" for m in recent_msgs[-3:]])
+    recent_msgs = [m for m in messages if isinstance(m, (HumanMessage, AIMessage)) and getattr(m, "content", "")]
+    recent_text = "\n".join([f"{'Paciente' if isinstance(m, HumanMessage) else 'IA'}: {m.content}" for m in recent_msgs[-3:]])
     
     config = state.get("clinic_config", {})
     specialties = ", ".join(config.get("specialties", []))
+    
+    tenant_id = state.get("tenant_id")
+    available_slots_info = "Nenhuma pesquisa de horários feita ainda."
+    
+    if intent == "agendar" and next_missing in ["date", "time"] and "specialty" in collected:
+        try:
+            from db_layer import db, LUANDA_TZ
+            from datetime import datetime
+            medicos = await db.medicos_por_especialidade(tenant_id, collected["specialty"])
+            if medicos:
+                # Usa o primeiro medico ativo dessa especialidade
+                m = medicos[0]
+                hoje = datetime.now(LUANDA_TZ).date()
+                slots = await db.slots_disponiveis(tenant_id, m.id, data_alvo=hoje, limite=4)
+                if slots:
+                    available_slots_info = f"Horários mais próximos com Dr(a). {m.nome}:\n"
+                    available_slots_info += "\n".join([f"- {s.dataHora.strftime('%d/%m às %H:%M')} ({s.preco} Kz)" for s in slots])
+                else:
+                    available_slots_info = f"Não encontrei vagas imediatas com Dr(a). {m.nome} para hoje."
+            else:
+                available_slots_info = f"Especialidade '{collected['specialty']}' não tem médicos activos no momento."
+        except Exception as db_e:
+            print(f"Aviso Slot Collector: falha ao buscar slots reais: {db_e}")
+            pass
     
     prompt = SLOT_COLLECTOR_PROMPT.format(
         intent=intent,
         collected_slots_json=json.dumps(collected, ensure_ascii=False),
         next_missing_slot=next_missing,
         available_specialties=specialties,
+        available_slots_info=available_slots_info,
         turn_count=turn_count,
+        reasoning_context=state.get("reasoning_context", "Sem raciocínio prévio."),
         booking_summary=json.dumps(collected, ensure_ascii=False),
         recent_messages=recent_text
     )
@@ -45,7 +71,7 @@ async def slot_collector(state: AgentState) -> dict:
     try:
         from intel.agent.providers import get_llm
         llm = get_llm(state.get("llm_provider", "groq"))
-        resp = await llm.ainvoke([SystemMessage(content=prompt)])
+        resp = await llm.ainvoke([HumanMessage(content=prompt)])
         ai_message = resp
     except Exception as e:
         import traceback

@@ -1,52 +1,140 @@
 import { prisma } from '../lib/prisma';
-import { TipoExame } from '@prisma/client';
-import type { 
-  ExameDTO, 
-  ExameCreateInput,
-} from '@clinicaplus/types';
+import { AppError } from '../lib/AppError';
+import { EstadoExame } from '@prisma/client';
+import { supabase } from '../lib/supabase';
+import { config } from '../lib/config';
 
 export const examesService = {
   /**
-   * Lists exams for a patient.
+   * Lists exams for a patient, handling legacy data mappings.
    */
-  async listByPaciente(clinicaId: string, pacienteId: string): Promise<ExameDTO[]> {
+  async listByPaciente(clinicaId: string, pacienteId: string): Promise<unknown[]> {
     const records = await prisma.exame.findMany({
       where: { clinicaId, pacienteId },
+      include: { tipoCatalogo: true },
       orderBy: { criadoEm: 'desc' },
     });
 
     return records.map(r => ({
       ...r,
-      tipo: r.tipo as string,
+      // Legado: se não tem catálogo, usa o nome/tipo antigo
+      nome: r.tipoCatalogo?.nome || r.nome,
+      tipo: r.tipoCatalogo ? 'CATALOGO' : r.tipo,
+      // Mapeamento de estado para legados: se o status antigo existia e o novo está PENDENTE
+      estado: r.estado, 
       dataPedido: r.dataPedido.toISOString(),
+      dataRealizacao: r.dataRealizacao?.toISOString() || null,
       dataResultado: r.dataResultado?.toISOString() || null,
       criadoEm: r.criadoEm.toISOString(),
       atualizadoEm: r.atualizadoEm.toISOString(),
-    } as ExameDTO));
+    }));
   },
 
   /**
-   * Creates a new exam request.
+   * Creates a new exam request using the new catalog or free text (legacy support).
    */
-  async create(clinicaId: string, data: ExameCreateInput): Promise<ExameDTO> {
+  async create(clinicaId: string, data: Record<string, unknown>): Promise<unknown> {
     const record = await prisma.exame.create({
       data: {
         clinicaId,
-        pacienteId: data.pacienteId,
-        medicoId: data.medicoId,
-        agendamentoId: data.agendamentoId ?? null,
-        nome: data.nome,
-        tipo: data.tipo as TipoExame,
-      }
+        pacienteId: data.pacienteId as string,
+        medicoId: data.medicoId as string,
+        agendamentoId: (data.agendamentoId as string) ?? null,
+        tipoExameId: (data.tipoExameId as string) ?? null,
+        nome: (data.nome as string) || 'Exame s/ nome', // Fallback para legados
+        descricao: data.descricao as string,
+        estado: 'PENDENTE',
+      },
+      include: { tipoCatalogo: true }
     });
 
     return {
       ...record,
-      tipo: record.tipo as string,
       dataPedido: record.dataPedido.toISOString(),
-      dataResultado: record.dataResultado?.toISOString() || null,
       criadoEm: record.criadoEm.toISOString(),
       atualizadoEm: record.atualizadoEm.toISOString(),
-    } as ExameDTO;
+    };
+  },
+
+  /**
+   * Updates an exam (patch), enforcing state machine rules.
+   */
+  async update(clinicaId: string, id: string, data: Record<string, unknown>): Promise<unknown> {
+    const current = await prisma.exame.findUnique({
+      where: { id, clinicaId }
+    });
+
+    if (!current) throw new AppError('Exame não encontrado', 404);
+
+    // Validação de transição de estado (Simples para Sprint I)
+    if (data.estado && current.estado === 'CANCELADO') {
+      throw new AppError('Não é possível alterar o estado de um exame cancelado', 400);
+    }
+
+    const updated = await prisma.exame.update({
+      where: { id, clinicaId },
+      data: {
+        ...(data as Record<string, unknown>),
+        // Se mudar para REALIZADO, seta a data se não enviada
+        dataRealizacao: data.estado === 'REALIZADO' && !data.dataRealizacao ? new Date() : (data.dataRealizacao as Date),
+      },
+      include: { tipoCatalogo: true }
+    });
+
+    return {
+      ...updated,
+      dataPedido: updated.dataPedido.toISOString(),
+      dataRealizacao: updated.dataRealizacao?.toISOString() || null,
+      dataResultado: updated.dataResultado?.toISOString() || null,
+      criadoEm: updated.criadoEm.toISOString(),
+      atualizadoEm: updated.atualizadoEm.toISOString(),
+    };
+  },
+
+  /**
+   * Gera uma Signed URL para upload seguro diretamente para o Supabase.
+   */
+  async getLaudoUploadUrl(clinicaId: string, id: string, fileName: string): Promise<{ uploadUrl: string; path: string }> {
+    const exame = await prisma.exame.findUnique({ where: { id, clinicaId } });
+    if (!exame) throw new AppError('Exame não encontrado', 404);
+
+    const ext = fileName.split('.').pop() || 'pdf';
+    const path = `${clinicaId}/exames/${id}/laudo_${Date.now()}.${ext}`;
+
+    const { data: uploadData, error } = await supabase.storage
+      .from(config.SUPABASE_LAUDOS_BUCKET)
+      .createSignedUploadUrl(path);
+
+    if (error || !uploadData) {
+      throw new AppError('Erro ao gerar URL de upload', 500);
+    }
+
+    return { uploadUrl: uploadData.signedUrl, path };
+  },
+
+  /**
+   * Confirma o upload do laudo e avança o estado para LAUDADO.
+   */
+  async confirmLaudo(clinicaId: string, id: string, path: string): Promise<unknown> {
+    // Verificar se o arquivo realmente existe no Supabase
+    const { data, error } = await supabase.storage
+      .from(config.SUPABASE_LAUDOS_BUCKET)
+      .list(path.substring(0, path.lastIndexOf('/')), {
+        search: path.split('/').pop() || ''
+      });
+
+    if (error || !data || data.length === 0) {
+      throw new AppError('Arquivo não encontrado no storage', 400);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(config.SUPABASE_LAUDOS_BUCKET)
+      .getPublicUrl(path);
+
+    return this.update(clinicaId, id, {
+      laudoUrl: publicUrlData.publicUrl,
+      estado: 'LAUDADO' as EstadoExame,
+      dataResultado: new Date()
+    });
   }
 };

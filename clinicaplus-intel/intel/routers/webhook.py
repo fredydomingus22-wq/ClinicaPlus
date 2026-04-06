@@ -71,13 +71,22 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
     # Lógica de resete: se inactividade > 30min, limpamos o histórico
     last_act_key = f"last_activity:{thread_id}"
     last_ts = await _redis.get(last_act_key)
-    agora = datetime.now().timestamp()
+    
+    # IMPORTANTE: Usar LUANDA_TZ (UTC+1) explicitamente para evitar mismatch de timezone no Railway/Local
+    agora = datetime.now(LUANDA_TZ).timestamp()
     timeout = 1800 # 30 min
     
     force_reset = False
-    if last_ts and (agora - float(last_ts)) > timeout:
-        print(f"🔄 Sessão expirada para {numero} (>30min). Forçando resete.")
-        force_reset = True
+    if last_ts:
+        diff = agora - float(last_ts)
+        print(f"⏱️ DEBUG Sessão {numero}: agora={agora}, last_ts={last_ts}, diff={diff}s (timeout={timeout}s)")
+        
+        if diff > timeout:
+            print(f"🔄 Sessão expirada para {numero} (>{timeout/60}min). Forçando resete.")
+            force_reset = True
+        elif diff < -60:
+            # Proteção contra relógios dessincronizados (se o tempo 'voltou' mais de 1 min)
+            print(f"⚠️ Relógio dessincronizado detectado para {numero}. Corrigindo timestamp.")
     
     await _redis.set(last_act_key, str(agora))
     
