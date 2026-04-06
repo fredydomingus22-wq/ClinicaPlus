@@ -66,6 +66,7 @@ const AgendarPage = React.lazy(() => import('./pages/paciente/AgendarPage'));
 const MeusAgendamentosPage = React.lazy(() => import('./pages/paciente/MeusAgendamentosPage'));
 const MinhasReceitasPage = React.lazy(() => import('./pages/paciente/MinhasReceitasPage'));
 const PerfilPage = React.lazy(() => import('./pages/paciente/PerfilPage'));
+const HistoricoClinicoPage = React.lazy(() => import('./pages/paciente/HistoricoClinicoPage').then(m => ({ default: m.HistoricoClinicoPage })));
 const NotificacoesPage = React.lazy(() => import('./pages/NotificacoesPage'));
 const StyleGuidePage = React.lazy(() => import('./pages/StyleGuidePage'));
 const LuxeStylePage = React.lazy(() => import('./pages/LuxeStylePage'));
@@ -398,6 +399,10 @@ export const router = createBrowserRouter([
             element: <AdminPacientes />
           },
           {
+            path: '/admin/pacientes/:id/historico',
+            element: <HistoricoClinicoPage />
+          },
+          {
             path: '/admin/medicos',
             element: <AdminMedicos />
           },
@@ -477,6 +482,10 @@ export const router = createBrowserRouter([
             element: <HistoricoAtendimentosPage />
           },
           {
+            path: '/medico/pacientes/:id/historico',
+            element: <HistoricoClinicoPage />
+          },
+          {
             path: '/medico/consulta/:id',
             element: <ConsultaPage />
           },
@@ -522,6 +531,10 @@ export const router = createBrowserRouter([
           {
             path: '/paciente/perfil',
             element: <PerfilPage />
+          },
+          {
+            path: '/paciente/historico',
+            element: <HistoricoClinicoPage />
           },
           {
             path: '/paciente/notificacoes',

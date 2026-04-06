@@ -1,11 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Papel, EstadoAgendamento } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Seeding database...');
-
+async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash('Demo1234!', 12);
 
   // 1. Clínica Demo
@@ -26,11 +24,11 @@ async function main() {
 
   // 2. Utilizadores
   const users = [
-    { nome: 'Maximus Super Admin', email: 'super@demo.ao', papel: 'SUPER_ADMIN' },
-    { nome: 'Ana Administradora', email: 'admin@demo.ao', papel: 'ADMIN' },
-    { nome: 'Dr. Carlos Silva', email: 'carlos@demo.ao', papel: 'MEDICO' },
-    { nome: 'Beatriz Recepcionista', email: 'beatriz@demo.ao', papel: 'RECEPCIONISTA' },
-    { nome: 'João Manuel', email: 'joao@demo.ao', papel: 'PACIENTE' },
+    { nome: 'Maximus Super Admin', email: 'super@demo.ao', papel: Papel.SUPER_ADMIN },
+    { nome: 'Ana Administradora', email: 'admin@demo.ao', papel: Papel.ADMIN },
+    { nome: 'Dr. Carlos Silva', email: 'carlos@demo.ao', papel: Papel.MEDICO },
+    { nome: 'Beatriz Recepcionista', email: 'beatriz@demo.ao', papel: Papel.RECEPCIONISTA },
+    { nome: 'João Manuel', email: 'joao@demo.ao', papel: Papel.PACIENTE },
   ];
 
   for (const u of users) {
@@ -42,7 +40,7 @@ async function main() {
         nome: u.nome,
         email: u.email,
         passwordHash: passwordHash,
-        papel: u.papel as any,
+        papel: u.papel,
       },
     });
   }
@@ -111,9 +109,9 @@ async function main() {
   dataRef.setHours(9, 0, 0, 0);
 
   const agendamentosData = [
-    { estado: 'PENDENTE', data: new Date(dataRef.getTime() + 24 * 60 * 60 * 1000) },
-    { estado: 'CONFIRMADO', data: new Date(dataRef.getTime()) },
-    { estado: 'CONCLUIDO', data: new Date(dataRef.getTime() - 24 * 60 * 60 * 1000) },
+    { estado: EstadoAgendamento.PENDENTE, data: new Date(dataRef.getTime() + 24 * 60 * 60 * 1000) },
+    { estado: EstadoAgendamento.CONFIRMADO, data: new Date(dataRef.getTime()) },
+    { estado: EstadoAgendamento.CONCLUIDO, data: new Date(dataRef.getTime() - 24 * 60 * 60 * 1000) },
   ];
 
   for (const ag of agendamentosData) {
@@ -123,7 +121,7 @@ async function main() {
         paciente: { connect: { id: paciente.id } },
         medico: { connect: { id: medico.id } },
         dataHora: ag.data,
-        estado: ag.estado as any,
+        estado: ag.estado,
         tipo: 'CONSULTA',
         motivoConsulta: 'Check-up de rotina',
       },
@@ -157,12 +155,27 @@ async function main() {
   const { seedFeatureFlags } = await import('./seeds/feature-flags');
   await seedFeatureFlags();
 
-  console.log('Seeding completed successfully.');
+  // 10. Catálogos de Exames e Tratamentos (Sprint I)
+  await prisma.tipoTratamento.createMany({
+    data: [
+       { clinicaId: clinica.id, nome: 'Fisioterapia Geral', duracaoMin: 45 },
+       { clinicaId: clinica.id, nome: 'Psicoterapia', duracaoMin: 60 }
+    ],
+    skipDuplicates: true
+  });
+
+  await prisma.tipoExameClinica.createMany({
+    data: [
+       { clinicaId: clinica.id, nome: 'Raio-X' },
+       { clinicaId: clinica.id, nome: 'Hemograma Completo' },
+       { clinicaId: clinica.id, nome: 'Ecografia' }
+    ],
+    skipDuplicates: true
+  });
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch(() => {
     process.exit(1);
   })
   .finally(async () => {

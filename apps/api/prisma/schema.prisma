@@ -47,6 +47,10 @@ model Clinica {
   utilizadores        Utilizador[]
   waInstancias        WaInstancia[]
   webhooks            Webhook[]
+  sessoesTratamento   SessaoTratamento[]
+  planosTratamento    PlanoTratamento[]
+  tiposTratamento     TipoTratamento[]
+  tiposExamesClinica  TipoExameClinica[]
 
   @@index([slug])
   @@index([suspensaEm])  // para filtrar clinicas activas/suspensas
@@ -141,6 +145,7 @@ model Paciente {
   receitas       Receita[]
   waConversas    WaConversa[]
   perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessão Intel)
+  planosTratamento  PlanoTratamento[]
 
 
   @@unique([clinicaId, numeroPaciente])
@@ -173,6 +178,7 @@ model Medico {
   utilizador      Utilizador    @relation(fields: [utilizadorId], references: [id])
   prontuarios     Prontuario[]
   receitas        Receita[]
+  planosTratamento PlanoTratamento[]
 
   @@index([clinicaId])
   @@index([clinicaId, especialidadeId])
@@ -225,6 +231,10 @@ model Agendamento {
   prontuario     Prontuario?
   receita        Receita?
   confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // Confirmação via Intel
+
+
+  planosOrigem   PlanoTratamento[]     @relation("AgendamentoPlanoTratamento")
+  sessoesTratamento SessaoTratamento[]
 
 
   @@index([clinicaId])
@@ -508,26 +518,39 @@ model Prontuario {
 }
 
 model Exame {
-  id            String       @id @default(cuid())
-  clinicaId     String
-  pacienteId    String
-  medicoId      String
-  agendamentoId String?
-  nome          String
-  tipo          TipoExame    @default(LABORATORIO)
-  status        String       @default("PENDENTE")
-  resultado     String?
-  dataPedido    DateTime     @default(now())
-  dataResultado DateTime?
-  criadoEm      DateTime     @default(now())
-  atualizadoEm  DateTime     @updatedAt
-  agendamento   Agendamento? @relation(fields: [agendamentoId], references: [id])
-  clinica       Clinica      @relation(fields: [clinicaId], references: [id])
-  medico        Medico       @relation(fields: [medicoId], references: [id])
-  paciente      Paciente     @relation(fields: [pacienteId], references: [id])
+  id               String       @id @default(cuid())
+  clinicaId        String
+  pacienteId       String
+  medicoId         String
+  agendamentoId    String?
+  
+  nome             String       // legado
+  tipo             TipoExame    @default(LABORATORIO) // legado
+  status           String       @default("PENDENTE")  // status antigo (legado)
+  resultado        String?      // legado
+  dataPedido       DateTime     @default(now())
+  dataResultado    DateTime?
+  
+  // -- NOVOS CAMPOS DO MÓDULO (SPRINT I) --
+  tipoExameId      String?           // NOVO: Link opcional para o catálogo
+  descricao        String?           // NOVO: indicação clínica/observações
+  estado           EstadoExame       @default(PENDENTE) // NOVO: máquina de estados tipada
+  dataRealizacao   DateTime?         // NOVO
+  laudoUrl         String?           // NOVO: URL do ficheiro no Supabase
+  laudoNota        String?           // NOVO: texto complementar ao ficheiro
+  
+  criadoEm         DateTime     @default(now())
+  atualizadoEm     DateTime     @updatedAt  // NOVO: tracking correto (caso falte no original)
+  
+  agendamento      Agendamento? @relation(fields: [agendamentoId], references: [id])
+  clinica          Clinica      @relation(fields: [clinicaId], references: [id])
+  medico           Medico       @relation(fields: [medicoId], references: [id])
+  paciente         Paciente     @relation(fields: [pacienteId], references: [id])
+  tipoCatalogo     TipoExameClinica? @relation(fields: [tipoExameId], references: [id]) // NOVO
 
   @@index([clinicaId])
   @@index([pacienteId])
+  @@index([clinicaId, estado]) // NOVO
   @@map("exames")
 }
 
@@ -946,4 +969,115 @@ enum EscopoApiKey {
   READ_RECEITAS
   READ_FATURAS
   WRITE_FATURAS
+}
+
+enum EstadoExame {
+  PENDENTE
+  AGENDADO
+  REALIZADO
+  LAUDADO
+  CANCELADO
+}
+
+enum EstadoPlano {
+  ACTIVO
+  SUSPENSO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum EstadoSessao {
+  AGENDADO
+  REALIZADO
+  FALTOU
+  CANCELADO
+}
+
+model TipoTratamento {
+  id          String   @id @default(cuid())
+  clinicaId   String
+  nome        String   
+  descricao   String?
+  duracaoMin  Int?     
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
+  
+  clinica     Clinica  @relation(fields: [clinicaId], references: [id])
+  planos      PlanoTratamento[]
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("tipos_tratamento")
+}
+
+model TipoExameClinica {
+  id          String   @id @default(cuid())
+  clinicaId   String
+  nome        String   
+  descricao   String?
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
+  
+  clinica     Clinica  @relation(fields: [clinicaId], references: [id])
+  exames      Exame[]
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("tipos_exame_clinica")
+}
+
+model PlanoTratamento {
+  id              String      @id @default(cuid())
+  clinicaId       String
+  pacienteId      String
+  agendamentoOrigemId String?    
+  medicoId        String      
+  responsavelId   String?     
+  
+  tipoId          String      
+  descricao       String?     
+  estado          EstadoPlano @default(ACTIVO)
+  totalSessoes    Int         
+  frequenciaSemana Int        
+  dataInicio      DateTime
+  dataFimPrevista DateTime
+  dataFimReal     DateTime?   
+  observacoes     String?
+  
+  criadoEm       DateTime    @default(now())
+  atualizadoEm   DateTime    @updatedAt
+
+  clinica        Clinica          @relation(fields: [clinicaId], references: [id])
+  paciente       Paciente         @relation(fields: [pacienteId], references: [id])
+  medico         Medico           @relation(fields: [medicoId], references: [id])
+  agendamentoOrigem Agendamento?  @relation(name: "AgendamentoPlanoTratamento", fields: [agendamentoOrigemId], references: [id])
+  tipoTratamento TipoTratamento   @relation(fields: [tipoId], references: [id])
+  sessoes        SessaoTratamento[]
+
+  @@index([clinicaId, pacienteId])
+  @@index([clinicaId, estado])
+  @@map("plano_tratamento")
+}
+
+model SessaoTratamento {
+  id             String       @id @default(cuid())
+  clinicaId      String
+  planoId        String
+  agendamentoId  String?      @unique
+  numeroSessao   Int
+  estado         EstadoSessao @default(AGENDADO)
+  dataHora       DateTime
+  duracao        Int          
+  notas          String?      
+  
+  criadoEm       DateTime     @default(now())
+  atualizadoEm   DateTime     @updatedAt
+
+  clinica      Clinica          @relation(fields: [clinicaId], references: [id])
+  plano        PlanoTratamento  @relation(fields: [planoId], references: [id], onDelete: Cascade)
+  agendamento  Agendamento?     @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId, planoId])
+  @@index([clinicaId, dataHora])
+  @@map("sessao_tratamento")
 }

@@ -24,4 +24,39 @@ router.post('/', requireRole(['ADMIN', 'MEDICO']), async (req, res, next) => {
   }
 });
 
+// Update Exam (Patch)
+router.patch('/:id', requireRole(['ADMIN', 'MEDICO']), async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    const record = await examesService.update(req.clinica!.id, id, req.body);
+    res.json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get Signed URL for Upload
+router.post('/:id/laudo-upload-url', requireRole(['ADMIN', 'MEDICO']), async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    const { fileName } = req.body;
+    const data = await examesService.getLaudoUploadUrl(req.clinica!.id, id, fileName);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Confirm Upload
+router.post('/:id/laudo-confirmar', requireRole(['ADMIN', 'MEDICO']), async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    const { path } = req.body;
+    const record = await examesService.confirmLaudo(req.clinica!.id, id, path);
+    res.json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

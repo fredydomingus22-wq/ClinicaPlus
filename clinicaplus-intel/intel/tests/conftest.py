@@ -28,17 +28,26 @@ def mock_llm_validation(monkeypatch):
     que demora ~30s por módulo importado.
 
     Resultado: testes correm em <5s em vez de ~5min.
+
+    NOTA: _create_client foi removido em versões recentes do langchain-google-genai.
+    Agora fazemos patch do atributo que inicializa o cliente interno.
     """
-    # Patch do ChatGoogleGenerativeAI para não validar a key em __init__
-    with patch("langchain_google_genai.ChatGoogleGenerativeAI._create_client", return_value=None):
-        yield
+    # Patch do cliente interno do Google Generative AI - compatível com versões >= 2.x
+    mock_client = MagicMock()
+    monkeypatch.setattr(
+        "langchain_google_genai.chat_models.ChatGoogleGenerativeAI.validate_environment",
+        classmethod(lambda cls, values: values),
+        raising=False,
+    )
+    yield mock_client
 
 
 @pytest.fixture(autouse=True)
 def mock_redis_connection():
     """
     Previne tentativas de ligação a Redis durante testes unitários.
-    Testes de integração devem fazer override desta fixture.
+    O grafo (graph.py) recebe o checkpointer injetado externamente (main.py),
+    por isso mockamos a função init_graph para não precisar de Redis real.
     """
     mock_redis = MagicMock()
     mock_redis.get = MagicMock(return_value=None)
@@ -46,5 +55,7 @@ def mock_redis_connection():
     mock_redis.pipeline = MagicMock(return_value=mock_redis)
     mock_redis.execute = MagicMock(return_value=[True, True])
 
-    with patch("intel.agent.graph.AsyncRedisSaver.from_conn_string", return_value=mock_redis):
+    # O checkpointer é injetado em main.py via AsyncPostgresSaver.
+    # Para testes, fazemos compile() sem checkpointer (comportamento de fallback do get_graph).
+    with patch("intel.agent.graph.init_graph", return_value=None):
         yield mock_redis

@@ -25,6 +25,10 @@ const configSchema = z.object({
   N8N_BASE_URL: z.string().url(),
   N8N_API_KEY: z.string().min(1),
   API_PUBLIC_URL: z.string().url(),
+  // Supabase
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_LAUDOS_BUCKET: z.string().default('laudos'),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
   path: ["JWT_REFRESH_SECRET"],

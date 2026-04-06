@@ -36,20 +36,25 @@ def _get_postgres_url() -> str:
 @asynccontextmanager
 async def get_checkpointer():
     """
-    Checkpointer persistente AsyncPostgresSaver.
-    Configurado para compatibilidade máxima com PgBouncer (Transaction Mode):
-    - prepare_threshold=None: Desativa prepared statements no psycopg3.
-    - autocommit=True: Necessário para o modo pipeline do LangGraph e poolers.
+    Checkpointer persistente AsyncPostgresSaver utilizando Pooling de Conexões.
     """
     import psycopg
+    from psycopg_pool import AsyncConnectionPool
+    
     conn_info = _get_postgres_url()
     
-    # Criamos a conexão manualmente para ter controlo total sobre os parâmetros do psycopg3
-    # O from_conn_string do LangGraph não permite passar estes argumentos em algumas versões.
-    async with await psycopg.AsyncConnection.connect(
-        conn_info, 
-        prepare_threshold=None, 
-        autocommit=True
-    ) as conn:
-        checkpointer = AsyncPostgresSaver(conn)
-        yield checkpointer
+    # Criamos a Pool para gerir múltiplas conexões de forma resiliente
+    async with AsyncConnectionPool(
+        conn_info,
+        min_size=1,
+        max_size=10,
+        kwargs={
+            "prepare_threshold": None,  # Compatibilidade com PgBouncer
+            "autocommit": True         # LangGraph pipeline mode
+        }
+    ) as pool:
+        # Nota: O AsyncPostgresSaver do LangGraph 1.1+ pode receber a pool diretamente 
+        # em algumas implementações, mas para garantir compatibilidade, usamos a conexão da pool.
+        async with pool.connection() as conn:
+            checkpointer = AsyncPostgresSaver(conn)
+            yield checkpointer

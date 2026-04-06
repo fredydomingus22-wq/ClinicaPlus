@@ -161,12 +161,40 @@ export interface ExameDTO {
   agendamentoId: string | null;
   nome: string;
   tipo: string;
-  status: string;
+  status: string; // Legado
+  estado: string; // Novo
   resultado: string | null;
+  laudoUrl?: string; // Novo
+  descricao?: string; // Novo
   dataPedido: string;
   dataResultado: string | null;
   criadoEm: string;
   atualizadoEm: string;
+  tipoCatalogo?: { id: string; nome: string }; // Novo
+}
+
+export interface PlanoTratamentoDTO {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  medicoId: string;
+  tipoId: string;
+  totalSessoes: number;
+  frequenciaSemana: number;
+  sessoesRealizadas: number; // Novo
+  dataInicio: string;
+  dataFimPrevista: string;
+  dataFimReal?: string;
+  estado: string;
+  descricao?: string;
+  observacoes?: string;
+  agendamentoOrigemId?: string;
+  responsavelId?: string;
+  criadoEm: string;
+  atualizadoEm: string;
+  tipoTratamento?: { id: string; nome: string };
+  paciente?: PacienteDTO;
+  _count?: { sessoes: number };
 }
 
 export interface DocumentoDTO {
