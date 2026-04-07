@@ -1,5 +1,8 @@
 import React from 'react';
 import { usePaciente } from '../../hooks/usePacientes';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/auth.store';
+import { Papel } from '@clinicaplus/types';
 import { 
   Button, 
   Card, 
@@ -9,12 +12,12 @@ import {
   ErrorMessage 
 } from '@clinicaplus/ui';
 import { 
-  X, 
-  Phone, 
-  Mail, 
-  MapPin, 
+  X,
+  Phone,
+  Mail,
+  MapPin,
   History,
-  AlertCircle 
+  ClipboardList
 } from 'lucide-react';
 import { formatDate } from '@clinicaplus/utils';
 import { AllergyBanner } from '../../components/patients/AllergyBanner';
@@ -27,7 +30,16 @@ interface PatientDetailPanelProps {
 }
 
 export function PatientDetailPanel({ id, onClose, onEdit, onNewBooking }: PatientDetailPanelProps) {
+  const navigate = useNavigate();
+  const { utilizador } = useAuthStore();
   const { data: paciente, isLoading, error } = usePaciente(id);
+
+  const handleGoToHistory = () => {
+    if (!utilizador) return;
+    const basePath = utilizador.papel === Papel.ADMIN ? 'admin' : 'medico';
+    navigate(`/${basePath}/pacientes/${id}/historico`);
+    onClose();
+  };
   
   if (isLoading) return (
     <div className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white shadow-xl z-50 flex items-center justify-center">
@@ -118,17 +130,24 @@ export function PatientDetailPanel({ id, onClose, onEdit, onNewBooking }: Patien
           </Card>
         </div>
 
-        {/* Short History Placeholder */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-bold text-neutral-600 uppercase tracking-widest flex items-center gap-2">
-            <History className="h-3 w-3" /> Histórico Recente
-          </h4>
-          <Card className="p-8 bg-neutral-100/50 border-dashed border-neutral-200 shadow-none">
-            <div className="text-center space-y-2">
-              <AlertCircle className="h-8 w-8 text-neutral-300 mx-auto" />
-              <p className="text-xs text-neutral-400 font-medium max-w-[200px] mx-auto">
-                O histórico clínico será disponibilizado brevemente.
+        <div className="space-y-3 pb-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-neutral-600 uppercase tracking-widest flex items-center gap-2">
+              <History className="h-3 w-3" /> Histórico Clínico
+            </h4>
+            <Button variant="ghost" size="sm" className="h-6 text-primary-600 hover:text-primary-700 font-bold px-2" onClick={handleGoToHistory}>
+              Ver Completo
+            </Button>
+          </div>
+          <Card className="p-4 bg-primary-50/30 border-dashed border-primary-200/50 shadow-none">
+            <div className="text-center space-y-3">
+              <ClipboardList className="h-6 w-6 text-primary-300 mx-auto" />
+              <p className="text-xs text-neutral-600 font-medium max-w-[220px] mx-auto">
+                Aceda ao histórico de consultas, exames e planos de tratamento deste paciente.
               </p>
+              <Button size="sm" variant="ghost" className="w-full text-primary-600" onClick={handleGoToHistory}>
+                Abrir Histórico
+              </Button>
             </div>
           </Card>
         </div>

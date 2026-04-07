@@ -37,6 +37,10 @@ import { EstadoAgendamento } from '@clinicaplus/types';
 import { ReceitaModal } from './ReceitaModal';
 import { useUIStore } from '../../stores/ui.store';
 import { VitalsGrid } from '../../components/consultation/VitalsGrid';
+import { PedidoExameModal } from '../../components/tratamentos/PedidoExameModal';
+import { useExamesPaciente } from '../../hooks/useTratamentos';
+import { useAuthStore } from '../../stores/auth.store';
+import type { ExameDTO } from '@clinicaplus/types';
 
 /**
  * Consultation Page — dual mode.
@@ -52,9 +56,13 @@ export default function ConsultaPage() {
   const [notas, setNotas] = useState('');
   const [diagnostico, setDiagnostico] = useState('');
   const [showReceitaModal, setShowReceitaModal] = useState(false);
+  const [showExameModal, setShowExameModal] = useState(false);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const { data: clinica } = useClinicaMe();
+  const { utilizador } = useAuthStore();
   const { addToast } = useUIStore();
+
+  const { data: exames, refetch: refetchExames } = useExamesPaciente(agendamento?.pacienteId || '');
 
   const handleImprimirReceita = () => {
     window.print();
@@ -200,6 +208,14 @@ export default function ConsultaPage() {
               </Button>
 
               <Button 
+                variant="outline" 
+                onClick={() => setShowExameModal(true)}
+                className="font-semibold border-primary-200 text-primary-700 hover:bg-primary-50"
+              >
+                <Activity className="h-4 w-4 mr-2" /> Solicitar Exame
+              </Button>
+
+              <Button 
                 onClick={() => setShowFinalizarModal(true)}
                 loading={updateEstado.isPending || salvarConsulta.isPending}
                 className="bg-neutral-900 text-white shadow-xl shadow-neutral-900/10 font-bold px-6"
@@ -282,6 +298,37 @@ export default function ConsultaPage() {
                     </div>
                    </div>
                 </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Exames Solicitados Mini-List */}
+          <Card className="p-0 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
+                <FileText className="h-4 w-4 text-secondary-500" /> Exames Solicitados
+              </h3>
+            </div>
+            <div className="p-4 space-y-2">
+              {exames && (exames as ExameDTO[]).length > 0 ? (
+                (exames as ExameDTO[]).map((ex) => (
+                  <div key={ex.id} className="p-3 bg-white rounded-lg border border-neutral-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-neutral-800">{ex.tipoCatalogo?.nome || ex.nome}</p>
+                      <p className="text-[10px] text-neutral-500">{formatDateTime(ex.dataPedido)}</p>
+                    </div>
+                    <Badge variant={ex.estado === 'LAUDADO' ? 'success' : 'neutral'} className="text-[8.5px]">
+                      {ex.estado}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum exame solicitado nesta sessão.</p>
+              )}
+              {!isReadOnly && (
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowExameModal(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Novo Pedido
+                </Button>
               )}
             </div>
           </Card>
@@ -422,6 +469,20 @@ export default function ConsultaPage() {
           pacienteNome={paciente.nome}
           diagnosticoPadrao={diagnostico}
           onClose={() => setShowReceitaModal(false)}
+        />
+      )}
+
+      {!isReadOnly && showExameModal && (
+        <PedidoExameModal 
+          isOpen={showExameModal}
+          pacienteId={paciente.id}
+          agendamentoId={agendamento.id}
+          medicoId={utilizador?.medico?.id || ''} // Pré-seleção do médico atual
+          onClose={() => setShowExameModal(false)}
+          onSuccess={() => {
+            refetchExames();
+            addToast({ title: 'Sucesso', message: 'Exame solicitado com sucesso!', type: 'success' });
+          }}
         />
       )}
 

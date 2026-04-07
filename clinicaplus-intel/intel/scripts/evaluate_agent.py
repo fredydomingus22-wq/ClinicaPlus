@@ -95,7 +95,7 @@ async def run_agent(inputs: dict) -> dict:
         "whatsapp_number": "244910000000",
         "patient_id": "test_123" if inputs.get("is_identified") else None,
         "messages": [HumanMessage(content=inputs["question"])],
-        "llm_provider": "gemini",
+        "llm_provider": "openai",
         "clinic_config": config_clinica
     }
     
@@ -128,8 +128,8 @@ def accuracy_evaluator(run, example) -> dict:
     example_inputs = example.inputs if hasattr(example, "inputs") else example.inputs
     
     async def grade():
-        # Usamos Groq como Judge para evitar limites do Gemini Free Tier no LangSmith Evals
-        llm = get_llm("groq").with_structured_output(EvalGrade)
+        # Usamos OpenAI como Judge para maior precisão nos testes solicitados
+        llm = get_llm("openai_fast").with_structured_output(EvalGrade)
         prompt = f"""
 Avalia a assertividade de Resposta e Fluxo (Score de 0 a 10).
 Pergunta Origem: {example_inputs.get('question')}
@@ -155,8 +155,8 @@ def tone_evaluator(run, example) -> dict:
     run_outputs = run.outputs if hasattr(run, "outputs") else run.get("outputs", {})
     
     async def grade():
-        # Usamos Groq como Judge aqui também
-        llm = get_llm("groq").with_structured_output(EvalGrade)
+        # Usamos OpenAI como Judge aqui também
+        llm = get_llm("openai_fast").with_structured_output(EvalGrade)
         prompt = f"""
 Avalia o TOM e FORMA da Resposta do assistente (Score: 0 a 10).
 Resposta: "{run_outputs.get('agent_response')}"

@@ -10,6 +10,8 @@ import {
   User,
   Wallet,
   BarChart3,
+  Activity,
+  History,
   type LucideIcon
 } from 'lucide-react';
 import { Papel } from '@clinicaplus/types';
@@ -108,6 +110,34 @@ export const NAV_CONFIG: NavItem[] = [
     roles: [Papel.ADMIN] 
   },
   { 
+    to: '/medico/exames', 
+    label: 'Gestão de Exames', 
+    icon: FileText, 
+    priority: true,
+    roles: [Papel.MEDICO] 
+  },
+  { 
+    to: '/medico/tratamentos', 
+    label: 'Gestão de Tratamentos', 
+    icon: Activity, 
+    priority: true,
+    roles: [Papel.MEDICO] 
+  },
+  { 
+    to: '/admin/exames', 
+    label: 'Gestão de Exames', 
+    icon: FileText, 
+    priority: true,
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/admin/tratamentos', 
+    label: 'Gestão de Tratamentos', 
+    icon: Activity, 
+    priority: true,
+    roles: [Papel.ADMIN] 
+  },
+  { 
     to: '/recepcao/pacientes', 
     label: 'Pacientes', 
     icon: Users, 
@@ -125,6 +155,13 @@ export const NAV_CONFIG: NavItem[] = [
     to: '/paciente/receitas', 
     label: 'Minhas Receitas', 
     icon: FileText, 
+    priority: true,
+    roles: [Papel.PACIENTE] 
+  },
+  { 
+    to: '/paciente/historico', 
+    label: 'Histórico Clínico', 
+    icon: History, 
     priority: true,
     roles: [Papel.PACIENTE] 
   },
@@ -202,6 +239,12 @@ export const NAV_CONFIG: NavItem[] = [
     to: '/admin/configuracao', 
     label: 'Definições', 
     icon: Settings, 
+    roles: [Papel.ADMIN] 
+  },
+  { 
+    to: '/admin/configuracao/servicos', 
+    label: 'Tabela de Preços', 
+    icon: Wallet, 
     roles: [Papel.ADMIN] 
   },
   { 

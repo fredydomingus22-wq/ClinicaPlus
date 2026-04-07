@@ -30,6 +30,17 @@ export const tratamentosApi = {
     return data;
   },
 
+  // --- LISTAGENS GLOBAIS ---
+  async getAllExames(filters: { estado?: string | undefined; q?: string | undefined } = {}) {
+    const { data } = await apiClient.get('/exames', { params: filters });
+    return data;
+  },
+
+  async getAllPlanos(filters: { estado?: string | undefined; q?: string | undefined } = {}) {
+    const { data } = await apiClient.get('/planos', { params: filters });
+    return data;
+  },
+
   // --- EXAMES ---
   async getExamesPaciente(pacienteId: string) {
     const { data } = await apiClient.get(`/exames/paciente/${pacienteId}`);

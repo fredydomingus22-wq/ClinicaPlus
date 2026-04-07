@@ -17,14 +17,44 @@ export const examesService = {
 
     return records.map(r => ({
       ...r,
-      // Legado: se não tem catálogo, usa o nome/tipo antigo
       nome: r.tipoCatalogo?.nome || r.nome,
       tipo: r.tipoCatalogo ? 'CATALOGO' : r.tipo,
-      // Mapeamento de estado para legados: se o status antigo existia e o novo está PENDENTE
       estado: r.estado, 
       dataPedido: r.dataPedido.toISOString(),
       dataRealizacao: r.dataRealizacao?.toISOString() || null,
       dataResultado: r.dataResultado?.toISOString() || null,
+      criadoEm: r.criadoEm.toISOString(),
+      atualizadoEm: r.atualizadoEm.toISOString(),
+    }));
+  },
+
+  /**
+   * Lists all exams for a clinic with optional filters.
+   */
+  async listAll(clinicaId: string, filters: { estado?: string; q?: string }): Promise<unknown[]> {
+    const records = await prisma.exame.findMany({
+      where: { 
+        clinicaId,
+        ...(filters.estado ? { estado: filters.estado as EstadoExame } : {}),
+        ...(filters.q ? {
+          OR: [
+            { paciente: { nome: { contains: filters.q, mode: 'insensitive' } } },
+            { tipoCatalogo: { nome: { contains: filters.q, mode: 'insensitive' } } },
+            { nome: { contains: filters.q, mode: 'insensitive' } }
+          ]
+        } : {})
+      },
+      include: { 
+        tipoCatalogo: true,
+        paciente: { select: { id: true, nome: true, numeroPaciente: true } }
+      },
+      orderBy: { criadoEm: 'desc' },
+    });
+
+    return records.map(r => ({
+      ...r,
+      nome: r.tipoCatalogo?.nome || r.nome,
+      dataPedido: r.dataPedido.toISOString(),
       criadoEm: r.criadoEm.toISOString(),
       atualizadoEm: r.atualizadoEm.toISOString(),
     }));

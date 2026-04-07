@@ -17,7 +17,7 @@ booking_builder.add_edge(START, "slot_collector")
 # Decisão interna: Se slots completos -> executa. Senão -> continua a pedir (loop interno).
 booking_builder.add_conditional_edges("slot_collector", check_slots_complete, {
     "action_executor": "action_executor",
-    "slot_collector":  "slot_collector",
+    "slot_collector":  END,
 })
 
 # Após a execução da ação (agendar/cancelar), o subgraph termina
