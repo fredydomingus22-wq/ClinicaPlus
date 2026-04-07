@@ -37,6 +37,9 @@ const AdminEquipa = React.lazy(() => import('./pages/admin/EquipaPage').then(m =
 const AdminConfiguracao = React.lazy(() => import('./pages/admin/ConfiguracaoPage'));
 const AdminPerfilPage = React.lazy(() => import('./pages/admin/PerfilPage'));
 const AdminIntegracoes = React.lazy(() => import('./pages/admin/IntegracoesPage'));
+const AdminServicosPrecos = React.lazy(() => import('./pages/admin/ServicosPrecosPage'));
+const AdminExames = React.lazy(() => import('./pages/admin/GestaoExamesPage'));
+const AdminTratamentos = React.lazy(() => import('./pages/admin/GestaoTratamentosPage'));
 const AdminRelatorios = React.lazy(() => import('./pages/financeiro/RelatoriosPage'));
 const AdminAuditLog = React.lazy(() => import('./pages/admin/AuditLogPage'));
 const AdminWhatsApp = React.lazy(() => import('./pages/configuracoes/WhatsappPage').then(m => ({ default: m.WhatsappPage })));
@@ -423,6 +426,10 @@ export const router = createBrowserRouter([
             element: <AdminConfiguracao />
           },
           {
+            path: '/admin/configuracao/servicos',
+            element: <AdminServicosPrecos />
+          },
+          {
             path: '/admin/configuracao/subscricao',
             element: <SubscricaoPage />
           },
@@ -453,6 +460,14 @@ export const router = createBrowserRouter([
           {
             path: '/admin/audit-logs',
             element: <AdminAuditLog />
+          },
+          {
+            path: '/admin/exames',
+            element: <AdminExames />
+          },
+          {
+            path: '/admin/tratamentos',
+            element: <AdminTratamentos />
           },
           {
             path: '/admin/notificacoes',
@@ -496,6 +511,14 @@ export const router = createBrowserRouter([
           {
             path: '/medico/perfil',
             element: <MedicoPerfilPage />
+          },
+          {
+            path: '/medico/exames',
+            element: <AdminExames />
+          },
+          {
+            path: '/medico/tratamentos',
+            element: <AdminTratamentos />
           },
           {
             path: '/medico/notificacoes',

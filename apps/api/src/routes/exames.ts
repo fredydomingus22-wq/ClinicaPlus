@@ -4,6 +4,20 @@ import { requireRole } from '../middleware/requireRole';
 
 const router = Router();
 
+// List all for Clinic (Global)
+router.get('/', requireRole(['ADMIN', 'MEDICO']), async (req, res, next) => {
+  try {
+    const filters = {
+      estado: req.query.estado as string,
+      q: req.query.q as string
+    };
+    const records = await examesService.listAll(req.clinica!.id, filters);
+    res.json(records);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // List by Paciente
 router.get('/paciente/:pacienteId', async (req, res, next) => {
   try {

@@ -62,8 +62,10 @@ export const TipoExameClinicaSchema = z.object({
   clinicaId: z.string(),
   nome: z.string(),
   descricao: z.string().nullable().optional(),
+  preco: z.number().int(),
   ativo: z.boolean()
 });
+export type TipoExameClinicaDTO = z.infer<typeof TipoExameClinicaSchema>;
 
 export const TipoTratamentoSchema = z.object({
   id: z.string().cuid(),
@@ -71,12 +73,40 @@ export const TipoTratamentoSchema = z.object({
   nome: z.string(),
   descricao: z.string().nullable().optional(),
   duracaoMin: z.number().nullable().optional(),
+  preco: z.number().int(),
   ativo: z.boolean()
 });
+export type TipoTratamentoDTO = z.infer<typeof TipoTratamentoSchema>;
+
+export const PlanoTratamentoSchema = z.object({
+  id: z.string().cuid(),
+  clinicaId: z.string(),
+  pacienteId: z.string(),
+  medicoId: z.string(),
+  tipoId: z.string(),
+  totalSessoes: z.number().int(),
+  frequenciaSemana: z.number().int(),
+  sessoesRealizadas: z.number().int().optional().default(0),
+  dataInicio: z.string(),
+  dataFimPrevista: z.string(),
+  dataFimReal: z.string().nullable().optional(),
+  estado: z.string(),
+  descricao: z.string().nullable().optional(),
+  observacoes: z.string().nullable().optional(),
+  agendamentoOrigemId: z.string().nullable().optional(),
+  responsavelId: z.string().nullable().optional(),
+  criadoEm: z.string(),
+  atualizadoEm: z.string(),
+  tipoTratamento: TipoTratamentoSchema.optional(),
+  paciente: z.any().optional(),
+  _count: z.object({ sessoes: z.number() }).optional(),
+});
+export type PlanoTratamentoDTO = z.infer<typeof PlanoTratamentoSchema>;
 
 export const CriarTipoExameClinicaSchema = z.object({
   nome: z.string().min(1).max(100),
   descricao: z.string().max(500).optional(),
+  preco: z.number().int().min(0).optional().default(0),
   ativo: z.boolean().optional().default(true),
 });
 export type CriarTipoExameClinicaDto = z.infer<typeof CriarTipoExameClinicaSchema>;
@@ -85,6 +115,7 @@ export const CriarTipoTratamentoSchema = z.object({
   nome: z.string().min(1).max(100),
   descricao: z.string().max(500).optional(),
   duracaoMin: z.number().int().min(1).optional(),
+  preco: z.number().int().min(0).optional().default(0),
   ativo: z.boolean().optional().default(true),
 });
 export type CriarTipoTratamentoDto = z.infer<typeof CriarTipoTratamentoSchema>;

@@ -47,6 +47,8 @@ import utilizadoresRouter from './routes/utilizadores';
 import subscricoesRouter from './routes/subscricoes';
 import whatsappRouter from './routes/whatsapp';
 import configTratamentosRouter from './routes/config-tratamentos.routes';
+import planosRouter from './routes/planos';
+import sessoesRouter from './routes/sessoes';
 
 const app = express();
 
@@ -218,6 +220,8 @@ app.use('/api/utilizadores', utilizadoresRouter);
 app.use('/api/api-keys', authenticate, tenantMiddleware, apiKeysRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/config-tratamentos', configTratamentosRouter);
+app.use('/api/planos', planosRouter);
+app.use('/api/sessoes', sessoesRouter);
 
 // Global Error Handler
 app.use(errorHandler);

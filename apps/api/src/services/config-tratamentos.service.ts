@@ -19,6 +19,7 @@ export const tratamentosConfigService = {
           clinicaId,
           nome,
           descricao: descricao ?? null,
+          preco: data.preco ?? 0,
           ativo: ativo ?? true,
         },
       });
@@ -47,6 +48,7 @@ export const tratamentosConfigService = {
           nome,
           descricao: descricao ?? null,
           duracaoMin: duracaoMin ?? null,
+          preco: data.preco ?? 0,
           ativo: ativo ?? true,
         },
       });

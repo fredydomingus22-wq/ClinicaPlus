@@ -4,6 +4,7 @@ import { redis } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { config } from '../lib/config';
 import { EmailJob, JobNames } from '@clinicaplus/events';
+import { emailTemplates } from '../lib/emailTemplates';
 
 const resend = new Resend(config.RESEND_API_KEY);
 
@@ -16,16 +17,31 @@ export const emailWorker = new Worker<EmailJob>(
     try {
       const { to, template, data } = job.data;
       
-      // In a real scenario, we would use a template engine like EJS or React Email.
-      // For now, we'll just log and send a simple text.
-      const subject = template === 'reminder' ? 'Lembrete de Consulta' : 
-                     template === 'registration' ? 'Bem-vindo à ClinicaPlus' : 'Fatura Emitida';
+      const FROM = 'ClinicaPlus <noreply@zimbotechia.site>';
+      
+      let subject = 'Notificação ClinicaPlus';
+      let html = '';
+
+      if (template === 'reminder') {
+        subject = `Lembrete de Consulta — ${data.tipo} — ClinicaPlus`;
+        html = emailTemplates.lembrete({
+          pacienteNome: data.pacienteNome as string,
+          medicoNome: data.medicoNome as string,
+          clinicaNome: data.clinicaNome as string,
+          dataHora: new Date(data.dataHora as string),
+          horasAntecedencia: data.tipo === '24h' ? 24 : 2,
+        });
+      } else {
+        // Fallback or other templates
+        subject = template === 'registration' ? 'Bem-vindo à ClinicaPlus' : 'Notificação';
+        html = `<p>Template: ${template}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      }
 
       await resend.emails.send({
-        from: 'ClinicaPlus <noreply@clinicaplus.ao>',
+        from: FROM,
         to,
         subject,
-        html: `<p>Template: ${template}</p><pre>${JSON.stringify(data, null, 2)}</pre>`,
+        html,
       });
 
       log.info('Email sent successfully');

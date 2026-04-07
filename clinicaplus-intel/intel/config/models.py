@@ -1,37 +1,37 @@
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.language_models import BaseChatModel
 
 # ── Definição de providers por agente ─────────────────────────────────────────
-# CONCORDADO: Usar apenas Gemini 1.5 Flash (Google) para aproveitar free tier
 AGENT_MODELS: dict[str, dict] = {
     "supervisor": {
-        "provider":    "google",
-        "model":       "gemini-2.5-flash-lite",
+        "provider":    "openai",
+        "model":       "gpt-4o-mini",
         "temperature": 0.1,
         "max_tokens":  512,
     },
     "intent": {
-        "provider":    "google",
-        "model":       "gemini-2.5-flash-lite",
+        "provider":    "openai",
+        "model":       "gpt-4o-mini",
         "temperature": 0,
         "max_tokens":  512,
     },
     "booking": {
-        "provider":    "google",
-        "model":       "gemini-2.5-flash-lite",
+        "provider":    "openai",
+        "model":       "gpt-4o-mini",
         "temperature": 0.1,
         "max_tokens":  1024,
     },
     "info": {
-        "provider":    "google",
-        "model":       "gemini-2.5-flash-lite",
+        "provider":    "openai",
+        "model":       "gpt-4o",
         "temperature": 0.2,
         "max_tokens":  512,
     },
     "escalation": {
-        "provider":    "google",
-        "model":       "gemini-2.5-flash-lite",
+        "provider":    "openai",
+        "model":       "gpt-4o-mini",
         "temperature": 0.1,
         "max_tokens":  256,
     },
@@ -50,7 +50,19 @@ def build_llm(agent_name: str) -> BaseChatModel:
     """
     cfg = AGENT_MODELS.get(agent_name, AGENT_MODELS["info"])
 
-    # Fallback se a chave Google não existir (para testes de fumo/CI)
+    provider = cfg.get("provider", "google")
+    
+    if provider == "openai":
+        if not os.environ.get("OPENAI_API_KEY"):
+            print(f"⚠️ AVISO: OPENAI_API_KEY não encontrada. Agente '{agent_name}' pode falhar.")
+        return ChatOpenAI(
+            model=cfg["model"],
+            temperature=cfg["temperature"],
+            max_tokens=cfg["max_tokens"],
+            api_key=os.environ.get("OPENAI_API_KEY", "")
+        )
+
+    # Fallback default para Google
     if not os.environ.get("GOOGLE_API_KEY"):
         print(f"⚠️ AVISO: GOOGLE_API_KEY não encontrada. Agente '{agent_name}' pode falhar.")
         # Retornar um Fake se fosse para testes, mas aqui mantemos o erro para visibilidade

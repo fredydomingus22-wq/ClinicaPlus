@@ -173,29 +173,7 @@ export interface ExameDTO {
   tipoCatalogo?: { id: string; nome: string }; // Novo
 }
 
-export interface PlanoTratamentoDTO {
-  id: string;
-  clinicaId: string;
-  pacienteId: string;
-  medicoId: string;
-  tipoId: string;
-  totalSessoes: number;
-  frequenciaSemana: number;
-  sessoesRealizadas: number; // Novo
-  dataInicio: string;
-  dataFimPrevista: string;
-  dataFimReal?: string;
-  estado: string;
-  descricao?: string;
-  observacoes?: string;
-  agendamentoOrigemId?: string;
-  responsavelId?: string;
-  criadoEm: string;
-  atualizadoEm: string;
-  tipoTratamento?: { id: string; nome: string };
-  paciente?: PacienteDTO;
-  _count?: { sessoes: number };
-}
+
 
 export interface DocumentoDTO {
   id: string;

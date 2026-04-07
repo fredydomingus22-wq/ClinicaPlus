@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import { CriarPlanoDto, AtualizarPlanoDto } from '@clinicaplus/types';
 import { tratamentoQueue } from '../lib/queues';
 import { JobNames } from '@clinicaplus/events';
+import { EstadoPlano, Prisma } from '@prisma/client';
 
 export const planosService = {
   /**
@@ -27,7 +28,7 @@ export const planosService = {
     const dataFimPrevista = new Date(dataInicio);
     dataFimPrevista.setDate(dataFimPrevista.getDate() + (semanas * 7));
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const plano = await tx.planoTratamento.create({
         data: {
           clinicaId,
@@ -55,6 +56,31 @@ export const planosService = {
       );
 
       return plano;
+    });
+  },
+
+  /**
+   * Lists all treatment plans for a clinic with optional filters.
+   */
+  async listAll(clinicaId: string, filters: { estado?: string; q?: string }): Promise<unknown[]> {
+    return prisma.planoTratamento.findMany({
+      where: { 
+        clinicaId,
+        ...(filters.estado ? { estado: filters.estado as EstadoPlano } : {}),
+        ...(filters.q ? {
+          OR: [
+            { paciente: { nome: { contains: filters.q, mode: 'insensitive' } } },
+            { tipoTratamento: { nome: { contains: filters.q, mode: 'insensitive' } } },
+            { descricao: { contains: filters.q, mode: 'insensitive' } }
+          ]
+        } : {})
+      },
+      include: { 
+        tipoTratamento: true,
+        paciente: { select: { id: true, nome: true, numeroPaciente: true } },
+        _count: { select: { sessoes: true } }
+      },
+      orderBy: { criadoEm: 'desc' },
     });
   },
 
