@@ -22,6 +22,7 @@ langchain-community>=0.4.0 # era 0.3.25 — alinhado com langchain>=1.x
 langchain-google-genai>=2.0.0
 langchain-groq>=0.2.0
 langchain-anthropic>=0.3.0
+langchain-openai>=0.3.0
 langgraph>=1.1.0
 langgraph-checkpoint>=4.0.0    # era 2.1.2 — formato de armazenamento redesenhado
 langgraph-checkpoint-postgres>=2.0.0  # Persistência LangGraph via Postgres
