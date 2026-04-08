@@ -95,7 +95,7 @@ async def run_agent(inputs: dict) -> dict:
         "whatsapp_number": "244910000000",
         "patient_id": "test_123" if inputs.get("is_identified") else None,
         "messages": [HumanMessage(content=inputs["question"])],
-        "llm_provider": "openai",
+        "llm_provider": "gemini",
         "clinic_config": config_clinica
     }
     

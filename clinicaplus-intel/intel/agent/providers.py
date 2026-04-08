@@ -17,7 +17,8 @@ def get_llm(provider_name: str = "openai_fast"):
         "groq": ("llama-3.3-70b-versatile", "groq"),
         "groq_fast": ("llama-3.1-8b-instant", "groq"),
         "cerebras": ("llama3.3-70b", "cerebras"),
-        "gemini": ("gemini-2.5-flash", "google_genai"),
+        "gemini": ("gemini-1.5-flash", "google_genai"),
+        "gemini_pro": ("gemini-1.5-pro", "google_genai"),
         "claude": ("claude-3-5-sonnet-20241022", "anthropic"),
         "openai": ("gpt-4o", "openai"),
         "openai_fast": ("gpt-4o-mini", "openai"),
@@ -25,7 +26,7 @@ def get_llm(provider_name: str = "openai_fast"):
     }
     
     if provider_name not in models:
-        provider_name = "openai_fast" # Fallback global de segurança focado na OpenAI
+        provider_name = "gemini" # Novo default focado no custo-benefício do Gemini
         
     def _create_llm(p_name):
         model_name, provider = models[p_name]
@@ -38,7 +39,8 @@ def get_llm(provider_name: str = "openai_fast"):
             return ChatGoogleGenerativeAI(
                 model=model_name, 
                 google_api_key=os.environ.get("GOOGLE_API_KEY"),
-                convert_system_message_to_human=True
+                convert_system_message_to_human=True,
+                max_retries=2
             )
         if provider == "anthropic":
             return ChatAnthropic(model=model_name, api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -52,31 +54,34 @@ def get_llm(provider_name: str = "openai_fast"):
         primary_llm = _create_llm(provider_name)
     except Exception as e:
         print(f"⚠️ Erro ao inicializar provider '{provider_name}': {e}. A tentar fallbacks...")
-        # Se falhar a criação do objeto (ex: falta de key), retornamos logo a cadeia de fallback
         try:
-            fb_ce = _create_llm("cerebras")
-            fb_ge = _create_llm("openai_fast")
-            return fb_ce.with_fallbacks([fb_ge])
-        except Exception:
             return _create_llm("openai_fast")
+        except Exception:
+            return _create_llm("gemini") # Última tentativa
     
-    # 2. Configurar Cadeia de Fallback Robusta (Runtime: Rate Limits, Timeouts)
-    if provider_name in ["groq", "groq_fast"]:
-        fallbacks = []
-        
-        # Backup 1: Cerebras (Usa llama-3.3-70b se Groq falhar)
-        try:
-            fallbacks.append(_create_llm("cerebras"))
-        except Exception as e:
-            print(f"⚠️ Aviso: Cerebras indisponível como fallback: {e}")
-            
-        # Backup 2: OpenAI (Usa o gpt-4o-mini como última barreira em vez do gemini)
+    # 2. Configurar Cadeia de Fallback Robusta
+    fallbacks = []
+    
+    if provider_name in ["gemini", "gemini_pro"]:
+        # Se Gemini falhar, tenta OpenAI
         try:
             fallbacks.append(_create_llm("openai_fast"))
-        except Exception as e:
-            print(f"⚠️ Aviso: Gemini indisponível como fallback: {e}")
-        
-        if fallbacks:
-            return primary_llm.with_fallbacks(fallbacks)
+        except: pass
+    elif provider_name in ["groq", "groq_fast"]:
+        # Se Groq falhar, tenta Cerebras depois OpenAI
+        try:
+            fallbacks.append(_create_llm("cerebras"))
+        except: pass
+        try:
+            fallbacks.append(_create_llm("openai_fast"))
+        except: pass
+    elif provider_name == "claude":
+        # Se Claude falhar, tenta OpenAI
+        try:
+            fallbacks.append(_create_llm("openai"))
+        except: pass
+
+    if fallbacks:
+        return primary_llm.with_fallbacks(fallbacks)
             
     return primary_llm
