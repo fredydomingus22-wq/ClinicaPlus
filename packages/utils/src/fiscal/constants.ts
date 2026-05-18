@@ -67,6 +67,82 @@ export const AGT_VAT_EXEMPTIONS: Record<string, { description: string; mention: 
     mention: 'Isento nos termos da alinea a) do nº1 do artigo 14.º',
     description: 'As importações definitivas de bens cuja transmissão no território nacional seja isenta de imposto'
   },
+  'M81': {
+    mention: 'Isento nos termos da alinea b) do nº1 do artigo 14.º',
+    description: 'As importações de ouro, moedas ou notas de banco, efectuadas pelo Banco Nacional de Angola'
+  },
+  'M82': {
+    mention: 'Isento nos termos da alinea c) do nº1 do artigo 14.º',
+    description: 'A importação de bens destinados a ofertas para atenuar os efeitos das calamidades naturais...'
+  },
+  'M83': {
+    mention: 'Isento nos termos da alinea d) do nº1 do artigo 14.º',
+    description: 'A importação de mercadorias ou equipamentos destinados exclusivos e directamente à execução das operações petrolíferas...'
+  },
+  'M84': {
+    mention: 'Isento nos termos da alínea e) do nº1 do artigo 14.º',
+    description: 'Importação de moeda estrangeira efectuada pelas instituições financeiras bancárias...'
+  },
+  'M85': {
+    mention: 'Isento nos termos da alinea a) do nº2 do artigo 14.º',
+    description: 'No âmbito de tratados e acordos internacionais de que a República de Angola seja parte...'
+  },
+  'M86': {
+    mention: 'Isento nos termos da alinea b) do nº2 do artigo 14.º',
+    description: 'No âmbito de relações diplomáticas e consulares...'
+  },
+  'M30': {
+    mention: 'Isento nos termos da alínea a) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens expedidos ou transportados com destino ao estrangeiro pelo vendedor...'
+  },
+  'M31': {
+    mention: 'Isento nos termos da alínea b) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens de abastecimento postos a bordo das embarcações...'
+  },
+  'M32': {
+    mention: 'Isento nos termos da alínea c) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens de abastecimento postos a bordo das aeronaves...'
+  },
+  'M33': {
+    mention: 'Isento nos termos da alínea d) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens de abastecimento postos a bordo das embarcações de salvamento...'
+  },
+  'M34': {
+    mention: 'Isento nos termos da alínea e) do artigo 15.º do CIVA',
+    description: 'As transmissões, transformações, reparações, manutenção, frete e aluguer de embarcações e aeronaves...'
+  },
+  'M35': {
+    mention: 'Isento nos termos da alínea f) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens efectuadas no âmbito de relações diplomáticas e consulares...'
+  },
+  'M36': {
+    mention: 'Isento nos termos da alínea g) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens destinados a organismos internacionais reconhecidos por Angola...'
+  },
+  'M37': {
+    mention: 'Isento nos termos da alínea h) do artigo 15.º do CIVA',
+    description: 'As transmissões de bens efectuadas no âmbito de tratados e acordos internacionais...'
+  },
+  'M38': {
+    mention: 'Isento nos termos da alínea i) do artigo 15.º do CIVA',
+    description: 'O transporte de pessoas provenientes ou com destino ao estrangeiro.'
+  },
+  'M90': {
+    mention: 'Isento nos termos da alínea a) do nº1 do artigo 16.º',
+    description: 'As importações de bens postos nos regimes de zona franca ou armazéns aduaneiros...'
+  },
+  'M91': {
+    mention: 'Isento nos termos da alínea b) do nº1 do artigo 16.º',
+    description: 'As transmissões de bens expedidos para zonas ou depósitos francos...'
+  },
+  'M92': {
+    mention: 'Isento nos termos da alínea c) do nº1 do artigo 16.º',
+    description: 'As transmissões de bens em regimes de zona franca enquanto permanecerem sob tais regimes...'
+  },
+  'M93': {
+    mention: 'Isento nos termos da alínea d) do nº1 do artigo 16.º',
+    description: 'As transmissões de bens em regimes de trânsito, draubaque ou importação temporária...'
+  },
   'M00': {
     mention: 'IVA – Regime Simplificado',
     description: 'IVA – Regime Simplificado'
