@@ -240,28 +240,32 @@ export interface AgtConsultResponse {
 
 export interface AgtSeriesRequest {
   schemaVersion: string;
-  submissionUUID: string;
+  submissionUUID: string; // N (identificador único da requisição)
   taxRegistrationNumber: string;
   submissionTimeStamp: string;
   softwareInfo: AgtSoftwareInfo;
-  jwsSignature: string; // Assinatura de taxRegistrationNumber + campos série
+  jwsSignature: string; // Assinatura de taxRegistrationNumber + submissionUUID (ou requestID conforme manual)
   seriesYear: string;
-  documentType: string;
+  documentType: string; // FA, FT, FR, FG, GF, AC, AR, TV, RC, RG, RE, ND, NC, AF, RP, RA, CS
   establishmentNumber: string;
   seriesContingencyIndicator: string;
 }
 
 export interface AgtSeriesResponse {
   requestID?: string;
-  resultCode: string;
+  resultCode: string; // 0-Sucesso, 1-Parcial, 2-Erro, 7-Prematuro, 8-Em curso, 9-Cancelado
   taxRegistrationNumber?: string;
   seriesFEResult?: {
     seriesCode: string;
-    authorizedQuantity: string;
+    authorizedQuantity: string | number;
     firstDocumentNo: string;
     lastDocumentNo: string;
   };
   requestErrorList?: Array<{
+    idError: string;
+    descriptionError: string;
+  }>;
+  errorList?: Array<{
     idError: string;
     descriptionError: string;
   }>;
@@ -277,4 +281,42 @@ export interface AgtInvoicePayload {
   hash: string;
   hashControl: string;
   tipoDocFiscal: string;
+}
+
+export interface AgtListSeriesRequest {
+  schemaVersion: string;
+  taxRegistrationNumber: string;
+  submissionTimeStamp: string;
+  seriesCode?: string;
+  seriesYear?: string;
+  seriesStatus?: string;
+  documentType?: string;
+  establishmentNumber?: string;
+  jwsSignature: string;
+  softwareInfo: AgtSoftwareInfo;
+}
+
+export interface AgtListSeriesResponse {
+  resultCode: string;
+  errorList?: Array<{
+    idError: string;
+    descriptionError: string;
+  }>;
+  seriesResultCount: string;
+  seriesInfo: Array<{
+    id: string;
+    seriesCode: string;
+    seriesYear: string;
+    seriesStatus: string;
+    documentType: string;
+    seriesCreationDate: string;
+    firstDocumentCreated?: string;
+    lastDocumentCreated?: string;
+    firstDocumentNumber?: string;
+    invoicingMethod: string;
+    nif: string;
+    nome: string;
+    dataAdesao?: string;
+    tipoAdesao?: string;
+  }>;
 }

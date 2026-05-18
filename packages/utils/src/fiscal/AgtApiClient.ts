@@ -11,7 +11,9 @@ import {
   AgtConsultRequest,
   AgtConsultResponse,
   AgtSeriesRequest,
-  AgtSeriesResponse 
+  AgtSeriesResponse,
+  AgtListSeriesRequest,
+  AgtListSeriesResponse 
 } from './types';
 
 /**
@@ -202,6 +204,47 @@ export class AgtApiClient {
       return response.data;
     } catch (error) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao solicitar série na AGT`);
+      throw error;
+    }
+  }
+
+  /**
+   * Lista as séries de facturação registadas na AGT
+   */
+  public async listarSeries(request: AgtListSeriesRequest, apiToken: string): Promise<AgtListSeriesResponse> {
+    const env = typeof globalThis !== 'undefined' && (globalThis as any).process ? (globalThis as any).process.env : {};
+    const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
+    if (mockEnabled) {
+      return {
+        resultCode: '0',
+        seriesResultCount: '1',
+        seriesInfo: [
+          {
+            id: 'MOCK-ID-1',
+            seriesCode: request.seriesCode || 'CPLS-SR1',
+            seriesYear: request.seriesYear || '2026',
+            seriesStatus: 'A',
+            documentType: request.documentType || 'FT',
+            seriesCreationDate: new Date().toISOString(),
+            invoicingMethod: 'E',
+            nif: request.taxRegistrationNumber,
+            nome: 'ClinicaPlus Mock User'
+          }
+        ]
+      };
+    }
+
+    try {
+      const response = await this.client.post('/listarSeries', request, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Username': request.taxRegistrationNumber,
+          'Password': apiToken
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao listar séries na AGT`);
       throw error;
     }
   }
