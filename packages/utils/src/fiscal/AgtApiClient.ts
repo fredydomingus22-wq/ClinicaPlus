@@ -13,7 +13,9 @@ import {
   AgtSeriesRequest,
   AgtSeriesResponse,
   AgtListSeriesRequest,
-  AgtListSeriesResponse 
+  AgtListSeriesResponse,
+  AgtValidateDocumentRequest,
+  AgtValidateDocumentResponse
 } from './types';
 
 /**
@@ -246,6 +248,34 @@ export class AgtApiClient {
       return response.data;
     } catch (error) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao listar séries na AGT`);
+      throw error;
+    }
+  }
+
+  /**
+   * Valida um documento na AGT (DS.120 v.4.7)
+   */
+  public async validarDocumento(request: AgtValidateDocumentRequest, apiToken: string): Promise<AgtValidateDocumentResponse> {
+    const env = typeof globalThis !== 'undefined' && (globalThis as any).process ? (globalThis as any).process.env : {};
+    const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
+    if (mockEnabled) {
+      return {
+        actionResultCode: '0',
+        documentStatusCode: 'V'
+      };
+    }
+
+    try {
+      const response = await this.client.post('/validarDocumento', request, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Username': request.taxRegistrationNumber,
+          'Password': apiToken
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao validar documento na AGT`);
       throw error;
     }
   }

@@ -323,3 +323,25 @@ export interface AgtListSeriesResponse {
     tipoAdesao?: string;
   }>;
 }
+
+export interface AgtValidateDocumentRequest {
+  schemaVersion: string;
+  submissionTimeStamp: string;
+  taxRegistrationNumber: string;
+  softwareInfo: AgtSoftwareInfo;
+  jwsSignature: string;
+  documentNo: string;
+  action: string;
+  deductibleVATPercentage?: string;
+  nonDeductibleAmount?: string;
+}
+
+export interface AgtValidateDocumentResponse {
+  actionResultCode: string;
+  documentStatusCode: string;
+  errorList?: Array<{
+    idError: string;
+    documentNo: string;
+    descriptionError: string;
+  }>;
+}
