@@ -9,6 +9,7 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
     tenant_id: str
     whatsapp_number: str            
+    channel: str
     
     # Identificação do paciente
     patient_id: Optional[str]       
@@ -30,3 +31,5 @@ class AgentState(TypedDict):
     conversation_stage: str         
     turn_count: int                 
     last_activity_ts: str           
+    ui_payload: Optional[dict]      
+    is_session_finished: bool

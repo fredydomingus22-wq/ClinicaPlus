@@ -9,6 +9,7 @@ import {
   CreditCard, 
   Zap, 
   ShieldAlert, 
+  ShieldCheck,
   Plus, 
   Trash2, 
   Mail, 
@@ -20,7 +21,9 @@ import {
   Sparkles,
   AlertTriangle,
   MapPin,
-  FileText
+  FileText,
+  Wallet,
+  History
 } from 'lucide-react';
 import type { ContactoClinicaInput, ClinicaUpdateInput } from '@clinicaplus/types';
 import { 
@@ -41,6 +44,7 @@ import { ClinicaUpdateSchema } from '@clinicaplus/types';
 import { PROVINCES } from '@clinicaplus/utils';
 import { useUIStore } from '../../stores/ui.store';
 import { Link } from 'react-router-dom';
+import ServicosPrecosPage from './ServicosPrecosPage';
 
 export default function ConfiguracaoPage() {
   const { data: clinica, isLoading, error } = useClinicaMe();
@@ -49,7 +53,7 @@ export default function ConfiguracaoPage() {
   const { data: subStatus, isLoading: isLoadingSub } = useSubscriptionStatus();
   const { addToast } = useUIStore();
   
-  const [activeTab, setActiveTab] = useState<'geral' | 'localizacao' | 'contactos' | 'plano' | 'regras' | 'seguradoras' | 'whatsapp' | 'avancado'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'localizacao' | 'contactos' | 'plano' | 'regras' | 'seguradoras' | 'whatsapp' | 'precos' | 'avancado' | 'fiscal'>('geral');
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const { mutate: updateContactos, isPending: isUpdatingContactos } = useUpdateClinicaContactos();
   const [localContactos, setLocalContactos] = useState<ContactoClinicaInput[]>([]);
@@ -68,6 +72,9 @@ export default function ConfiguracaoPage() {
         cidade: clinica.cidade || '',
         provincia: clinica.provincia || '',
         logo: clinica.logo || '',
+        nif: clinica.nif || '',
+        razaoSocial: clinica.razaoSocial || '',
+        regimeFiscal: clinica.regimeFiscal as any,
       });
       setLocalContactos(clinica.contactos?.map(c => ({
         tipo: c.tipo as 'TELEFONE' | 'WHATSAPP' | 'EMAIL' | 'OUTRO',
@@ -97,6 +104,8 @@ export default function ConfiguracaoPage() {
     { id: 'plano', label: 'Plano & Faturação', icon: CreditCard },
     { id: 'regras', label: 'Regras & CRM', icon: Zap },
     { id: 'seguradoras', label: 'Seguradoras', icon: ShieldAlert },
+    { id: 'precos', label: 'Tabela de Preços', icon: Wallet },
+    { id: 'fiscal', label: 'Fiscal & AGT', icon: ShieldCheck },
     { id: 'avancado', label: 'Avançado', icon: ShieldAlert },
   ] as const;
 
@@ -120,6 +129,28 @@ export default function ConfiguracaoPage() {
                 error={form.formState.errors.email?.message}
               />
               <Input 
+                label="Razão Social" 
+                placeholder="Ex: Clínica Plus, Lda"
+                {...form.register('razaoSocial')}
+                error={form.formState.errors.razaoSocial?.message}
+              />
+              <Input 
+                label="NIF (Número de Identificação Fiscal)" 
+                placeholder="Ex: 5000000000"
+                {...form.register('nif')}
+                error={form.formState.errors.nif?.message}
+              />
+              <Select 
+                label="Regime Fiscal (AGT)"
+                options={[
+                  { value: 'GERAL', label: 'Regime Geral' },
+                  { value: 'SIMPLIFICADO', label: 'Regime Simplificado' },
+                  { value: 'EXUSA', label: 'Regime de Exclusão' },
+                ]}
+                {...form.register('regimeFiscal')}
+                error={form.formState.errors.regimeFiscal?.message}
+              />
+              <Input 
                 label="Telefone Geral" 
                 placeholder="Ex: +244 923 000 000"
                 {...form.register('telefone')}
@@ -129,10 +160,10 @@ export default function ConfiguracaoPage() {
                 <label className="text-sm font-bold text-neutral-900">Identidade Visual (Logo)</label>
                 <div className="flex gap-3">
                   <Input 
-                     placeholder="URL da imagem..."
-                     {...form.register('logo')}
-                     className="flex-grow"
-                     error={form.formState.errors.logo?.message}
+                    placeholder="URL da imagem..."
+                    {...form.register('logo')}
+                    className="flex-grow"
+                    error={form.formState.errors.logo?.message}
                   />
                   {clinica?.logo && (
                     <div className="w-10 h-10 rounded-xl border border-neutral-100 overflow-hidden shrink-0 bg-neutral-50 p-1 ring-1 ring-neutral-200">
@@ -559,6 +590,48 @@ export default function ConfiguracaoPage() {
                  </Button>
               </div>
             )}
+          </div>
+        );
+
+      case 'precos':
+        return (
+          <div className="animate-fade-in -mt-4">
+            <ServicosPrecosPage />
+          </div>
+        );
+
+      case 'fiscal':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="p-10 border border-neutral-100 rounded-[2.5rem] bg-neutral-50/30 flex flex-col items-center justify-center text-center gap-6">
+              <div className="h-20 w-20 bg-primary-50 rounded-3xl flex items-center justify-center shadow-sm">
+                <ShieldCheck className="w-10 h-10 text-primary-600" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-neutral-900 tracking-tight">Certificação & Configuração Fiscal</h3>
+                <p className="text-sm text-neutral-500 max-w-sm font-medium leading-relaxed">
+                  Gerencie as séries de faturação, certificados RSA e a integração em tempo real com o e-Factura da AGT.
+                </p>
+              </div>
+              <Link to="/admin/configuracao/fiscal">
+                <Button className="font-bold bg-neutral-900 hover:bg-black shadow-lg shadow-neutral-900/10 h-12 px-8 rounded-2xl">
+                  Gerir Módulo Fiscal <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+              
+              <div className="grid grid-cols-2 gap-4 w-full max-w-lg mt-4">
+                 <div className="p-4 bg-white rounded-2xl border border-neutral-100 text-left">
+                    <FileText className="w-5 h-5 text-primary-500 mb-2" />
+                    <p className="text-xs font-bold text-neutral-800">Séries Atómicas</p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">Controlo de numeração sequencial conforme a lei.</p>
+                 </div>
+                 <div className="p-4 bg-white rounded-2xl border border-neutral-100 text-left">
+                    <History className="w-5 h-5 text-primary-500 mb-2" />
+                    <p className="text-xs font-bold text-neutral-800">Histórico AGT</p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">Monitorização de estados de envio e respostas.</p>
+                 </div>
+              </div>
+            </div>
           </div>
         );
 

@@ -9,6 +9,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "require": "./dist/server.js",
+      "types": "./dist/server.d.ts"
     }
   },
   "scripts": {
@@ -17,9 +22,10 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
+    "@clinicaplus/types": "workspace:*",
+    "axios": "^1.13.6",
     "date-fns": "^3.0.0",
-    "date-fns-tz": "^3.0.0",
-    "@clinicaplus/types": "workspace:*"
+    "date-fns-tz": "^3.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

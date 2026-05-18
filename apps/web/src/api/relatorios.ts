@@ -1,9 +1,11 @@
 import { apiClient } from './client';
+import type { FaturaDTO } from '@clinicaplus/types';
 
 export interface RelatorioReceitaData {
   totais: {
     consultas: number;
     receita: number;
+    totalIva: number;
     receitaPrevista: number;
     rascunhos: number;
     segurosPendentes: number;
@@ -40,4 +42,8 @@ export const relatoriosApi = {
         link.click();
         link.remove();
       }),
+
+  getMapaFaturacao: (params: { inicio?: string; fim?: string; medicoId?: string }) =>
+    apiClient.get<{ success: boolean; data: FaturaDTO[] }>('/relatorios/mapa-faturacao', { params })
+      .then(r => r.data.data),
 };

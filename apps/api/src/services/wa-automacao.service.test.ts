@@ -29,6 +29,9 @@ import { apiKeysService } from './apikeys.service';
 describe('waAutomacaoService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrisma.waAutomacao.findFirstOrThrow.mockResolvedValue(getMockData());
+    mockPrisma.waAutomacao.findUniqueOrThrow.mockResolvedValue(getMockData());
+    mockPrisma.clinica.findUniqueOrThrow.mockResolvedValue({ slug: 'teste' });
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +80,13 @@ describe('waAutomacaoService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             n8nWorkflowId: 'wf-123',
-            n8nWebhookPath: '/webhook/test',
+            n8nWebhookPath: '/webhook/test'
+          })
+        })
+      );
+      expect(mockPrisma.waAutomacao.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
             ativo: true
           })
         })
@@ -89,7 +98,8 @@ describe('waAutomacaoService', () => {
       mockDisconnected.instancia.estado = WaEstadoInstancia.DESCONECTADO;
       mockPrisma.waAutomacao.findFirstOrThrow.mockResolvedValue(mockDisconnected);
       
-      await expect(waAutomacaoService.activar('aut-1', 'clinica-1', 'user-1')).rejects.toThrow('Liga o WhatsApp antes de activar automações');
+      await expect(waAutomacaoService.activar('aut-1', 'clinica-1', 'user-1'))
+        .rejects.toThrow('Liga o WhatsApp desta instância antes');
     });
 
     it('deve gerar/reutilizar API key interna para o n8n', async () => {

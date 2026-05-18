@@ -46,9 +46,12 @@ import auditLogsRouter from './routes/audit-logs';
 import utilizadoresRouter from './routes/utilizadores';
 import subscricoesRouter from './routes/subscricoes';
 import whatsappRouter from './routes/whatsapp';
+import typebotRouter from './routes/typebot';
+import { botIntegracaoRouter } from './routes/bots';
 import configTratamentosRouter from './routes/config-tratamentos.routes';
 import planosRouter from './routes/planos';
 import sessoesRouter from './routes/sessoes';
+import fiscalRouter from './routes/fiscal';
 
 const app = express();
 
@@ -190,6 +193,7 @@ app.use('/api/clinicas', clinicasRouter);
 
 // Routes with alternative/internal auth (API Keys, HMAC)
 app.use('/api/whatsapp', whatsappRouter);
+app.use('/api/typebot', typebotRouter);
 app.use('/api/public/v1', apiKeyAuth, publicV1Router);
 
 // Protected Routes Chain (JWT)
@@ -219,9 +223,11 @@ app.use('/api/audit-logs', authenticate, tenantMiddleware, auditLogsRouter);
 app.use('/api/utilizadores', utilizadoresRouter);
 app.use('/api/api-keys', authenticate, tenantMiddleware, apiKeysRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/bots', botIntegracaoRouter);
 app.use('/api/config-tratamentos', configTratamentosRouter);
 app.use('/api/planos', planosRouter);
 app.use('/api/sessoes', sessoesRouter);
+app.use('/api/fiscal', fiscalRouter);
 
 // Global Error Handler
 app.use(errorHandler);

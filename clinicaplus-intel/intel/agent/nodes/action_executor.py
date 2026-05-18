@@ -51,7 +51,8 @@ async def action_executor(state: AgentState) -> dict:
         # 5. Guardar o pedido de ferramenta e os resultados (ToolMessages) para as próximas etapas
         return {
             # Anexamos primeiro o msg do LLM (que tem os tool_calls) e depois o resultado físico das tools
-            "messages": [tool_call_msg] + result["messages"]
+            "messages": [tool_call_msg] + result["messages"],
+            "is_session_finished": True # Sessão termina após acção concluída com sucesso
         }
         
     except Exception as e:

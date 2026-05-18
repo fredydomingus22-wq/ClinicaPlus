@@ -88,15 +88,27 @@ export const factories = {
     // Seed basic permissions needed for tests
     await factories.seedPermissions();
 
-    const clinica = await factories.createClinica();
+    const clinica = await factories.createClinica({
+      nif: '5417234567',
+      razaoSocial: 'Clinica Teste SAC',
+      enderecoPostal: 'Rua Direta do Sambizanga, Luanda, Angola',
+      cidade: 'Luanda',
+      provincia: 'Luanda',
+      serieDocFiscal: 'TEST'
+    });
     const admin = await factories.createAdmin(clinica.id);
     const { user: medicoUser, medico } = await factories.createMedico(clinica.id);
-    const paciente = await factories.createPaciente(clinica.id);
+    const paciente = await factories.createPaciente(clinica.id, {
+      nif: '999999999',
+      endereco: 'Luanda, Angola'
+    });
 
     // Generate auth tokens
     const { authService } = await import('../../services/auth.service');
-    const { accessToken } = await authService._issueTokens(admin as unknown as Utilizador & { medico: (Medico & { especialidade: Especialidade }) | null; paciente: Paciente | null });
-    const { accessToken: medicoToken } = await authService._issueTokens(medicoUser as unknown as Utilizador & { medico: (Medico & { especialidade: Especialidade }) | null; paciente: Paciente | null });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { accessToken } = await authService._issueTokens(admin as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { accessToken: medicoToken } = await authService._issueTokens(medicoUser as any);
     
     // Also create a Paciente user token for role-guard testing
     const pacienteUser = await prisma.utilizador.create({
@@ -115,7 +127,8 @@ export const factories = {
       data: { utilizadorId: pacienteUser.id }
     });
     
-    const { accessToken: pacienteToken } = await authService._issueTokens(pacienteUser as unknown as Utilizador & { medico: (Medico & { especialidade: Especialidade }) | null; paciente: Paciente | null });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { accessToken: pacienteToken } = await authService._issueTokens(pacienteUser as any);
 
     // Also create a REPCIONISTA user token for role-guard testing
     const recepcaoUser = await prisma.utilizador.create({
@@ -127,7 +140,22 @@ export const factories = {
         papel: 'RECEPCIONISTA',
       }
     });
-    const { accessToken: recepcaoToken } = await authService._issueTokens(recepcaoUser as unknown as Utilizador & { medico: (Medico & { especialidade: Especialidade }) | null; paciente: Paciente | null });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { accessToken: recepcaoToken } = await authService._issueTokens(recepcaoUser as any);
+
+    // Create default clinic config
+    await prisma.configuracaoClinica.create({
+      data: {
+        clinicaId: clinica.id,
+        lembrete24h: true,
+        lembrete2h: true,
+        horasAntecedencia: 24,
+        moedaSimbolo: 'Kz',
+        fusoHorario: 'Africa/Luanda',
+        nif: '5417234567',
+        seguradoras: ["ENSA", "AAA Seguros"]
+      }
+    });
 
     return { 
       clinica, 

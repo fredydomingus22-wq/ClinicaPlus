@@ -172,6 +172,31 @@ async function main(): Promise<void> {
     ],
     skipDuplicates: true
   });
+
+  // 11. Sequências Fiscais (Sprint I)
+  const tipofiscais = ['FT', 'FR', 'NC', 'ND', 'VD'];
+  const anoFiscal = new Date().getFullYear();
+  
+  for (const tipo of tipofiscais) {
+    await prisma.sequenciaDocFiscal.upsert({
+      where: {
+        clinicaId_tipoDoc_serie_anoFiscal: {
+          clinicaId: clinica.id,
+          tipoDoc: tipo as any,
+          serie: 'CPLS',
+          anoFiscal: anoFiscal
+        }
+      },
+      update: {},
+      create: {
+        clinicaId: clinica.id,
+        tipoDoc: tipo as any,
+        serie: 'CPLS',
+        anoFiscal: anoFiscal,
+        ultimoNumero: 0
+      }
+    });
+  }
 }
 
 main()

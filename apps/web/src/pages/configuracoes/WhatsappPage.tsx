@@ -5,7 +5,8 @@ import { PlanGate } from '../../components/PlanGate';
 import { WaConexaoCard } from '../../components/wa/WaConexaoCard';
 import { WaAutomacaoCard } from '../../components/wa/WaAutomacaoCard';
 import { WaActividadeRecente } from '../../components/wa/WaActividadeRecente';
-import { Button, Card, Badge, EmptyState, KpiCard, Select } from '@clinicaplus/ui';
+import { BotIntegracaoCard } from '../../components/wa/BotIntegracaoCard';
+import { Button, Card, Badge, EmptyState, KpiCard, Select, Modal, Input } from '@clinicaplus/ui';
 import { WaInstancia } from '../../api/whatsapp';
 
 /**
@@ -25,6 +26,8 @@ export function WhatsappPage() {
     adicionarAutomacao,
     configurarAutomacao,
     criando,
+    criandoMeta,
+    criarInstanciaMeta,
     eliminando,
     toggling,
     adicionando,
@@ -33,6 +36,11 @@ export function WhatsappPage() {
   } = useWhatsApp();
 
   const [activeInstanciaId, setActiveInstanciaId] = useState<string>('');
+  
+  // Modais State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addType, setAddType] = useState<'SELECT' | 'EVOLUTION' | 'META'>('SELECT');
+  const [metaForm, setMetaForm] = useState({ phoneNumberId: '', wabaId: '', accessToken: '' });
 
   const connectedInstancias = (instancias as WaInstancia[]).filter(i => i.estado === 'CONECTADO');
 
@@ -69,8 +77,12 @@ export function WhatsappPage() {
               Módulo Ativo
             </Badge>
             <Button 
-              onClick={() => criarInstancia()} 
-              loading={criando}
+              onClick={() => {
+                setAddType('SELECT');
+                setMetaForm({ phoneNumberId: '', wabaId: '', accessToken: '' });
+                setIsAddModalOpen(true);
+              }} 
+              loading={criando || criandoMeta}
               className="font-bold shadow-sm"
               size="sm"
             >
@@ -79,6 +91,104 @@ export function WhatsappPage() {
             </Button>
           </div>
         </div>
+
+        {/* Modal de Adição de Instância */}
+        <Modal 
+          isOpen={isAddModalOpen} 
+          onClose={() => setIsAddModalOpen(false)} 
+          title="Nova Ligação WhatsApp"
+          size={addType === 'SELECT' ? 'sm' : 'md'}
+          footer={
+            addType === 'META' ? (
+              <>
+                <Button variant="outline" onClick={() => setAddType('SELECT')}>Voltar</Button>
+                <Button 
+                  loading={criandoMeta}
+                  disabled={!metaForm.phoneNumberId || !metaForm.wabaId || !metaForm.accessToken}
+                  onClick={async () => {
+                    await criarInstanciaMeta({
+                      metaPhoneNumberId: metaForm.phoneNumberId,
+                      metaWabaId: metaForm.wabaId,
+                      metaAccessToken: metaForm.accessToken
+                    });
+                    setIsAddModalOpen(false);
+                  }}
+                >
+                  Confirmar e Ligar
+                </Button>
+              </>
+            ) : null
+          }
+        >
+          {addType === 'SELECT' && (
+            <div className="py-4 space-y-4">
+              <p className="text-sm text-neutral-600 mb-6">Escolhe o tipo de integração que pretendes utilizar para este número.</p>
+              
+              <div 
+                className="flex items-start p-4 border border-neutral-200 rounded-lg cursor-pointer hover:border-black hover:bg-neutral-50 transition-colors"
+                onClick={async () => {
+                  setIsAddModalOpen(false);
+                  await criarInstancia();
+                }}
+              >
+                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center mr-4 shrink-0">
+                  <Smartphone className="w-5 h-5 text-neutral-700" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-neutral-900">Evolution API (QR Code)</h3>
+                  <p className="text-xs text-neutral-500 mt-1">Conecta rapidamente com a app do WhatsApp através de QR Code. Ideal para testes e baixo volume.</p>
+                </div>
+              </div>
+
+              <div 
+                className="flex items-start p-4 border border-neutral-200 rounded-lg cursor-pointer hover:border-[#128C7E] hover:bg-[#128C7E]/5 transition-colors"
+                onClick={() => setAddType('META')}
+              >
+                <div className="w-10 h-10 rounded-lg bg-[#128C7E]/10 flex items-center justify-center mr-4 shrink-0">
+                  <MessageSquare className="w-5 h-5 text-[#128C7E]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-neutral-900">Meta Cloud API (Oficial)</h3>
+                  <p className="text-xs text-neutral-500 mt-1">Integração oficial, mais estável e com recursos nativos como listas e botões interativos.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {addType === 'META' && (
+            <div className="py-2 space-y-4">
+              <p className="text-sm text-neutral-600 mb-4">Insere as credenciais fornecidas no painel <strong>Meta for Developers</strong> → App Dashboard.</p>
+              
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Phone Number ID</label>
+                <Input 
+                  placeholder="Ex: 102345678901234" 
+                  value={metaForm.phoneNumberId}
+                  onChange={(e) => setMetaForm({ ...metaForm, phoneNumberId: e.target.value })}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">WhatsApp Business Account ID</label>
+                <Input 
+                  placeholder="Ex: 102345678901235" 
+                  value={metaForm.wabaId}
+                  onChange={(e) => setMetaForm({ ...metaForm, wabaId: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">System Access Token</label>
+                <Input 
+                  type="password"
+                  placeholder="EAAB..." 
+                  value={metaForm.accessToken}
+                  onChange={(e) => setMetaForm({ ...metaForm, accessToken: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+        </Modal>
 
         {/* --- FILA DE KPI (4 colunas) --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -155,6 +265,11 @@ export function WhatsappPage() {
           
           {/* Coluna Automações (3/5) */}
           <div className="lg:col-span-3 space-y-4">
+              
+              <div className="mb-6">
+                 <BotIntegracaoCard instancias={instancias} />
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
                   Automações

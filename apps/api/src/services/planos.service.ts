@@ -3,6 +3,7 @@ import { CriarPlanoDto, AtualizarPlanoDto } from '@clinicaplus/types';
 import { tratamentoQueue } from '../lib/queues';
 import { JobNames } from '@clinicaplus/events';
 import { EstadoPlano, Prisma } from '@prisma/client';
+import { AppError } from '../lib/AppError';
 
 export const planosService = {
   /**
@@ -60,6 +61,30 @@ export const planosService = {
   },
 
   /**
+   * Procura um plano específico com detalhes
+   */
+  async getById(clinicaId: string, id: string): Promise<unknown> {
+    const plano = await prisma.planoTratamento.findFirst({
+      where: { id, clinicaId },
+      include: {
+        tipoTratamento: true,
+        paciente: { select: { id: true, nome: true, numeroPaciente: true } },
+        medico: { select: { id: true, nome: true } },
+        sessoes: {
+          orderBy: { numeroSessao: 'asc' },
+          include: { agendamento: true }
+        }
+      }
+    });
+
+    if (!plano) {
+      throw new AppError('Plano de tratamento não encontrado', 404);
+    }
+
+    return plano;
+  },
+
+  /**
    * Lists all treatment plans for a clinic with optional filters.
    */
   async listAll(clinicaId: string, filters: { estado?: string; q?: string }): Promise<unknown[]> {
@@ -84,12 +109,20 @@ export const planosService = {
     });
   },
 
+  /**
+   * Lists all treatment plans for a specific patient.
+   * Scoped to clinicId.
+   */
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<unknown[]> {
     return prisma.planoTratamento.findMany({
       where: { clinicaId, pacienteId },
       include: { 
         tipoTratamento: true,
-        _count: { select: { sessoes: true } }
+        medico: { select: { id: true, nome: true } },
+        _count: { select: { sessoes: true } },
+        sessoes: {
+          select: { id: true, estado: true, numeroSessao: true, dataHora: true }
+        }
       },
       orderBy: { criadoEm: 'desc' }
     });

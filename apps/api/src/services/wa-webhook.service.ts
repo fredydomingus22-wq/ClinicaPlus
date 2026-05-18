@@ -3,9 +3,10 @@ import { logger } from '../lib/logger';
 import { redis } from '../lib/redis';
 import { WaInstancia, WaEstadoConversa, WaDirecao } from '@prisma/client';
 
-import { waConversaService } from './wa-conversa.service';
+import axios from 'axios';
 import { waInstanciaService } from './wa-instancia.service';
 import { waAutomacaoService } from './wa-automacao.service';
+import { ClinicaMessageDTO } from '@clinicaplus/types';
 
 // Webhook interfaces (defined in common types usually, but here for context if needed)
 interface MessageUpsertData {
@@ -157,33 +158,40 @@ export const waWebhookService = {
       },
     });
 
-    // 3. Encaminhar para n8n se houver automações activas
-    const automacoes = await prisma.waAutomacao.findMany({
-      where: { 
-        instanciaId: instancia.id,
-        ativo: true,
-        n8nWebhookUrl: { not: null }
-      }
+    // 3. Montar Schema Unificado (ClinicaMessage)
+    const clinicaMessage: ClinicaMessageDTO = {
+      clinicaId: instancia.clinicaId,
+      instanciaId: instancia.id,
+      channel: 'BAILEYS',
+      telefone: numeroWhatsapp,
+      nomeContato: data.pushName || 'Contato',
+      messageType: 'TEXT', // O Evolution (na nossa abstração actual) envia quase tudo como TEXT ou media-text
+      value: conteudo,
+      messageId: key.id,
+      timestamp: new Date().getTime().toString(),
+    };
+
+    // 4. Verificação de Conflito com Bots Externos (Typebot, Dialogflow, N8N)
+    // Se a instância tiver um bot externo ativo, a Evolution API já o está a executar nativamente!
+    // Não devemos enviar o Payload para o Langgraph (Intel), senão teríamos 2 IAs a responder.
+    const botAtivo = await prisma.botIntegracao.findFirst({
+      where: { instanciaId: instancia.id, ativo: true }
     });
 
-    if (automacoes.length > 0) {
-      for (const automacao of automacoes) {
-        // Disparamos o webhook no n8n. O waAutomacaoService.dispararWebhook já trata erros e logs.
-        waAutomacaoService.dispararWebhook(automacao.id, {
-          ...data,
-          clinicaId: instancia.clinicaId,
-          conversaId: conversa.id,
-          tipoAutomacao: automacao.tipo
-        }).catch(() => {}); // Fogo e esquece, erros já logados no service
-      }
+    if (botAtivo) {
+      logger.info({ conversaId: conversa.id }, 'Mensagem guardada; não enviada à Intel porque há um Bot Externo (Typebot/N8N) ativo nesta instância.');
+      return;
     }
 
-    // 4. Encaminhar para Máquina de Estados interna (Fallback / Auxiliar)
-    // Se houver automação de n8n, podemos querer saltar a máquina interna?
-    // Por agora mantemos ambas para não quebrar fluxos manuais, mas n8n tem prioridade de execução.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await waConversaService.processarMensagem(conversa as any, conteudo);
+    // 5. Encaminhar para o FastAPI (Intent Router / Agente)
+    const INTEL_URL = process.env.INTEL_SERVICE_URL || 'http://localhost:8001';
+    try {
+      await axios.post(`${INTEL_URL}/webhook/unified`, clinicaMessage);
+      logger.info({ clinicaMessage }, 'Mensagem Evolution reencaminhada para a ClinicaPlus Intelligence');
+    } catch (apiErr) {
+      logger.error({ apiErr }, 'Erro ao encaminhar mensagem para ClinicaPlus Intelligence (FastAPI)');
+    }
 
-    logger.info({ conversaId: conversa.id }, 'Mensagem processada via Webhook');
+    logger.info({ conversaId: conversa.id }, 'Mensagem recebida do Webhook Evolution normalizada');
   },
 };

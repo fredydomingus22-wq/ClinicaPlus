@@ -6,13 +6,18 @@ import { emailWorker } from './workers/email.worker';
 import { reminderWorker } from './workers/reminder.worker';
 import { webhookWorker } from './workers/webhook.worker';
 import { reportWorker } from './workers/report.worker';
+import { reportAgtWorker } from './workers/report-agt.worker';
 import { criarSessoesWorker } from './workers/criarSessoes.worker';
 import { schedulerService } from './services/scheduler.service';
 
+/**
+ * Ponto de entrada do ClinicaPlus Worker.
+ * Responsável por inicializar todos os workers e garantir o graceful shutdown.
+ */
 async function main() {
   logger.info('🚀 ClinicaPlus Worker starting...');
 
-  // Minimal HTTP server for Railway healthcheck
+  // Servidor HTTP mínimo para healthcheck da infraestrutura (ex: Railway)
   const port = process.env.PORT || 3000;
   const healthServer = http.createServer((req, res) => {
     if (req.url === '/health') {
@@ -37,6 +42,7 @@ async function main() {
       reminderWorker.close(),
       webhookWorker.close(),
       reportWorker.close(),
+      reportAgtWorker.close(),
       criarSessoesWorker.close(),
     ]);
 

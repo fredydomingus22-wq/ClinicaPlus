@@ -162,3 +162,19 @@ export enum WaDirecao {
   SAIDA = 'SAIDA'
 }
 export const WaDirecaoSchema = z.nativeEnum(WaDirecao);
+
+export enum TipoDocumentoFiscal {
+  FT = 'FT',
+  FR = 'FR',
+  VD = 'VD',
+  NC = 'NC',
+  ND = 'ND'
+}
+export const TipoDocumentoFiscalSchema = z.nativeEnum(TipoDocumentoFiscal);
+
+export enum RegimeFiscal {
+  GERAL = 'GERAL',
+  SIMPLIFICADO = 'SIMPLIFICADO',
+  EXUSA = 'EXUSA'
+}
+export const RegimeFiscalSchema = z.nativeEnum(RegimeFiscal);

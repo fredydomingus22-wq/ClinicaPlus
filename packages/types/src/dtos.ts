@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Papel, Plano, EstadoAgendamento, TipoAgendamento } from './enums';
+import { Papel, Plano, EstadoAgendamento, TipoAgendamento, TipoDocumentoFiscal } from './enums';
 import { MedicoHorario } from './schemas/medico.schema';
 import { Triagem, AgendamentoCreateSchema } from './schemas/agendamento.schema';
 import { Medicamento } from './schemas/receita.schema';
@@ -32,6 +32,12 @@ export interface ClinicaDTO {
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
+  // Campos Fiscais (AGT)
+  nif?: string | null;
+  razaoSocial?: string | null;
+  regimeFiscal?: 'GERAL' | 'SIMPLIFICADO' | 'EXUSA' | null;
+  agtSoftwareCert?: string | null;
+  enderecoPostal?: string | null;
   configuracao?: {
     id: string;
     lembrete24h: boolean;
@@ -43,6 +49,7 @@ export interface ClinicaDTO {
     moedaSimbolo: string;
     fusoHorario: string;
     seguradoras: string[];
+    alvara?: string | null;
   };
   contactos?: ContactoClinicaDTO[];
 }
@@ -293,5 +300,19 @@ export interface WaAutomacaoDTO {
   n8nWebhookUrl: string | null;
   criadoEm: string;
   atualizadoEm: string;
+}
+
+export type ClinicaMessageType = 'TEXT' | 'INTERACTIVE_REPLY' | 'UNKNOWN';
+
+export interface ClinicaMessageDTO {
+  clinicaId: string;
+  instanciaId: string;
+  channel: 'META_CLOUD' | 'BAILEYS';
+  telefone: string;
+  nomeContato: string;
+  messageType: ClinicaMessageType;
+  value: string; // The text content or the selected ID of the interactive message
+  messageId: string;
+  timestamp: string;
 }
 

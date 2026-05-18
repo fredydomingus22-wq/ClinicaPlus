@@ -17,10 +17,14 @@ const configSchema = z.object({
   REDIS_URL: z.string().min(1), // redis:// ou rediss:// (TLS) — Zod url() rejeita estes protocolos
   METRICS_TOKEN: z.string().min(8),
   ALERT_EMAIL: z.string().email(),
-  // WhatsApp & Evolution API
+  // WhatsApp & Evolution API (Baileys)
   EVOLUTION_API_URL: z.string().url(),
   EVOLUTION_API_KEY: z.string().min(1),
   EVOLUTION_WEBHOOK_SECRET: z.string().min(1),
+  // WhatsApp Meta Cloud API
+  META_APP_SECRET: z.string().min(8).optional(),      // App Secret — verifica X-Hub-Signature-256
+  META_VERIFY_TOKEN: z.string().min(8).optional(),    // Token de verificação do webhook Meta
+  META_GRAPH_VERSION: z.string().default('v23.0'),    // Versão da Graph API
   // n8n
   N8N_BASE_URL: z.string().url(),
   N8N_API_KEY: z.string().min(1),
@@ -29,6 +33,9 @@ const configSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_LAUDOS_BUCKET: z.string().default('laudos'),
+  // Typebot integration
+  TYPEBOT_VIEWER_URL: z.string().url().default('http://localhost:8082'),
+  TYPEBOT_TRIAGEM_FLOW_ID: z.string().default('cp-triagem-bot'),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
   path: ["JWT_REFRESH_SECRET"],

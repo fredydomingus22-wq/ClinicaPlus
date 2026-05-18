@@ -11,6 +11,12 @@ vi.mock('../../services/patientNumber.service', () => ({
   generatePatientNumber: vi.fn(),
 }));
 
+vi.mock('../../services/mfa.service', () => ({
+  mfaService: {
+    verify: vi.fn(),
+  },
+}));
+
 vi.mock('../../lib/prisma', () => ({
   prisma: {
     clinica: {
@@ -33,7 +39,7 @@ vi.mock('../../lib/prisma', () => ({
   },
 }));
 
-vi.mock('bcrypt', () => ({
+vi.mock('bcryptjs', () => ({
   default: {
     compare: vi.fn(),
     hash: vi.fn(),
@@ -45,6 +51,8 @@ vi.mock('jsonwebtoken', () => ({
     sign: vi.fn().mockReturnValue('mock-jwt-token'),
     verify: vi.fn(),
   },
+  sign: vi.fn().mockReturnValue('mock-jwt-token'),
+  verify: vi.fn(),
 }));
 
 // Mock the private _issueTokens method to avoid JWT generation during pure unit tests
@@ -73,6 +81,7 @@ describe('auth.service', () => {
     clinicaId: 'c1',
     passwordHash: 'hashed-password',
     ativo: true,
+    mfaActivatedAt: null,
   } as unknown as Utilizador;
 
   describe('login', () => {
@@ -114,17 +123,15 @@ describe('auth.service', () => {
   });
 
   describe('loginSuperAdmin', () => {
-    it('returns tokens for valid super admin', async () => {
-      const mockSA = { ...mockUser, papel: 'SUPER_ADMIN' } as unknown as Utilizador;
+    it('returns setup requirement for valid super admin without MFA', async () => {
+      const mockSA = { ...mockUser, papel: 'SUPER_ADMIN', mfaActivatedAt: null } as unknown as Utilizador;
       vi.mocked(prisma.utilizador.findFirst).mockResolvedValue(mockSA);
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
       const result = await authService.loginSuperAdmin(email, password);
 
-      expect(result).toHaveProperty('accessToken');
-      expect(prisma.utilizador.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-        where: { email, papel: 'SUPER_ADMIN' }
-      }));
+      expect(result).toHaveProperty('requiresMfaSetup', true);
+      expect(result).toHaveProperty('setupToken');
     });
 
     it('throws 401 for invalid super admin credentials', async () => {

@@ -34,7 +34,7 @@ describe('/api/relatorios', () => {
     it('returns 403 for non-Admin role', async () => {
       const res = await request
         .get('/api/relatorios/receita')
-        .set('Authorization', `Bearer ${ctx.medicoToken}`);
+        .set('Authorization', `Bearer ${ctx.pacienteToken}`);
       
       expect(res.status).toBe(403);
     });

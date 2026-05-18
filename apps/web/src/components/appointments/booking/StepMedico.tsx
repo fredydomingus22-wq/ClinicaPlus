@@ -20,55 +20,56 @@ export const StepMedico: React.FC<StepMedicoProps> = ({
   onBack 
 }) => {
   return (
-    <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" className="px-0 hover:bg-transparent text-neutral-400 hover:text-neutral-900" onClick={onBack}>
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+      <div className="flex items-center justify-between border-b border-neutral-100 pb-6">
+        <Button variant="ghost" className="px-0 hover:bg-transparent text-neutral-600 hover:text-primary-900 font-mono text-xs uppercase tracking-widest" onClick={onBack}>
           <ChevronLeft className="w-5 h-5 mr-1" /> Voltar
         </Button>
         <div className="text-right">
-          <h1 className="text-xl sm:text-2xl font-black text-neutral-900">{selectedSpecialty}</h1>
+          <p className="text-xs text-neutral-500 font-black uppercase tracking-[0.2em] mb-1">Especialidade Seleccionada</p>
+          <h1 className="text-2xl font-black text-neutral-900 uppercase tracking-tighter">{selectedSpecialty}</h1>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
           <Spinner size="lg" />
-          <p className="text-neutral-500 font-medium animate-pulse">A procurar melhores especialistas...</p>
+          <p className="text-neutral-600 font-mono font-bold uppercase tracking-widest text-xs">A filtrar especialistas...</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-0 border-t border-l border-neutral-100">
           {!medicos || medicos.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-neutral-200">
-              <AlertCircle className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-500 font-medium">Não encontramos médicos para esta especialidade.</p>
-              <Button variant="ghost" onClick={onBack} className="mt-4">Tentar outra</Button>
+            <div className="text-center py-20 bg-white border-r border-b border-neutral-100">
+              <AlertCircle className="w-10 h-10 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-600 font-mono text-xs uppercase tracking-widest">Nenhum médico disponível para esta especialidade.</p>
+              <Button variant="ghost" onClick={onBack} className="mt-6 border border-neutral-200 rounded-none">Tentar outra</Button>
             </div>
           ) : (
             medicos.map((medico) => (
               <button
                 key={medico.id}
                 onClick={() => onSelect(medico.id)}
-                className="w-full flex items-center gap-4 md:gap-6 p-4 md:p-6 bg-white border border-neutral-200 rounded-2xl md:rounded-3xl hover:border-primary-500 hover:shadow-2xl hover:shadow-primary-100 transition-all text-left active:scale-[0.98]"
+                className="w-full flex items-center gap-6 p-6 bg-white border-r border-b border-neutral-100 hover:bg-neutral-50 transition-all text-left group active:scale-[0.99]"
               >
                 <Avatar 
-                  initials={medico.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()} 
+                   initials={medico.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()} 
                   size="md"
-                  className="ring-2 md:ring-4 ring-neutral-50 shrink-0"
+                  className="ring-2 ring-neutral-100 shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-black text-neutral-900 group-hover:text-primary-700 transition-colors truncate">
-                  {medico.nome.startsWith('Dr') ? medico.nome : `Dr. ${medico.nome}`}
-                </h3>
-                  <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
-                    <span className="flex items-center gap-1.5 text-xs md:text-sm text-neutral-500 font-medium">
-                      <MapPin className="w-3.5 h-3.5 md:w-4 h-4 text-primary-500" /> Luanda
+                  <h3 className="text-xl font-bold text-neutral-900 group-hover:text-primary-900 transition-colors truncate tracking-tight">
+                    {medico.nome.startsWith('Dr') ? medico.nome : `Dr. ${medico.nome}`}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-4 mt-2">
+                    <span className="flex items-center gap-1.5 text-xs text-neutral-600 font-black uppercase tracking-wider">
+                      <MapPin className="w-3.5 h-3.5 text-primary-600" /> Luanda, Angola
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs md:text-sm text-secondary-600 font-bold bg-secondary-50 px-2 py-0.5 rounded-lg whitespace-nowrap">
-                      <CreditCard className="w-3.5 h-3.5 md:w-4 h-4" /> {formatKwanza(medico.preco || 5000)}
+                    <span className="flex items-center gap-1.5 text-xs text-primary-700 font-black bg-neutral-50 border border-neutral-200 px-3 py-1 uppercase tracking-widest whitespace-nowrap">
+                      <CreditCard className="w-3.5 h-3.5 shadow-sm" /> {formatKwanza(medico.preco || 5000)}
                     </span>
                   </div>
                 </div>
-                <div className="bg-primary-600 text-white px-6 py-2 rounded-2xl font-black text-sm shadow-lg shadow-primary-200 hidden sm:block">
+                <div className="bg-primary-900 text-white px-8 py-3 rounded-none font-black text-xs uppercase tracking-[0.2em] hidden sm:block group-hover:bg-black transition-colors">
                   Seleccionar
                 </div>
               </button>

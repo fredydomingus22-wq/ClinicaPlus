@@ -1,7 +1,8 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { waInstanciaService } from '../services/wa-instancia.service';
 import { waAutomacaoService } from '../services/wa-automacao.service';
 import { waWebhookService } from '../services/wa-webhook.service';
+import { waMetaWebhookService, MetaWebhookPayload } from '../services/wa-meta-webhook.service';
 import { waConversaService } from '../services/wa-conversa.service';
 import { waActividadeService } from '../services/wa-actividade.service';
 import { requirePlan } from '../middleware/requirePlan';
@@ -14,6 +15,10 @@ import { tenantMiddleware } from '../middleware/tenant';
 import { apiKeyAuth, requireScope } from '../middleware/apiKeyAuth';
 import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
+import { metaCloudApi } from '../lib/metaCloudApi';
+import { auditLogService } from '../services/auditLog.service';
+import crypto from 'crypto';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -185,8 +190,8 @@ router.post('/automacoes/:id/desactivar',
     } catch (error) { return next(error); }
 });
 
-// --- WEBHOOK DA EVOLUTION API (HMAC) ---
-router.post('/webhook', verificarHmacEvolution, async (req, res) => {
+// --- WEBHOOK DA EVOLUTION API (Baileys — HMAC) ---
+router.post('/webhook', verificarHmacEvolution, async (req: Request, res: Response) => {
   try {
     const { event, instance, data } = req.body;
     await waWebhookService.handle(instance, event, data);
@@ -196,6 +201,146 @@ router.post('/webhook', verificarHmacEvolution, async (req, res) => {
     res.status(200).send('Error logged'); 
   }
 });
+
+// ─── META CLOUD API ──────────────────────────────────────────────────────────
+
+// Schema de validação para criar instância Meta
+const criarInstanciaMetaSchema = z.object({
+  metaPhoneNumberId: z.string().min(1, 'Phone Number ID obrigatório'),
+  metaWabaId:        z.string().min(1, 'WABA ID obrigatório'),
+  metaAccessToken:   z.string().min(1, 'Access Token obrigatório'),
+});
+
+/**
+ * POST /whatsapp/instancias/meta
+ * Cria uma instância Meta Cloud (sem QR code, sem Evolution API).
+ * Requer plano PRO+ e permissão whatsapp.manage.
+ */
+router.post('/instancias/meta',
+  authenticate,
+  tenantMiddleware,
+  // requirePlan(Plano.PRO),
+  // requirePermission('whatsapp', 'manage'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const clinicaId = req.clinica.id as string;
+      const userId    = req.user!.id;
+
+      const parsed = criarInstanciaMetaSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: 'Dados inválidos',
+          errors: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const { metaPhoneNumberId, metaWabaId, metaAccessToken } = parsed.data;
+
+      // Verificar plano (mesma regra da instância Baileys)
+      const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
+      // if (clinica.plano !== Plano.PRO && clinica.plano !== Plano.ENTERPRISE) {
+      //   return res.status(403).json({ message: 'Módulo WhatsApp apenas disponível para planos PRO ou superiores.' });
+      // }
+
+      // Verificar instância duplicada temporariamente desativada
+      // const existente = await prisma.waInstancia.findFirst({ where: { clinicaId } });
+      // if (existente && clinica.plano !== Plano.ENTERPRISE) {
+      //   return res.status(409).json({ message: 'Esta clínica já possui uma instância configurada.' });
+      // }
+
+      // Nome único para a instância (sem Evolution, mas precisa ser único na BD)
+      const instanceName = `meta-${clinica.slug}-${crypto.randomBytes(3).toString('hex')}`;
+
+      const instancia = await prisma.waInstancia.create({
+        data: {
+          clinicaId,
+          evolutionName:     instanceName,
+          evolutionToken:    crypto.randomUUID(),
+          tipoIntegracao:    'META_CLOUD',
+          metaPhoneNumberId,
+          metaWabaId,
+          metaAccessToken,   // ⚠️ Encriptar em produção (ADR a criar)
+          estado:            'CONECTADO',   // Meta está sempre "conectada" via token
+          atualizadoEm:      new Date(),
+        },
+      });
+
+      await auditLogService.log({
+        actorId:   userId,
+        clinicaId,
+        accao:     'CREATE',
+        recurso:   'wa_instancia_meta',
+        recursoId: instancia.id,
+        depois:    { tipoIntegracao: 'META_CLOUD', metaPhoneNumberId, metaWabaId },
+      });
+
+      logger.info({ instanciaId: instancia.id, metaPhoneNumberId }, 'Instância Meta Cloud criada');
+      return res.status(201).json({
+        id:                instancia.id,
+        tipoIntegracao:    instancia.tipoIntegracao,
+        metaPhoneNumberId: instancia.metaPhoneNumberId,
+        metaWabaId:        instancia.metaWabaId,
+        estado:            instancia.estado,
+        criadoEm:          instancia.criadoEm,
+      });
+    } catch (error) { return next(error); }
+  },
+);
+
+/**
+ * GET /whatsapp/webhook/meta
+ * Verificação do webhook Meta (hub.challenge handshake).
+ * Público — a Meta acede sem autenticação.
+ */
+router.get('/webhook/meta', (req: Request, res: Response) => {
+  try {
+    const mode      = req.query['hub.mode'] as string;
+    const token     = req.query['hub.verify_token'] as string;
+    const challenge = req.query['hub.challenge'] as string;
+    const responseChallenge = metaCloudApi.responderChallenge(mode, token, challenge);
+    logger.info({ mode, token }, 'Webhook Meta verificado com sucesso');
+    return res.status(200).send(responseChallenge);
+  } catch (err) {
+    logger.warn({ err }, 'Falha na verificação do webhook Meta');
+    return res.status(403).send('Forbidden');
+  }
+});
+
+/**
+ * POST /whatsapp/webhook/meta
+ * Recebe eventos da Meta Cloud API.
+ * Verificação HMAC-SHA256 com X-Hub-Signature-256.
+ * Público — a Meta não usa o nosso auth.
+ * IMPORTANTE: Express deve ter bodyParser configurado com verify para preservar rawBody.
+ */
+router.post('/webhook/meta', async (req: Request, res: Response) => {
+  try {
+    // Verificar assinatura HMAC
+    const signature = req.headers['x-hub-signature-256'] as string | undefined;
+    if (signature) {
+      // rawBody é injectado pelo middleware do Express no server.ts (verify option)
+      const rawBody: Buffer = (req as unknown as { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(req.body));
+      metaCloudApi.verificarAssinaturaWebhook(rawBody, signature);
+    }
+
+    // A Meta espera 200 imediatamente — processar de forma assíncrona
+    res.status(200).send('EVENT_RECEIVED');
+
+    // Processar em background (não bloquear response)
+    setImmediate(async () => {
+      try {
+        await waMetaWebhookService.handle(req.body as MetaWebhookPayload);
+      } catch (err) {
+        logger.error({ err }, 'Erro assíncrono ao processar webhook Meta');
+      }
+    });
+  } catch (err: unknown) {
+    const e = err as { statusCode?: number; message?: string };
+    logger.error({ err }, 'Erro crítico no webhook Meta');
+    res.status(e.statusCode ?? 401).json({ message: e.message });
+  }
+});
+
 
 // --- ACTIVIDADE E RELATÓRIOS (ADMIN) ---
 router.get('/actividade', 
@@ -227,6 +372,75 @@ router.get('/conversas', authenticate, tenantMiddleware, async (req, res, next) 
       const clinicaId = req.clinica.id as string;
       const conversas = await waConversaService.listarActivas(clinicaId);
       return res.json(conversas);
+    } catch (error) { return next(error); }
+});
+
+// ─── GATEWAY DE ENVIO UNIFICADO (CHAMADO PELO FASTAPI) ──────────────────────
+// Endpoint interno, deve ser protegido pela API Key do Intel Service
+router.post('/internal/enviar', 
+  apiKeyAuth,
+  requireScope('WRITE_AGENDAMENTOS'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const clinicaId = req.clinica.id;
+      const { instanciaId, telefone, mensagem } = req.body;
+      
+      const instancia = await prisma.waInstancia.findFirstOrThrow({ 
+        where: { id: instanciaId, clinicaId } 
+      });
+
+      if (instancia.tipoIntegracao === 'META_CLOUD') {
+        if (!instancia.metaPhoneNumberId || !instancia.metaAccessToken) {
+          throw new Error('Instância Meta incompleta');
+        }
+        
+        if (typeof mensagem === 'string') {
+          await metaCloudApi.enviarTexto(
+            instancia.metaPhoneNumberId,
+            instancia.metaAccessToken,
+            telefone.replace('+', ''),
+            mensagem
+          );
+        } else if (typeof mensagem === 'object') {
+          // Detectar o tipo de interativo
+          if (mensagem.type === 'list') {
+            await metaCloudApi.enviarInteractivoLista(
+              instancia.metaPhoneNumberId,
+              instancia.metaAccessToken,
+              telefone.replace('+', ''),
+              mensagem.payload
+            );
+          } else if (mensagem.type === 'button') {
+            await metaCloudApi.enviarInteractivoBotoes(
+              instancia.metaPhoneNumberId,
+              instancia.metaAccessToken,
+              telefone.replace('+', ''),
+              mensagem.payload
+            );
+          }
+        }
+      } else {
+        // Evolution API fallback: converte os interativos para texto bruto caso seja tentado enviar json 
+        const textoDescritivo = typeof mensagem === 'string' ? mensagem : JSON.stringify(mensagem);
+        await evolutionApi.enviarTexto(instancia.evolutionName, telefone.replace('+', ''), textoDescritivo);
+      }
+
+      // Persistir mensagem enviada pela IA
+      const conversa = await prisma.waConversa.findFirst({
+        where: { instanciaId: instancia.id, numeroWhatsapp: telefone.replace('+', '') }
+      });
+      if (conversa) {
+        await prisma.waMensagem.create({
+          data: {
+            conversaId: conversa.id,
+            conteudo: typeof mensagem === 'object' ? `[INTERATIVO ${mensagem.type}]` : mensagem,
+            direcao: 'SAIDA',
+            evolutionMsgId: `intel-${Date.now()}`
+          }
+        });
+      }
+
+      return res.json({ success: true });
     } catch (error) { return next(error); }
 });
 

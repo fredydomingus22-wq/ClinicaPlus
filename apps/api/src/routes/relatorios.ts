@@ -20,6 +20,7 @@ interface ReceitaResult {
   medico_nome: string | null;
   consultas: number;
   receita: number;
+  total_iva: number;
   receita_prevista: number;
   rascunhos: number;
   seguros_pendentes: number;
@@ -72,6 +73,7 @@ relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (
         m.nome AS medico_nome,
         COUNT(DISTINCT f.id)::int AS consultas,
         SUM(CASE WHEN f.estado IN ('EMITIDA', 'PAGA') THEN f.total ELSE 0 END)::int AS receita,
+        SUM(CASE WHEN f.estado IN ('EMITIDA', 'PAGA') THEN f."totalIva" ELSE 0 END)::int AS total_iva,
         SUM(CASE WHEN f.estado = 'RASCUNHO' THEN f.total ELSE 0 END)::int AS receita_prevista,
         COUNT(DISTINCT CASE WHEN f.estado = 'RASCUNHO' THEN f.id ELSE NULL END)::int AS rascunhos,
         SUM(CASE WHEN f.tipo = 'SEGURO' AND sp.estado = 'PENDENTE' THEN f.total ELSE 0 END)::int AS seguros_pendentes
@@ -94,11 +96,12 @@ relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (
     const totais = results.reduce((acc, curr) => {
       acc.consultas += curr.consultas;
       acc.receita += curr.receita;
+      acc.totalIva += curr.total_iva || 0;
       acc.receitaPrevista += curr.receita_prevista || 0;
       acc.rascunhos += curr.rascunhos || 0;
       acc.segurosPendentes += curr.seguros_pendentes || 0;
       return acc;
-    }, { consultas: 0, receita: 0, receitaPrevista: 0, rascunhos: 0, segurosPendentes: 0 });
+    }, { consultas: 0, receita: 0, totalIva: 0, receitaPrevista: 0, rascunhos: 0, segurosPendentes: 0 });
 
     const mediaConsulta = totais.consultas > 0 ? Math.round(totais.receita / totais.consultas) : 0;
 
@@ -179,5 +182,48 @@ relatoriosRouter.get('/receita/export', requirePermission('relatorio', 'export')
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=relatorio-receita-${new Date().toISOString().split('T')[0]}.csv`);
     res.status(200).send(csv);
+  } catch (err) { next(err); }
+});
+
+relatoriosRouter.get('/mapa-faturacao', requirePermission('relatorio', 'read'), async (req: Request, res: Response, next) => {
+  try {
+    const clinicaId = req.clinica.id!;
+    const { inicio, fim, medicoId } = req.query as ReceitaQuery;
+
+    const dataInicio = inicio ? new Date(inicio) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const dataFim = fim ? new Date(fim) : new Date();
+
+    const faturas = await prisma.fatura.findMany({
+      where: {
+        clinicaId,
+        dataEmissao: { gte: dataInicio, lte: dataFim },
+        estado: { in: ['EMITIDA', 'PAGA', 'ANULADA'] },
+        ...(medicoId && { medicoId })
+      },
+      include: {
+        paciente: { select: { nome: true, nif: true, endereco: true, cidade: true } },
+        medico: { select: { nome: true } }
+      },
+      orderBy: { dataEmissao: 'asc' }
+    });
+
+    const totais = faturas.reduce((acc, f) => {
+      if (f.estado !== 'ANULADA') {
+        acc.totalFaturado += Number(f.total);
+        acc.totalDescontos += Number(f.desconto);
+        acc.totalIva += Number(f.totalIva || 0);
+      }
+      return acc;
+    }, { totalFaturado: 0, totalIva: 0, totalDescontos: 0 });
+
+    res.json({
+      success: true,
+      data: {
+        inicio: dataInicio.toISOString(),
+        fim: dataFim.toISOString(),
+        faturas,
+        ...totais
+      }
+    });
   } catch (err) { next(err); }
 });

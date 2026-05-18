@@ -35,6 +35,7 @@ const AdminMedicos = React.lazy(() => import('./pages/admin/MedicosPage'));
 const AdminEspecialidades = React.lazy(() => import('./pages/admin/EspecialidadesPage'));
 const AdminEquipa = React.lazy(() => import('./pages/admin/EquipaPage').then(m => ({ default: m.EquipaPage })));
 const AdminConfiguracao = React.lazy(() => import('./pages/admin/ConfiguracaoPage'));
+const AdminConfiguracaoFiscal = React.lazy(() => import('./pages/admin/ConfiguracaoFiscalPage'));
 const AdminPerfilPage = React.lazy(() => import('./pages/admin/PerfilPage'));
 const AdminIntegracoes = React.lazy(() => import('./pages/admin/IntegracoesPage'));
 const AdminServicosPrecos = React.lazy(() => import('./pages/admin/ServicosPrecosPage'));
@@ -160,6 +161,8 @@ function RoleAwareRedirect({ to }: { to: string }) {
   return <Navigate to={targetPath} replace />;
 }
 
+import { GlobalError } from './components/common/GlobalError';
+
 /**
  * Application router configuration.
  */
@@ -167,6 +170,7 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/style-guide',
@@ -175,6 +179,7 @@ export const router = createBrowserRouter([
         <StyleGuidePage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/luxe-design',
@@ -183,6 +188,7 @@ export const router = createBrowserRouter([
         <LuxeStylePage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/design/industrial',
@@ -191,6 +197,7 @@ export const router = createBrowserRouter([
         <ProposalIndustrialPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/design/precision',
@@ -199,6 +206,7 @@ export const router = createBrowserRouter([
         <ProposalPrecisionPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/design/brutalist',
@@ -207,6 +215,7 @@ export const router = createBrowserRouter([
         <ProposalBrutalistPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/design/chromatic',
@@ -215,6 +224,7 @@ export const router = createBrowserRouter([
         <ProposalChromaticPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/design/continuum',
@@ -223,26 +233,32 @@ export const router = createBrowserRouter([
         <ProposalContinuityPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/login-p1',
     element: <LoginPageP1 />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/login-p2',
     element: <LoginPageP2 />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/login-p3',
     element: <LoginPageP3 />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/login-p4',
     element: <LoginPageP4 />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/login-p5',
     element: <LoginPageP5 />,
+    errorElement: <GlobalError />,
   },
   {
     path: '/superadmin/login',
@@ -251,6 +267,7 @@ export const router = createBrowserRouter([
         <SuperAdminLoginPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/superadmin/mfa-setup',
@@ -259,6 +276,7 @@ export const router = createBrowserRouter([
         <SuperAdminMFASetupPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/auth/registar-paciente',
@@ -267,6 +285,7 @@ export const router = createBrowserRouter([
         <RegistoPacientePage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/auth/forgot-password',
@@ -275,6 +294,7 @@ export const router = createBrowserRouter([
         <ForgotPasswordPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/reset-password',
@@ -283,6 +303,7 @@ export const router = createBrowserRouter([
         <ResetPasswordPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     path: '/auth/registar',
@@ -291,10 +312,12 @@ export const router = createBrowserRouter([
         <RegistoClinicaPage />
       </Suspense>
     ),
+    errorElement: <GlobalError />,
   },
   {
     // Protected routes
     element: <RequireAuth roles={[]} />,
+    errorElement: <GlobalError />,
     children: [
       {
         element: <AppLayout />,
@@ -424,6 +447,10 @@ export const router = createBrowserRouter([
           {
             path: '/admin/configuracao',
             element: <AdminConfiguracao />
+          },
+          {
+            path: '/admin/configuracao/fiscal',
+            element: <AdminConfiguracaoFiscal />
           },
           {
             path: '/admin/configuracao/servicos',

@@ -11,22 +11,32 @@ import {
 export const tratamentosApi = {
   // --- CATÁLOGOS ---
   async getTiposExame() {
-    const { data } = await apiClient.get('/config-tratamentos/tipos-exames');
-    return data;
+    const { data } = await apiClient.get('/config-tratamentos/tipos-exame');
+    return data.data;
   },
 
   async createTipoExame(payload: CriarTipoExameClinicaDto) {
-    const { data } = await apiClient.post('/config-tratamentos/tipos-exames', payload);
+    const { data } = await apiClient.post('/config-tratamentos/tipos-exame', payload);
+    return data.data;
+  },
+
+  async deleteTipoExame(id: string) {
+    const { data } = await apiClient.delete(`/config-tratamentos/tipos-exame/${id}`);
     return data;
   },
 
   async getTiposTratamento() {
     const { data } = await apiClient.get('/config-tratamentos/tipos-tratamento');
-    return data;
+    return data.data;
   },
 
   async createTipoTratamento(payload: CriarTipoTratamentoDto) {
     const { data } = await apiClient.post('/config-tratamentos/tipos-tratamento', payload);
+    return data.data;
+  },
+
+  async deleteTipoTratamento(id: string) {
+    const { data } = await apiClient.delete(`/config-tratamentos/tipos-tratamento/${id}`);
     return data;
   },
 
@@ -75,6 +85,11 @@ export const tratamentosApi = {
 
   async createPlano(payload: CriarPlanoDto) {
     const { data } = await apiClient.post('/planos', payload);
+    return data;
+  },
+
+  async getPlanoById(id: string) {
+    const { data } = await apiClient.get(`/planos/${id}`);
     return data;
   },
 

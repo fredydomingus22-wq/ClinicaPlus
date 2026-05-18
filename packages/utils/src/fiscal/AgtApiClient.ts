@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { AppError } from '../errors';
-import { certificationService } from './CertificationService';
 import { 
   Logger, 
   AgtElectronicInvoiceRequest, 
@@ -20,7 +19,7 @@ import {
  */
 export class AgtApiClient {
   private client: AxiosInstance;
-  private logger?: Logger;
+  private logger: Logger | undefined;
   private isMock: boolean;
 
   constructor(baseURL: string, logger?: Logger, isMock: boolean = false) {
@@ -45,7 +44,7 @@ export class AgtApiClient {
     if (mockEnabled) {
       return { 
         requestID: `MOCK-${Date.now()}`,
-        documentStatusList: request.documentList.map(doc => ({
+        documentStatusList: request.documents.map((doc: any) => ({
           documentNo: doc.documentNo,
           documentStatus: 'V'
         }))
@@ -75,7 +74,9 @@ export class AgtApiClient {
     const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
     if (mockEnabled) {
       return {
+        requestID: `MOCK-ST-${Date.now()}`,
         resultCode: '0',
+        taxRegistrationNumber: request.taxRegistrationNumber,
         documentStatusList: []
       };
     }

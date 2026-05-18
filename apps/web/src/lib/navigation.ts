@@ -242,12 +242,6 @@ export const NAV_CONFIG: NavItem[] = [
     roles: [Papel.ADMIN] 
   },
   { 
-    to: '/admin/configuracao/servicos', 
-    label: 'Tabela de Preços', 
-    icon: Wallet, 
-    roles: [Papel.ADMIN] 
-  },
-  { 
     to: '/superadmin', 
     label: 'Super Admin', 
     icon: ShieldCheck, 

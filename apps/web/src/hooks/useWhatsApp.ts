@@ -57,6 +57,19 @@ export function useWhatsApp() {
     },
   });
 
+  const criarMetaMutation = useMutation({
+    mutationFn: (data: { metaPhoneNumberId: string, metaWabaId: string, metaAccessToken: string }) => 
+      whatsappApi.conectarMeta(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: whatsappKeys.instancias() });
+      toast.success('Instância Meta Cloud configurada com sucesso.');
+    },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Erro ao configurar instância Meta Cloud.');
+    }
+  });
+
   const eliminarMutation = useMutation({
     mutationFn: (id: string) => whatsappApi.desligar(id),
     onSuccess: () => {
@@ -146,6 +159,8 @@ export function useWhatsApp() {
     
     // Actions
     criarInstancia: () => criarMutation.mutate(),
+    criarInstanciaMeta: (data: { metaPhoneNumberId: string, metaWabaId: string, metaAccessToken: string }) => 
+      criarMetaMutation.mutateAsync(data),
     eliminarInstancia: (id: string) => eliminarMutation.mutate(id),
     actualizarAutomacao: (id: string, active: boolean) => toggleMutation.mutate({ id, active }),
     adicionarAutomacao: (tipo: string, waInstanciaId: string) => 
@@ -156,6 +171,7 @@ export function useWhatsApp() {
     
     // Loading states
     criando: criarMutation.isPending || refetchQrMutation.isPending,
+    criandoMeta: criarMetaMutation.isPending,
     eliminando: eliminarMutation.isPending,
     toggling: toggleMutation.isPending,
     adicionando: adicionarMutation.isPending,

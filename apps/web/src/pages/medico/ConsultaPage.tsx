@@ -38,9 +38,11 @@ import { ReceitaModal } from './ReceitaModal';
 import { useUIStore } from '../../stores/ui.store';
 import { VitalsGrid } from '../../components/consultation/VitalsGrid';
 import { PedidoExameModal } from '../../components/tratamentos/PedidoExameModal';
-import { useExamesPaciente } from '../../hooks/useTratamentos';
+import { useExamesPaciente, usePlanosPaciente } from '../../hooks/useTratamentos';
 import { useAuthStore } from '../../stores/auth.store';
-import type { ExameDTO } from '@clinicaplus/types';
+import type { ExameDTO, PlanoTratamentoDTO } from '@clinicaplus/types';
+import { TratamentoDetalheModal } from '../../components/tratamentos/TratamentoDetalheModal';
+import { CriarPlanoForm } from '../../components/tratamentos/CriarPlanoForm';
 
 /**
  * Consultation Page — dual mode.
@@ -57,12 +59,15 @@ export default function ConsultaPage() {
   const [diagnostico, setDiagnostico] = useState('');
   const [showReceitaModal, setShowReceitaModal] = useState(false);
   const [showExameModal, setShowExameModal] = useState(false);
+  const [showPlanoModal, setShowPlanoModal] = useState(false);
+  const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const { data: clinica } = useClinicaMe();
   const { utilizador } = useAuthStore();
   const { addToast } = useUIStore();
 
   const { data: exames, refetch: refetchExames } = useExamesPaciente(agendamento?.pacienteId || '');
+  const { data: planos, refetch: refetchPlanos } = usePlanosPaciente(agendamento?.pacienteId || '');
 
   const handleImprimirReceita = () => {
     window.print();
@@ -332,6 +337,48 @@ export default function ConsultaPage() {
               )}
             </div>
           </Card>
+          {/* Tratamentos Ativos Mini-List */}
+          <Card className="p-0 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary-500" /> Planos de Tratamento
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {planos && (planos as PlanoTratamentoDTO[]).length > 0 ? (
+                (planos as PlanoTratamentoDTO[]).slice(0, 3).map((pl) => (
+                  <div 
+                    key={pl.id} 
+                    className="p-3 bg-white rounded-lg border border-neutral-100 cursor-pointer hover:border-primary-200 transition-colors"
+                    onClick={() => setSelectedPlanoId(pl.id)}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="text-xs font-bold text-neutral-800">{pl.tipoTratamento?.nome}</p>
+                      <Badge variant={pl.estado === 'ACTIVO' ? 'info' : 'success'} className="text-[8px]">
+                        {pl.estado}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-neutral-500">{pl.sessoesRealizadas || 0}/{pl.totalSessoes} Sessões</p>
+                      <div className="h-1 w-20 bg-neutral-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary-500" 
+                          style={{ width: `${Math.round(((pl.sessoesRealizadas || 0) / pl.totalSessoes) * 100)}%` }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] text-neutral-400 italic text-center py-4">Nenhum plano ativo.</p>
+              )}
+              {!isReadOnly && (
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowPlanoModal(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Prescrever Tratamento
+                </Button>
+              )}
+            </div>
+          </Card>
         </div>
 
         {/* Right Column (8/12) */}
@@ -470,6 +517,30 @@ export default function ConsultaPage() {
           diagnosticoPadrao={diagnostico}
           onClose={() => setShowReceitaModal(false)}
         />
+      )}
+
+      {selectedPlanoId && (
+        <TratamentoDetalheModal 
+          id={selectedPlanoId}
+          isOpen={!!selectedPlanoId}
+          onClose={() => setSelectedPlanoId(null)}
+        />
+      )}
+
+      {showPlanoModal && (
+        <Modal isOpen={showPlanoModal} onClose={() => setShowPlanoModal(false)} title="Prescrever Plano de Tratamento" size="lg">
+          <div className="p-2">
+             <CriarPlanoForm 
+                pacienteId={paciente.id} 
+                onSuccess={() => {
+                  setShowPlanoModal(false);
+                  refetchPlanos();
+                  addToast({ title: 'Sucesso', message: 'Plano de tratamento prescrito com sucesso!', type: 'success' });
+                }}
+                onCancel={() => setShowPlanoModal(false)}
+             />
+          </div>
+        </Modal>
       )}
 
       {!isReadOnly && showExameModal && (

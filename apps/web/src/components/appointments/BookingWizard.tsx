@@ -42,31 +42,31 @@ function StepIndicator({ currentStep, hasPatientStep }: { currentStep: number; h
     { num: 4, label: 'Confirmação' }
   ];
 
-  // Adjust display numbers to be 1-based correctly
   const displaySteps = steps.map((s, i) => ({ ...s, displayNum: i + 1 }));
 
   return (
-    <div className="flex items-center justify-between w-full max-w-3xl mx-auto mb-6 md:mb-10 px-2 sm:px-4">
+    <div className="flex items-center justify-between w-full max-w-4xl mx-auto mb-12 px-4">
       {displaySteps.map((step, idx) => (
         <React.Fragment key={step.num}>
-          <div className="flex flex-col items-center gap-1.5 md:gap-2 relative z-10">
+          <div className="flex flex-col items-center gap-2.5 relative z-10 group">
             <div className={`
-              w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all shadow-sm
+              w-10 h-10 border transition-all duration-300 flex items-center justify-center font-mono font-bold text-sm
               ${currentStep === step.num 
-                ? 'bg-primary-600 text-white ring-4 ring-primary-100 scale-110' 
-                : currentStep > step.num || (currentStep === -1 && step.num === 5)
-                  ? 'bg-success-500 text-white shadow-success-100' 
-                  : 'bg-white text-neutral-400 border border-neutral-200'
+                ? 'bg-primary-900 text-white border-primary-900 shadow-[0_0_0_4px_rgba(0,0,0,0.05)]' 
+                : currentStep > step.num
+                  ? 'bg-success-600 text-white border-success-600' 
+                  : 'bg-white text-neutral-400 border-neutral-200'
               }
+              ${currentStep === step.num ? 'scale-110' : 'scale-100'}
             `}>
-              {currentStep > step.num ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.displayNum}
+              {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.displayNum}
             </div>
-            <span className={`hidden sm:block text-[10px] sm:text-[11px] font-black uppercase tracking-wider ${currentStep === step.num ? 'text-primary-700' : 'text-neutral-400'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-300 ${currentStep === step.num ? 'text-primary-900' : 'text-neutral-400'}`}>
               {step.label}
             </span>
           </div>
           {idx < displaySteps.length - 1 && (
-            <div className={`flex-1 h-0.5 mx-1 sm:mx-2 -mt-4 sm:-mt-6 transition-colors duration-500 ${currentStep > step.num ? 'bg-success-500' : 'bg-neutral-100'}`} />
+            <div className={`flex-1 h-px mx-0 -mt-7 transition-colors duration-700 ${currentStep > step.num ? 'bg-success-600' : 'bg-neutral-200'}`} />
           )}
         </React.Fragment>
       ))}

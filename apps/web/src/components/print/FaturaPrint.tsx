@@ -1,15 +1,45 @@
-import React, { forwardRef } from 'react';
-import { formatDate, formatKwanza } from '@clinicaplus/utils';
-import type { FaturaDTO, ClinicaDTO } from '@clinicaplus/types';
+import React, { forwardRef, useEffect, useState } from 'react';
+import { formatDate, formatKwanza, numberToWords } from '@clinicaplus/utils';
+import type { FaturaDTO, ClinicaDTO, ItemFaturaDTO } from '@clinicaplus/types';
+import QRCode from 'qrcode';
 
 interface Props {
   fatura: FaturaDTO;
   clinica: ClinicaDTO;
+  isPreview?: boolean;
 }
 
 export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica }, ref) => {
+  const [qrCodeData, setQrCodeData] = useState<string>('');
+
+  useEffect(() => {
+    const generateQR = async () => {
+      try {
+        // Formato AGT: https://quiosqueagt.minfin.gov.ao/facturacao-eletronica/consultar-fe?emissor=NIF&document=NUMERO
+        const docNo = (fatura.numeroFatura || '').replace(/ /g, '%20');
+        const url = `https://quiosqueagt.minfin.gov.ao/facturacao-eletronica/consultar-fe?emissor=${clinica.nif}&document=${docNo}`;
+        const dataUrl = await QRCode.toDataURL(url, {
+          margin: 1,
+          width: 120,
+          errorCorrectionLevel: 'M'
+        });
+        setQrCodeData(dataUrl);
+      } catch {
+        // Silently fail or handle error without console statement in production
+      }
+    };
+
+    if (fatura.numeroFatura) {
+      generateQR();
+    }
+  }, [fatura.numeroFatura, clinica.nif]);
+
+  const hashControl = fatura.fiscalHash ? `${fatura.fiscalHash.substring(0, 4)}-` : '';
+  const isCanceled = fatura.estado === 'ANULADA';
+  const isDraft = !fatura.numeroFatura;
+
   return (
-    <div ref={ref} className="fatura-print-wrapper">
+    <div ref={ref} className="fatura-print-wrapper relative overflow-hidden">
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -25,18 +55,19 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica 
             top: 0;
             left: 0;
             width: 100%;
-            padding: 0;
+            padding: 10mm;
             margin: 0;
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
             color: #000;
             background: white;
           }
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 0;
           }
+          .no-print { display: none !important; }
         }
         .fatura-print-wrapper {
           display: none;
@@ -49,128 +80,179 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica 
         .table-print {
           width: 100%;
           border-collapse: collapse;
-          margin: 20px 0;
-          page-break-inside: auto;
-        }
-        .table-print tr {
-          page-break-inside: avoid;
-          page-break-after: auto;
+          margin: 15px 0;
         }
         .table-print th, .table-print td {
-          border: 1px solid #000;
-          padding: 8px;
+          border-bottom: 0.5px solid #eee;
+          padding: 8px 4px;
           text-align: left;
         }
         .table-print th {
-          background-color: #f2f2f2;
-          font-weight: bold;
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 8pt;
+          color: #666;
         }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-        .header-section {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          border-bottom: 2px solid #000;
-          padding-bottom: 15px;
-          margin-bottom: 25px;
-        }
-        .info-grid {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 25px;
-          gap: 20px;
-        }
-        .info-col {
-          flex: 1;
+        .watermark {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          font-size: 80pt;
+          font-weight: 900;
+          color: rgba(0,0,0,0.05);
+          z-index: 0;
+          pointer-events: none;
+          text-transform: uppercase;
         }
       `}</style>
 
-      {/* Cabeçalho */}
-      <div className="header-section">
-        <div>
-          <h1 style={{ fontSize: '20pt', margin: 0 }}>{clinica.nome}</h1>
-          <p style={{ margin: '5px 0' }}>{clinica.endereco || 'Endereço não especificado'}</p>
-          <p style={{ margin: '2px 0' }}>{clinica.cidade}, {clinica.provincia}</p>
-          <p style={{ margin: '2px 0' }}>Tel: {clinica.telefone || '---'} | Email: {clinica.email}</p>
-        </div>
-        <div className="text-right">
-          <h2 style={{ fontSize: '16pt', margin: 0 }}>FATURA</h2>
-          <p className="font-bold" style={{ fontSize: '12pt' }}>№ {fatura.numeroFatura || '(Rascunho)'}</p>
-          <p>Data: {fatura.dataEmissao ? formatDate(fatura.dataEmissao) : formatDate(fatura.criadoEm)}</p>
-        </div>
-      </div>
+      {isCanceled && <div className="watermark">ANULADA</div>}
+      {isDraft && <div className="watermark">RASCUNHO</div>}
 
-      <div className="info-grid">
-        <div className="info-col">
-          <p className="font-bold" style={{ textTransform: 'uppercase', fontSize: '9pt', color: '#666', borderBottom: '1px solid #ddd', marginBottom: '5px' }}>Dados do Paciente</p>
-          <p style={{ margin: '5px 0 2px' }}><strong>Nome:</strong> {fatura.paciente?.nome || '---'}</p>
-          <p style={{ margin: '2px 0' }}><strong>Nº Processo:</strong> {fatura.paciente?.numeroPaciente || '---'}</p>
-          {fatura.paciente?.endereco && <p style={{ margin: '2px 0' }}><strong>Endereço:</strong> {fatura.paciente.endereco}</p>}
+      <div className="relative z-10">
+        {/* Cabeçalho */}
+        <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
+          <div className="w-2/3">
+            <h1 className="text-xl font-black uppercase tracking-tighter">{clinica.razaoSocial || clinica.nome}</h1>
+            <div className="text-xs space-y-0.5 mt-2">
+              <p>NIF: <span className="font-bold">{clinica.nif}</span></p>
+              <p>{clinica.endereco}</p>
+              <p>{clinica.cidade}, {clinica.provincia}, Angola</p>
+              <p>Tel: {clinica.telefone} | Email: {clinica.email}</p>
+              {clinica.configuracao?.alvara && <p>Alvará Sanitário nº {clinica.configuracao.alvara}</p>}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="bg-black text-white px-3 py-1 inline-block mb-2 font-bold text-sm">
+              {fatura.tipoDocFiscal || 'FATURA'}
+            </div>
+            <h2 className="text-lg font-bold">{fatura.numeroFatura || 'PROVISÓRIO'}</h2>
+            <p className="text-xs">Data: {formatDate(fatura.dataEmissao || fatura.criadoEm)}</p>
+            <p className="text-xs">Hora: {new Date(fatura.criadoEm).toLocaleTimeString()}</p>
+          </div>
         </div>
-        <div className="info-col text-right">
-          <p className="font-bold" style={{ textTransform: 'uppercase', fontSize: '9pt', color: '#666', borderBottom: '1px solid #ddd', marginBottom: '5px' }}>Dados do Documento</p>
-          <p style={{ margin: '5px 0 2px' }}><strong>Estado:</strong> {fatura.estado}</p>
-          <p style={{ margin: '2px 0' }}><strong>Tipo:</strong> {fatura.tipo}</p>
-          <p style={{ margin: '2px 0' }}><strong>Vencimento:</strong> {fatura.dataVencimento ? formatDate(fatura.dataVencimento) : '---'}</p>
-        </div>
-      </div>
 
-      {/* Tabela de Itens */}
-      <table className="table-print">
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <th className="text-center">Qtd</th>
-            <th className="text-right">Preço Unit.</th>
-            <th className="text-right">Desconto</th>
-            <th className="text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(fatura.itens || []).map((item, index) => (
-            <tr key={index}>
-              <td>{item.descricao}</td>
-              <td className="text-center">{item.quantidade}</td>
-              <td className="text-right">{formatKwanza(item.precoUnit)}</td>
-              <td className="text-right">{item.desconto > 0 ? formatKwanza(item.desconto) : '---'}</td>
-              <td className="text-right font-bold">{formatKwanza(item.total)}</td>
+        <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="p-4 bg-gray-50 border border-gray-100 rounded">
+            <h3 className="text-[8pt] font-bold uppercase text-gray-400 mb-2 border-b border-gray-200">Exmo.(s) Senhor(es)</h3>
+            <p className="font-bold text-sm uppercase">{fatura.paciente?.nome || 'CONSUMIDOR FINAL'}</p>
+            <p className="text-xs mt-1">NIF: {fatura.paciente?.nif || '999999999'}</p>
+            <p className="text-xs">{fatura.paciente?.endereco}</p>
+            <p className="text-xs">{fatura.paciente?.cidade}</p>
+          </div>
+          <div className="text-right text-xs space-y-1 self-end">
+            <p>Moeda: <span className="font-bold">AOA (Kwanza)</span></p>
+            <p>Vencimento: <span className="font-bold">{formatDate(fatura.dataVencimento || fatura.criadoEm)}</span></p>
+            <p>Regime Fiscal: <span className="font-bold">{clinica.regimeFiscal || 'GERAL'}</span></p>
+          </div>
+        </div>
+
+        {/* Tabela de Itens */}
+        <table className="table-print text-xs">
+          <thead>
+            <tr>
+              <th className="w-12">Cód.</th>
+              <th>Descrição</th>
+              <th className="text-center w-16">Qtd</th>
+              <th className="text-right w-24">Preço Unit.</th>
+              <th className="text-center w-16">Taxa %</th>
+              <th className="text-right w-24">Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(fatura.itens || []).map((item: ItemFaturaDTO, index: number) => (
+              <tr key={index}>
+                <td className="text-gray-400">00{index + 1}</td>
+                <td className="font-medium">{item.descricao}</td>
+                <td className="text-center">{item.quantidade}</td>
+                <td className="text-right">{formatKwanza(item.precoUnit)}</td>
+                <td className="text-center">{item.taxaIva > 0 ? `${item.taxaIva}%` : (item.codigoIva || 'ISE')}</td>
+                <td className="text-right font-bold">{formatKwanza(item.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      {/* Totais */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-        <div style={{ width: '250px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-            <span>Subtotal:</span>
-            <span>{formatKwanza(fatura.subtotal)}</span>
+        {/* Resumo de Impostos */}
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <h4 className="text-[7pt] font-bold uppercase text-gray-400 mb-1">Quadro de Impostos</h4>
+            <table className="w-full text-[8pt] border border-gray-100">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-1 px-2 border-b">Taxa/Cód.</th>
+                  <th className="p-1 px-2 border-b text-right">Incidência</th>
+                  <th className="p-1 px-2 border-b text-right">Val. Imposto</th>
+                  <th className="p-1 px-2 border-b text-center">Motivo Isenção</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Agrupar por taxa */}
+                <tr className="border-b border-gray-50">
+                  <td className="p-1 px-2">IVA 14%</td>
+                  <td className="p-1 px-2 text-right">{formatKwanza(fatura.subtotal)}</td>
+                  <td className="p-1 px-2 text-right">0,00</td>
+                  <td className="p-1 px-2 text-[6pt] text-gray-500 italic">Isento nos termos do n.º 2 do Artigo 12.º do CIVA</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #eee', color: fatura.desconto > 0 ? 'red' : 'inherit' }}>
-            <span>Desconto Global:</span>
-            <span>-{formatKwanza(fatura.desconto)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '13pt', fontWeight: 'bold' }}>
-            <span>TOTAL:</span>
-            <span>{formatKwanza(fatura.total)}</span>
+          
+          <div className="flex flex-col items-end">
+            <div className="w-full max-w-[200px] space-y-1.5 border-b-2 border-black pb-2 mb-2">
+              <div className="flex justify-between text-xs">
+                <span>Subtotal:</span>
+                <span className="font-bold">{formatKwanza(fatura.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Total Imposto:</span>
+                <span className="font-bold">{formatKwanza(fatura.totalIva || 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-red-600">
+                <span>Desconto:</span>
+                <span className="font-bold">-{formatKwanza(fatura.desconto)}</span>
+              </div>
+            </div>
+            <div className="flex justify-between w-full max-w-[200px] text-lg font-black italic">
+              <span>TOTAL:</span>
+              <span>{formatKwanza(fatura.total)}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Notas */}
-      {fatura.notas && (
-        <div style={{ marginTop: '30px', padding: '10px', backgroundColor: '#f9f9f9', borderLeft: '3px solid #000' }}>
-          <p className="font-bold" style={{ margin: '0 0 5px', fontSize: '9pt', textTransform: 'uppercase' }}>Observações:</p>
-          <p style={{ margin: 0, fontSize: '10pt' }}>{fatura.notas}</p>
+        <div className="mt-8 border-t border-gray-100 pt-4">
+          <p className="text-[8pt]"><span className="font-bold text-gray-400 uppercase">Valor por Extenso:</span> {fatura.total > 0 ? numberToWords(fatura.total) : 'Zero Kwanzas'}</p>
         </div>
-      )}
 
-      {/* Rodapé */}
-      <div style={{ marginTop: '50px', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '15px', fontSize: '9pt', color: '#777', pageBreakInside: 'avoid' }}>
-        <p style={{ margin: '0 0 5px' }}>Obrigado pela sua preferência. Este documento serve como comprovativo de faturação.</p>
-        <p style={{ margin: 0 }}>Gerado por ClinicaPlus em {new Date().toLocaleString('pt-AO')}</p>
+        {/* Rodapé Fiscal */}
+        <div className="mt-12 flex justify-between items-end border-t border-black pt-4">
+          <div className="w-2/3 space-y-4">
+            <div className="text-[7pt] text-gray-600 space-y-1 leading-relaxed">
+              <p className="font-bold">{hashControl}Processado por programa validado nº 0/AGT/2026 - ClinicaPlus SaaS 1.0.0</p>
+              <p>Os bens/serviços foram colocados à disposição do adquirente na data e local do documento.</p>
+              {clinica.regimeFiscal === 'SIMPLIFICADO' && (
+                <p>IVA - Regime Simplificado (Artigo 24.º do CIVA).</p>
+              )}
+              {clinica.regimeFiscal === 'EXUSA' && (
+                <p>Isento nos termos do Regime de Exclusão (Artigo 21.º do CIVA).</p>
+              )}
+              {clinica.regimeFiscal === 'GERAL' && (
+                <p>Regime Geral de Tributação - Isento de IVA nos termos do n.º 2 do Artigo 12.º do CIVA.</p>
+              )}
+              {fatura.notas && <p className="mt-2"><span className="font-bold">Observações:</span> {fatura.notas}</p>}
+            </div>
+            <div className="text-[6pt] text-gray-400 uppercase">
+              Obrigado pela preferência. Documento gerado em {new Date().toLocaleString('pt-AO')}
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            {qrCodeData && (
+              <img src={qrCodeData} alt="QR Code AGT" className="w-24 h-24 mb-1" />
+            )}
+            <span className="text-[6pt] font-mono text-gray-400 uppercase">Autenticidade AGT</span>
+          </div>
+        </div>
       </div>
     </div>
   );

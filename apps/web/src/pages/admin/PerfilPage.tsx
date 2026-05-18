@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { getInitials } from '@clinicaplus/utils';
 import { UtilizadorUpdateInput } from '@clinicaplus/types';
+import { useAuditLogs } from '../../hooks/useAuditLogs';
 
 // ─── Types and Helper ────────────────────────────────────────────────────────
 interface ApiErrorResponse {
@@ -66,7 +67,6 @@ type Tab = 'DADOS' | 'SEGURANCA' | 'AUDITORIA';
 
 /**
  * Admin Profile Page
- * Reference: medico/PerfilPage.tsx
  */
 export default function AdminPerfilPage() {
   const utilizador = useAuthStore((s) => s.utilizador);
@@ -74,6 +74,14 @@ export default function AdminPerfilPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
+
+  // ── Audit Logs ─────────────────────────────────────────────────────────────
+  const { data: auditData, isLoading: isLoadingAudit } = useAuditLogs({
+    ...(utilizador?.id ? { actorId: utilizador.id } : {}),
+    limit: 5,
+  });
+
+  const logs = auditData?.data || [];
 
   // ── Password form ───────────────────────────────────────────────────────────
   const {
@@ -379,18 +387,23 @@ export default function AdminPerfilPage() {
                   Registo de Atividade Recente
                 </h3>
                 <div className="space-y-3">
-                  {[
-                    { action: 'Login no Sistema', date: 'Hoje, 14:20', ip: '197.231.144.11', status: 'Sucesso' },
-                    { action: 'Alteração de Configurações', date: 'Ontem, 16:45', ip: '197.231.144.11', status: 'Sucesso' },
-                  ].map((log, i) => (
-                    <div key={i} className="flex justify-between items-center p-4 bg-neutral-50 rounded-xl">
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold text-neutral-900">{log.action}</p>
-                        <p className="text-[10px] text-neutral-400 uppercase tracking-widest">{log.date} • IP: {log.ip}</p>
+                  {isLoadingAudit ? (
+                    <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>
+                  ) : logs.length === 0 ? (
+                    <div className="p-8 text-center text-neutral-400 italic text-sm">Nenhuma atividade registada.</div>
+                  ) : (
+                    logs.map((log) => (
+                      <div key={log.id} className="flex justify-between items-center p-4 bg-neutral-50 rounded-xl">
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-neutral-900">{log.accao} - {log.recurso}</p>
+                          <p className="text-[10px] text-neutral-400 uppercase tracking-widest">
+                            {new Date(log.criadoEm).toLocaleString('pt-AO')}
+                          </p>
+                        </div>
+                        <Badge variant="success" className="text-[9px] font-bold uppercase">Sucesso</Badge>
                       </div>
-                      <Badge variant="success" className="text-[9px] font-bold uppercase">{log.status}</Badge>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </Card>
             )}
@@ -448,7 +461,7 @@ export default function AdminPerfilPage() {
                     <p className="text-[10px] text-neutral-400">Registos de auditoria</p>
                   </div>
                 </div>
-                <span className="font-bold text-neutral-900 text-sm">12</span>
+                <span className="font-bold text-neutral-900 text-sm">{auditData?.pagination.total || 0}</span>
               </div>
             </div>
           </Card>

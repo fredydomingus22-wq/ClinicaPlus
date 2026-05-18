@@ -26,8 +26,8 @@ export const permissaoService = {
 
     if (!utilizador) return false;
 
-    // SUPER_ADMIN tem bypass total
-    if (utilizador.papel === Papel.SUPER_ADMIN) {
+    // SUPER_ADMIN e ADMIN têm bypass total (no caso do ADMIN, restrito pela clínica via Tenant Middleware)
+    if (utilizador.papel === Papel.SUPER_ADMIN || utilizador.papel === Papel.ADMIN) {
       await redis.set(cacheKey, '1', 'EX', 3600);
       return true;
     }

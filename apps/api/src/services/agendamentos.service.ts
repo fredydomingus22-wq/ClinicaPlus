@@ -427,8 +427,28 @@ export const agendamentosService = {
       }).catch(err => logger.error({ err }, 'Failed to trigger post-create notifications'));
     }
 
-    // 4. Publish real-time event
-    // 5. Trigger Webhooks
+    // 4. Notify Receptionists
+    const receptionists = await prisma.utilizador.findMany({
+      where: {
+        clinicaId,
+        papel: 'RECEPCIONISTA',
+        ativo: true
+      },
+      select: { id: true }
+    });
+
+    for (const recep of receptionists) {
+      await notificacoesService.create({
+        utilizadorId: recep.id,
+        titulo: 'Novo Agendamento',
+        mensagem: `Novo agendamento para ${finalAgendamento.paciente.nome} em ${dto.dataHora}`,
+        tipo: 'AGENDAMENTO',
+        url: `/recepcao/agendamentos`
+      }).catch(err => logger.error({ err, userId: recep.id }, 'Failed to notify receptionist of new appointment'));
+    }
+
+    // 5. Publish real-time event
+    // 6. Trigger Webhooks
     webhooksService.trigger(EventoWebhook.AGENDAMENTO_CRIADO, dto, clinicaId);
 
     return dto;
@@ -519,6 +539,21 @@ export const agendamentosService = {
             tipo: 'SUCESSO',
             url: `/paciente/agendamentos`
           });
+        }
+        // Notify Receptionists if confirmed
+        const receptionists = await prisma.utilizador.findMany({
+          where: { clinicaId, papel: 'RECEPCIONISTA', ativo: true },
+          select: { id: true }
+        });
+
+        for (const recep of receptionists) {
+          await notificacoesService.create({
+            utilizadorId: recep.id,
+            titulo: 'Agendamento Confirmado',
+            mensagem: `O agendamento de ${dto.paciente.nome} para ${dto.dataHora} foi confirmado.`,
+            tipo: 'AGENDAMENTO',
+            url: `/recepcao/agendamentos`
+          }).catch(err => logger.error({ err, userId: recep.id }, 'Failed to notify receptionist of confirmation'));
         }
       }).catch(err => logger.error({ err }, 'Failed to trigger post-confirmation notifications'));
     } else if (data.estado === 'CANCELADO') {

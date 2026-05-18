@@ -36,10 +36,16 @@ async def response_formatter(state: AgentState) -> dict:
         content = str(last_msg.content)
         if len(content) > WHATSAPP_MAX_LENGTH:
             truncated = content[:WHATSAPP_MAX_LENGTH - 3] + "..."
-            # Mantemos o ID se existir
-            if hasattr(last_msg, "id") and last_msg.id:
-                return {"messages": [AIMessage(content=truncated, id=last_msg.id)]}
-            else:
-                return {"messages": [AIMessage(content=truncated)]}
+            content = truncated
+
+    # 5. Adicionar Mensagem de Encerramento se Sessão estiver Finalizada
+    if state.get("is_session_finished"):
+        footer = "\n\n🏁 *Atendimento Finalizado.*\nA sua sessão foi encerrada. Se precisar de algo mais, basta escrever novamente. Obrigado!"
+        content += footer
+
+    if hasattr(last_msg, "id") and last_msg.id:
+        return {"messages": [AIMessage(content=content, id=last_msg.id)]}
+    else:
+        return {"messages": [AIMessage(content=content)]}
                 
     return {}

@@ -3,10 +3,11 @@ import {
   useTiposExameClinica, 
   useTiposTratamentoClinica, 
   useCriarTipoExame, 
-  useCriarTipoTratamento 
+  useCriarTipoTratamento,
+  useDeleteTipoExame,
+  useDeleteTipoTratamento
 } from '../../hooks/useTratamentos';
 import { 
-  Card, 
   Table, 
   Badge, 
   Button, 
@@ -18,11 +19,11 @@ import {
   Plus, 
   FileText, 
   Activity, 
-  Trash2,
-  Wallet
+  Trash2
 } from 'lucide-react';
 import { formatKwanza } from '@clinicaplus/utils';
 import { useForm } from 'react-hook-form';
+import { toast } from 'react-hot-toast';
 
 interface ServicoItem {
   id: string;
@@ -43,12 +44,16 @@ interface FormValues {
 export default function ServicosPrecosPage() {
   const [activeTab, setActiveTab] = useState<'exames' | 'tratamentos'>('exames');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, nome: string } | null>(null);
   
   const { data: exames, isLoading: loadingExames } = useTiposExameClinica();
   const { data: tratamentos, isLoading: loadingTrats } = useTiposTratamentoClinica();
   
   const { mutate: criarExame, isPending: criandoExame } = useCriarTipoExame();
   const { mutate: criarTratamento, isPending: criandoTrat } = useCriarTipoTratamento();
+  
+  const { mutate: deleteExame, isPending: deletingExame } = useDeleteTipoExame();
+  const { mutate: deleteTrat, isPending: deletingTrat } = useDeleteTipoTratamento();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
@@ -68,9 +73,52 @@ export default function ServicosPrecosPage() {
     };
 
     if (activeTab === 'exames') {
-      criarExame(payload, { onSuccess: () => { setIsModalOpen(false); reset(); } });
+      criarExame(payload, { 
+        onSuccess: () => { 
+          toast.success('Tipo de exame guardado com sucesso!');
+          setIsModalOpen(false); 
+          reset(); 
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => {
+          toast.error(err?.response?.data?.error?.message || 'Erro ao guardar exame.');
+        }
+      });
     } else {
-      criarTratamento(payload, { onSuccess: () => { setIsModalOpen(false); reset(); } });
+      criarTratamento(payload, { 
+        onSuccess: () => { 
+          toast.success('Tipo de tratamento guardado com sucesso!');
+          setIsModalOpen(false); 
+          reset(); 
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => {
+          toast.error(err?.response?.data?.error?.message || 'Erro ao guardar tratamento.');
+        }
+      });
+    }
+  };
+
+  const handleDelete = () => {
+    if (!itemToDelete) return;
+    if (activeTab === 'exames') {
+      deleteExame(itemToDelete.id, {
+        onSuccess: () => {
+          toast.success('Serviço removido com sucesso!');
+          setItemToDelete(null);
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => toast.error(err?.response?.data?.error?.message || 'Erro ao remover serviço.')
+      });
+    } else {
+      deleteTrat(itemToDelete.id, {
+        onSuccess: () => {
+          toast.success('Serviço removido com sucesso!');
+          setItemToDelete(null);
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => toast.error(err?.response?.data?.error?.message || 'Erro ao remover serviço.')
+      });
     }
   };
 
@@ -105,8 +153,13 @@ export default function ServicosPrecosPage() {
     {
       header: 'Ações',
       align: 'right' as const,
-      accessor: () => (
-        <Button variant="ghost" size="sm" className="text-danger-500 hover:bg-danger-50">
+      accessor: (row: ServicoItem) => (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-danger-500 hover:bg-danger-50"
+          onClick={() => setItemToDelete({ id: row.id, nome: row.nome })}
+        >
           <Trash2 className="w-4 h-4" />
         </Button>
       )
@@ -114,43 +167,37 @@ export default function ServicosPrecosPage() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-primary-600" />
-            <h1 className="text-2xl font-bold text-neutral-900">Tabela de Preços & Serviços</h1>
-          </div>
-          <p className="text-neutral-500 text-sm font-medium">Gerencie o catálogo de exames e planos de tratamento da clínica.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('exames')}
+            className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'exames' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+          >
+            Exames
+          </button>
+          <button 
+            onClick={() => setActiveTab('tratamentos')}
+            className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'tratamentos' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+          >
+            Planos de Tratamento
+          </button>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="shadow-sm font-bold">
+        <Button onClick={() => setIsModalOpen(true)} className="shadow-sm font-bold" size="sm">
           <Plus className="w-4 h-4 mr-2" /> Novo {activeTab === 'exames' ? 'Exame' : 'Tratamento'}
         </Button>
       </div>
 
-      <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl w-fit">
-        <button 
-          onClick={() => setActiveTab('exames')}
-          className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'exames' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
-        >
-          Exames
-        </button>
-        <button 
-          onClick={() => setActiveTab('tratamentos')}
-          className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'tratamentos' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
-        >
-          Planos de Tratamento
-        </button>
-      </div>
 
-      <Card className="p-4 border-neutral-200/60 shadow-sm rounded-2xl bg-white">
+
+      <div className="bg-white">
         <Table 
           columns={columns.filter(c => !c.hidden)}
           data={((activeTab === 'exames' ? exames : tratamentos) as ServicoItem[]) || []}
           isLoading={activeTab === 'exames' ? loadingExames : loadingTrats}
           keyExtractor={(r: ServicoItem) => r.id}
         />
-      </Card>
+      </div>
 
       <Modal 
         isOpen={isModalOpen} 
@@ -192,6 +239,30 @@ export default function ServicosPrecosPage() {
           </div>
         </form>
       </Modal>
+      <Modal 
+        isOpen={!!itemToDelete} 
+        onClose={() => setItemToDelete(null)}
+        title="Remover Serviço"
+      >
+        <div className="space-y-4 pt-4">
+          <p className="text-neutral-600">
+            Tem certeza que pretende remover o serviço <span className="font-bold">{itemToDelete?.nome}</span>? 
+            Esta ação não apagará o histórico já registado com este serviço, mas ele deixará de estar disponível para novos registos.
+          </p>
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="ghost" fullWidth onClick={() => setItemToDelete(null)}>Cancelar</Button>
+            <Button 
+              onClick={handleDelete}
+              fullWidth 
+              variant="danger" 
+              loading={deletingExame || deletingTrat}
+            >
+              Remover
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }

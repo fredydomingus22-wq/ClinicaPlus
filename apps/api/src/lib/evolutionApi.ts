@@ -109,4 +109,35 @@ export const evolutionApi = {
       events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'QRCODE_UPDATED'],
     });
   },
+  /**
+   * Configura o Typebot na instância da Evolution API (Injeção nativa)
+   */
+  async configurarTypebot(
+    instanceName: string, 
+    setup: {
+      enabled: boolean;
+      url?: string;
+      typebot?: string;
+      expire?: number;
+      keywordFinish?: string;
+      unknownMessage?: string;
+      variables?: Array<{key: string; value: string}>;
+    }
+  ): Promise<void> {
+    await evo.post(`/typebot/set/${instanceName}`, {
+      enabled: setup.enabled,
+      url: setup.url,
+      typebot: setup.typebot,
+      expire: setup.expire || 20,
+      keywordFinish: setup.keywordFinish || '#sair',
+      delayMessage: 1000,
+      unknownMessage: setup.unknownMessage || 'Desculpe, não entendi. Mande #sair para voltar ao menu principal.',
+      listeningFromMe: false,
+      stopBotFromMe: true,
+      keepOpen: false,
+      debounceTime: 10,
+      ignoreJids: [],
+      variables: setup.variables || [],
+    });
+  },
 };

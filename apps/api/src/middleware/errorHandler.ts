@@ -11,9 +11,9 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ): void {
+   // Global error handler
   // Ensure CORS headers for browser safety, even if the error happens before the cors middleware
   const origin = req.headers.origin;
   if (

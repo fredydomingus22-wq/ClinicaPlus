@@ -64,7 +64,7 @@ faturasRouter.patch('/:id/anular', requirePermission('fatura', 'void'), async (r
     const utilizadorId = req.user!.id;
     
     const data = AnularSchema.parse(req.body);
-    const fatura = await faturasService.anular(faturaId, clinicaId, data.motivo, utilizadorId);
+    const fatura = await faturasService.criarNotaCredito(faturaId, clinicaId, data.motivo, utilizadorId);
     res.json({ success: true, data: fatura });
   } catch (err) { next(err); }
 });

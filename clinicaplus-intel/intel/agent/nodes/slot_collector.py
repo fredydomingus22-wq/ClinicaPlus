@@ -17,6 +17,9 @@ def check_slots_complete(state: AgentState) -> str:
 
 async def slot_collector(state: AgentState) -> dict:
     """Solicita a informação em falta ao paciente."""
+    from db_layer import db, WaFormatter, LUANDA_TZ
+    from datetime import datetime
+    
     intent = state.get("intent", "")
     collected = state.get("collected_slots", {})
     required_slots = SLOTS_BY_INTENT.get(intent, [])
@@ -55,6 +58,17 @@ async def slot_collector(state: AgentState) -> dict:
         except Exception as db_e:
             print(f"Aviso Slot Collector: falha ao buscar slots reais: {db_e}")
             pass
+    elif intent == "cancelar" and next_missing == "appointment_reference":
+        # Injeção directa de contexto (Python -> Contexto) sem depender de ferramentas do LLM para busca
+        patient_data = state.get("patient_data", {})
+        agendamentos = patient_data.get("agendamentos", [])
+        if agendamentos:
+            available_slots_info = "CONTEXTO DE AGENDAMENTOS DO PACIENTE:\n"
+            for i, ag in enumerate(agendamentos, 1):
+                available_slots_info += f"- Referência {i}: {ag['texto']} (ID: {ag['id']})\n"
+            available_slots_info += "\nInstrução: Oferece estas opções ao paciente. Ele pode escolher pelo número ou médico."
+        else:
+            available_slots_info = "Não foram encontrados agendamentos ativos para este paciente na base de dados."
     
     prompt = SLOT_COLLECTOR_PROMPT.format(
         intent=intent,
@@ -75,7 +89,7 @@ async def slot_collector(state: AgentState) -> dict:
         ai_message = resp
     except Exception as e:
         import traceback
-        print(f"❌ ERRO no Slot Collector: {str(e)}")
+        print(f"ERROR no Slot Collector: {str(e)}")
         traceback.print_exc()
         
         # Fallback caso falhe o envio
@@ -87,7 +101,26 @@ async def slot_collector(state: AgentState) -> dict:
             
         ai_message = AIMessage(content=text)
         
+    # 4. Geração de UI Nativas (META_CLOUD)
+    ui_payload = None
+    if state.get("channel") == "META_CLOUD":
+        if next_missing == "specialty":
+            especialidades = await db.especialidades_activas(tenant_id)
+            if especialidades:
+                ui_payload = WaFormatter.especialidades_meta_lista(especialidades)
+        elif next_missing == "confirmation":
+            ui_payload = WaFormatter.confirmacao_meta_botoes(ai_message.content)
+        elif next_missing == "time":
+             # Se chegámos aqui, specialty está em collected
+             medicos = await db.medicos_por_especialidade(tenant_id, collected.get("specialty", ""))
+             if medicos:
+                 hoje = datetime.now(LUANDA_TZ).date()
+                 slots = await db.slots_disponiveis(tenant_id, medicos[0].id, data_alvo=hoje, limite=10)
+                 if slots:
+                     ui_payload = WaFormatter.slots_meta_lista(slots)
+
     return {
         "missing_slots": missing,
-        "messages": [ai_message]
+        "messages": [ai_message],
+        "ui_payload": ui_payload
     }

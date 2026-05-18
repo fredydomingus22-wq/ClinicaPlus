@@ -5,7 +5,11 @@
     "moduleResolution": "node",
     "target": "ES2020",
     "outDir": "./dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@clinicaplus/utils/server": ["../../packages/utils/src/server"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

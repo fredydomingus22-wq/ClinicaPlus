@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Badge } from '@clinicaplus/ui';
 import { formatDate } from '@clinicaplus/utils';
-import { Activity, Calendar } from 'lucide-react';
+import { Activity, Calendar, Stethoscope } from 'lucide-react';
 
 interface PlanoProgressBarProps {
   sessoesRealizadas: number;
@@ -41,9 +41,13 @@ export const PlanoProgressBar: React.FC<PlanoProgressBarProps> = ({
 
 import { PlanoTratamentoDTO } from '@clinicaplus/types';
 
-export const PlanoTratamentoCard: React.FC<{ plano: PlanoTratamentoDTO }> = ({ plano }) => {
+export const PlanoTratamentoCard: React.FC<{ plano: PlanoTratamentoDTO & { sessoes?: { estado: string }[], medico?: { nome: string } } }> = ({ plano }) => {
   const isConcluido = plano.estado === 'CONCLUIDO';
-  const sessoesRealizadas = plano.sessoesRealizadas || plano._count?.sessoes || 0;
+  
+  // Calcular sessões baseando-se no array real se disponível, caso contrário usar o contador da API
+  const sessoesRealizadas = plano.sessoes 
+    ? plano.sessoes.filter(s => s.estado === 'REALIZADO').length 
+    : (plano.sessoesRealizadas || 0);
 
   return (
     <Card className="p-5 border-neutral-100 shadow-sm hover:shadow-md hover:border-primary-100 transition-all group overflow-hidden">
@@ -52,14 +56,20 @@ export const PlanoTratamentoCard: React.FC<{ plano: PlanoTratamentoDTO }> = ({ p
           <div className={`p-2.5 rounded-lg ${isConcluido ? 'bg-green-50 text-green-600' : 'bg-primary-50 text-primary-600'} transition-colors`}>
             <Activity className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-neutral-800 group-hover:text-primary-700 transition-colors truncate">
               {plano.tipoTratamento?.nome || 'Tratamento Especializado'}
             </h3>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
-              <Calendar className="w-3.5 h-3.5" />
-              Início: {formatDate(plano.dataInicio)}
-              {plano.frequenciaSemana > 0 && ` • ${plano.frequenciaSemana}x / semana`}
+            <div className="flex flex-col gap-1 mt-1">
+              <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                <Stethoscope className="w-3 h-3" />
+                Dr(a). {plano.medico?.nome || 'N/A'}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-neutral-500">
+                <Calendar className="w-3.5 h-3.5" />
+                Início: {formatDate(plano.dataInicio)}
+                {plano.frequenciaSemana > 0 && ` • ${plano.frequenciaSemana}x / semana`}
+              </div>
             </div>
           </div>
         </div>

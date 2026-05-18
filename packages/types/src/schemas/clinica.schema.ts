@@ -49,6 +49,9 @@ export const ClinicaUpdateSchema = z.object({
   cidade: z.string().optional(),
   provincia: z.string().optional(),
   logo: z.string().url('URL de logo inválida').optional().or(z.literal('')),
+  nif: z.string().optional(),
+  razaoSocial: z.string().optional(),
+  regimeFiscal: z.enum(['GERAL', 'SIMPLIFICADO', 'EXUSA']).optional(),
   configuracao: ConfiguracaoClinicaUpdateSchema.optional(),
 });
 

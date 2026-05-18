@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import { EstadoFatura, TipoFatura, MetodoPagamento, EstadoSeguro } from '../enums';
+import { EstadoFatura, TipoFatura, MetodoPagamento, EstadoSeguro, TipoDocumentoFiscal } from '../enums';
 
 export const ItemFaturaSchema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
   quantidade: z.number().int().min(1).default(1),
   precoUnit: z.number().int().min(0),
   desconto: z.number().int().min(0).default(0),
+  taxaIva: z.number().min(0).max(14).default(0),
+  codigoIva: z.string().default('ISE'),
+  motivoIsencao: z.string().optional(),
 });
 
 export const FaturaCreateSchema = z.object({
@@ -13,8 +16,10 @@ export const FaturaCreateSchema = z.object({
   pacienteId: z.string(),
   medicoId: z.string().optional(),
   tipo: z.nativeEnum(TipoFatura).default(TipoFatura.PARTICULAR),
+  tipoDocFiscal: z.nativeEnum(TipoDocumentoFiscal).default(TipoDocumentoFiscal.FT),
   itens: z.array(ItemFaturaSchema).min(1, 'Pelo menos um item é obrigatório'),
   desconto: z.number().int().min(0).default(0),
+  retencaoFonte: z.number().int().min(0).default(0),
   notas: z.string().optional(),
   dataVencimento: z.string().optional(),
 });
@@ -56,6 +61,9 @@ export interface ItemFaturaDTO {
   quantidade: number;
   precoUnit: number;
   desconto: number;
+  taxaIva: number;
+  codigoIva: string;
+  motivoIsencao?: string;
   total: number;
 }
 
@@ -96,12 +104,25 @@ export interface FaturaDTO {
   estado: EstadoFatura;
   subtotal: number;
   desconto: number;
+  totalIva: number;
   total: number;
   notas?: string;
   dataEmissao?: string;
   dataVencimento?: string;
   criadoEm: string;
   atualizadoEm: string;
+  // Campos Fiscais (AGT)
+  tipoDocFiscal: TipoDocumentoFiscal;
+  valorExtenso?: string | null;
+  retencaoFonte: number;
+  valorPago: number;
+  moeda: string;
+  fiscalHash?: string | null;
+  hashAnterior?: string | null;
+  hashControl?: string | null;
+  documentoChave?: string | null;
+  statusEnvio?: string;
+  agtRequestID?: string | null;
   itens?: ItemFaturaDTO[];
   pagamentos?: PagamentoDTO[];
   paciente?: {
@@ -109,6 +130,8 @@ export interface FaturaDTO {
     nome: string;
     numeroPaciente?: string;
     endereco?: string;
+    nif?: string;
+    cidade?: string;
   };
   medico?: {
     id: string;

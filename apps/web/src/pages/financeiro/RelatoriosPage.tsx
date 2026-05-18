@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Card, 
   Button, 
@@ -15,15 +15,17 @@ import {
   ShieldAlert, 
   Download, 
   BarChart3,
-  User
+  User,
+  Printer
 } from 'lucide-react';
-import { useRelatorioReceita, useExportReceita, type RelatorioFilters } from '../../hooks/useRelatorios';
+import { useRelatorioReceita, useExportReceita, useMapaFaturacao, type RelatorioFilters } from '../../hooks/useRelatorios';
 import { useMedicos } from '../../hooks/useMedicos';
 import { useClinicaMe } from '../../hooks/useClinicas';
 import { formatKwanza } from '@clinicaplus/utils';
 import { TipoFatura, Plano } from '@clinicaplus/types';
 import { toast } from 'react-hot-toast';
 import { PlanGate } from '../../components/PlanGate';
+import { RelatorioVendasPrint } from '../../components/print/RelatorioVendasPrint';
 
 export default function RelatoriosPage() {
   const [filters, setFilters] = useState({
@@ -34,6 +36,7 @@ export default function RelatoriosPage() {
     tipo: ''
   });
 
+  const reportPrintRef = useRef<HTMLDivElement>(null);
   const { data: clinica } = useClinicaMe();
   const { data: medicos } = useMedicos({ page: 1, limit: 100 });
   
@@ -65,6 +68,11 @@ export default function RelatoriosPage() {
   } as RelatorioFilters);
 
   const exportMutation = useExportReceita();
+  const { data: mapaData, refetch: fetchMapa, isFetching: isFetchingMapa } = useMapaFaturacao({
+    inicio: dateRange.inicio as string,
+    fim: dateRange.fim as string,
+    medicoId: filters.medicoId ? (filters.medicoId as string) : undefined
+  } as any);
 
   const handleExport = async () => {
     if (clinica?.plano === Plano.BASICO) {
@@ -83,21 +91,46 @@ export default function RelatoriosPage() {
     }
   };
 
+  const handlePrintMapa = async () => {
+    if (clinica?.plano === Plano.BASICO) {
+      toast.error('O Mapa de Faturação está bloqueado no seu plano BÁSICO.');
+      return;
+    }
+    try {
+      await fetchMapa();
+      // Pequeno delay para garantir que o componente de print renderizou os dados novos antes de abrir o diálogo
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    } catch {
+      toast.error('Erro ao gerar mapa de faturação.');
+    }
+  };
+
   return (
     <PlanGate planoMinimo={Plano.PRO}>
-      <div className="space-y-6 animate-fade-in pb-20">
+      <div className="space-y-6 animate-fade-in pb-20 no-print">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900">Relatórios Financeiros</h1>
             <p className="text-sm text-neutral-500">Monitorize a receita e desempenho da clínica.</p>
           </div>
-          <Button 
-            variant="secondary" 
-            loading={exportMutation.isPending}
-            onClick={handleExport}
-          >
-            <Download className="h-4 w-4 mr-2" /> Exportar CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              loading={isFetchingMapa}
+              onClick={handlePrintMapa}
+            >
+              <Printer className="h-4 w-4 mr-2" /> Mapa de Faturação
+            </Button>
+            <Button 
+              variant="secondary" 
+              loading={exportMutation.isPending}
+              onClick={handleExport}
+            >
+              <Download className="h-4 w-4 mr-2" /> Exportar CSV
+            </Button>
+          </div>
         </div>
 
         <Card className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-neutral-50/50">
@@ -179,6 +212,12 @@ export default function RelatoriosPage() {
                 icon={<TrendingUp className="text-amber-600" />}
               />
               <KPIItem 
+                label="IVA a Entregar" 
+                value={formatKwanza(data?.totais.totalIva || 0)} 
+                icon={<BarChart3 className="text-amber-500" />}
+                variant="info"
+              />
+              <KPIItem 
                 label="Seguros Pendentes" 
                 value={formatKwanza(data?.totais.segurosPendentes || 0)} 
                 icon={<ShieldAlert className="text-red-500" />}
@@ -235,6 +274,15 @@ export default function RelatoriosPage() {
           </>
         )}
       </div>
+
+      {/* Componente Invisível de Impressão */}
+      {mapaData && clinica && (
+        <RelatorioVendasPrint 
+          ref={reportPrintRef}
+          clinica={clinica}
+          relatorio={{ inicio: filters.inicio, fim: filters.fim, faturas: mapaData as any, totalFaturado: 0, totalIva: 0, totalDescontos: 0 }}
+        />
+      )}
     </PlanGate>
   );
 }

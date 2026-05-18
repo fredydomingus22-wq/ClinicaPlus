@@ -1,0 +1,107 @@
+services:
+  # Database - PostgreSQL 17 (Available locally)
+  db:
+    image: postgres:17
+    container_name: clinicaplus-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: clinicaplus
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Cache & Jobs - Redis 7
+  redis:
+    image: redis:7-alpine
+    container_name: clinicaplus-redis
+    restart: always
+    ports:
+      - "6380:6379"
+
+  # Evolution API v2
+  evolution:
+    image: atendai/evolution-api:v2.2.1
+    container_name: clinicaplus-evolution
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=evol-clinica-plus-v2-dev-key
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://postgres:password@db:5432/clinicaplus?schema=evolution
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - db
+      - redis
+
+  # Typebot Builder
+  typebot-builder:
+    image: baptistearno/typebot-builder:latest
+    container_name: clinicaplus-typebot-builder
+    restart: always
+    ports:
+      - "8081:3000"
+    environment:
+      - ENCRYPTION_SECRET=random-encryption-secret-key-clinica-plus-1234
+      - DATABASE_URL=postgresql://postgres:password@db:5432/clinicaplus?schema=typebot
+      - NEXTAUTH_URL=http://localhost:8081
+      - NEXT_PUBLIC_VIEWER_URL=http://localhost:8082
+    depends_on:
+      - db
+      
+  # Typebot Viewer
+  typebot-viewer:
+    image: baptistearno/typebot-viewer:latest
+    container_name: clinicaplus-typebot-viewer
+    restart: always
+    ports:
+      - "8082:3000"
+    environment:
+      - ENCRYPTION_SECRET=random-encryption-secret-key-clinica-plus-1234
+      - DATABASE_URL=postgresql://postgres:password@db:5432/clinicaplus?schema=typebot
+      - NEXT_PUBLIC_VIEWER_URL=http://localhost:8082
+    depends_on:
+      - db
+
+  # Backend - API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: clinicaplus-api
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@db:5432/clinicaplus?schema=public
+      - REDIS_URL=redis://redis:6379
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:5173
+      - JWT_SECRET=change-me-locally-1234567890-very-long-secret-key-clinica-plus
+      - JWT_REFRESH_SECRET=change-me-locally-refresh-1234567890-very-long-secret-key
+    depends_on:
+      - db
+      - redis
+
+  # Frontend - Web
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: clinicaplus-web
+    restart: always
+    ports:
+      - "5173:80" # Mapping local dev port to nginx 80
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  evolution_instances:

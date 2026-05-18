@@ -54,7 +54,7 @@ async def get_clinica_nome(clinica_id: str) -> str:
             print(f"❌ Erro DB ao buscar nome da clínica {clinica_id}: {e}")
         return "Clínica"
 
-async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia_nome: str, numero: str, texto: str, push_name: str, msg_raw: Optional[dict] = None):
+async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia_nome: str, numero: str, texto: str, push_name: str, msg_raw: Optional[dict] = None, channel_type: str = "BAILEYS"):
     # 1. Thread ID único por conversa (LangGraph cuida do histórico no Redis)
     thread_id = f"{clinica_id}:{numero}"
     config    = {"configurable": {"thread_id": thread_id}}
@@ -83,6 +83,11 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
         
         if diff > timeout:
             print(f"🔄 Sessão expirada para {numero} (>{timeout/60}min). Forçando resete.")
+            force_reset = True
+        
+        # Check se a sessão anterior foi marcada como finalizada (contextual)
+        if existing_state and existing_state.values.get("is_session_finished"):
+            print(f"🏁 Sessão anterior de {numero} estava finalizada. Iniciando novo contexto.")
             force_reset = True
         elif diff < -60:
             # Proteção contra relógios dessincronizados (se o tempo 'voltou' mais de 1 min)
@@ -130,6 +135,7 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
             "requires_human":    False,
             "conversation_stage": "greeting",
             "turn_count":        0,
+            "channel":           channel_type,
         })
 
     if force_reset and existing_state and existing_state.values:
@@ -155,9 +161,34 @@ async def _executar_fluxo_mensagem(clinica_id: str, instancia_id: str, instancia
 
     if mensagens_ai:
         # A última mensagem do AI é a resposta final para o turno
-        resposta = mensagens_ai[-1].content
-        print(f"🤖 Resposta AI para {numero}: {resposta[:50]}...")
-        await evo_client.enviar_texto(instancia_nome, numero, resposta)
+        resposta_texto = mensagens_ai[-1].content
+        print(f"🤖 Resposta AI para {numero}: {resposta_texto[:50]}...")
+        
+        # Prioritizar UI Payload estruturado (Meta Cloud)
+        final_state = await app.aget_state(config)
+        ui_payload = final_state.values.get("ui_payload")
+        
+        payload_to_send = ui_payload if ui_payload else resposta_texto
+
+        # Enviar de volta ao Gateway Node.js
+        node_api = os.environ.get("API_PUBLIC_URL", "http://localhost:3001/api")
+        internal_key = os.environ.get("TS_API_INTERNAL_KEY", "intel_shared_secret_789456123")
+        
+        import httpx
+        async with httpx.AsyncClient() as client:
+            try:
+                res = await client.post(
+                    f"{node_api}/whatsapp/internal/enviar",
+                    json={
+                        "instanciaId": instancia_id,
+                        "telefone": numero,
+                        "mensagem": payload_to_send
+                    },
+                    headers={"Authorization": f"Bearer {internal_key}"}
+                )
+                res.raise_for_status()
+            except Exception as e:
+                print(f"❌ Erro ao enviar resposta via Gateway: {e}")
 
     # 7. Registar custo operacional no Redis
     await cost_tracker.registar(
@@ -254,6 +285,49 @@ async def processar_mensagem(payload: dict):
         import traceback
         print(f"💥 ERRO CRÍTICO no processamento de mensagem: {str(e)}")
         traceback.print_exc()
+
+from pydantic import BaseModel
+
+class ClinicaMessage(BaseModel):
+    clinicaId: str
+    instanciaId: str
+    channel: str
+    telefone: str
+    nomeContato: str
+    messageType: str
+    value: str
+    messageId: str
+    timestamp: str
+
+@router.post("/webhook/unified")
+async def webhook_unified(payload: ClinicaMessage, background_tasks: BackgroundTasks):
+    try:
+        # A API Node.js já fez a validação e limpeza
+        clinica_id = payload.clinicaId
+        numero = payload.telefone
+        texto = payload.value
+        push_name = payload.nomeContato
+        instancia = payload.instanciaId
+        
+        # Deduplicação baseada no ID unificado
+        if await ja_processado(payload.messageId): 
+            print(f"ℹ️ Mensagem {payload.messageId} duplicada. Ignorando.")
+            return {"status": "ignored"}
+            
+        print(f"🤖 [UNIFIED GATEWAY] A processar: '{texto[:20]}...' de {numero} via {payload.channel}")
+        
+        async def processar_unified_task():
+            try:
+                async with session_lock(clinica_id, numero):
+                    await _executar_fluxo_mensagem(clinica_id, payload.instanciaId, instancia, numero, texto, push_name, None, payload.channel)
+            except Exception as e:
+                print(f"❌ Erro ao processar mensagem unificada: {e}")
+
+        background_tasks.add_task(processar_unified_task)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"🔥 Erro no endpoint Unified Webhook: {e}")
+        return {"status": "error", "message": str(e)}
 
 async def processar_poll_update(clinica_id: str, instancia_id: str, instancia: str, data: Any):
     # Handle Poll updates (Evolution v2)

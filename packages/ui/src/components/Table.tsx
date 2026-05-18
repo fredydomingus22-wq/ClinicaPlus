@@ -17,6 +17,8 @@ interface TableProps<T> {
   className?: string;
   /** Called when the user hovers over a row — useful for prefetching */
   onRowHover?: (item: T) => void;
+  /** Called when the user clicks a row */
+  onRowClick?: (item: T) => void;
   /** Render a full-width row below the main row (Master-Detail) */
   renderExpandedRow?: (item: T) => React.ReactNode;
   tableTestId?: string;
@@ -32,10 +34,13 @@ export function Table<T>({
   emptyContent,
   className,
   onRowHover,
+  onRowClick,
   renderExpandedRow,
   tableTestId,
   itemTestId
 }: TableProps<T>) {
+  const safeData = Array.isArray(data) ? data : [];
+  
   return (
     <div className={cn("overflow-x-auto border", className)} style={{ backgroundColor: 'var(--table-bg)', borderColor: 'var(--table-border)' }} data-testid={tableTestId}>
       <table className="w-full text-sm border-collapse">
@@ -67,18 +72,19 @@ export function Table<T>({
                 ))}
               </tr>
             ))
-          ) : data.length === 0 ? (
+          ) : safeData.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-5 py-12 text-center font-medium" style={{ color: 'var(--table-text-muted)' }}>
                 {emptyContent || emptyMessage}
               </td>
             </tr>
           ) : (
-            data.map((item) => (
+            safeData.map((item) => (
               <React.Fragment key={keyExtractor(item)}>
                 <tr 
-                  className="transition-colors duration-200"
+                  className={cn("transition-colors duration-200", onRowClick && "cursor-pointer hover:bg-neutral-50")}
                   style={{ backgroundColor: 'var(--table-bg)' }}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
                   onMouseEnter={onRowHover ? () => onRowHover(item) : undefined}
                   data-testid={typeof itemTestId === 'function' ? itemTestId(item) : itemTestId}
                 >

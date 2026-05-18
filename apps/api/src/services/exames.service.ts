@@ -11,7 +11,10 @@ export const examesService = {
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<unknown[]> {
     const records = await prisma.exame.findMany({
       where: { clinicaId, pacienteId },
-      include: { tipoCatalogo: true },
+      include: { 
+        tipoCatalogo: true,
+        medico: { select: { id: true, nome: true } }
+      },
       orderBy: { criadoEm: 'desc' },
     });
 

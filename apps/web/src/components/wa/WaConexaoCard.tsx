@@ -218,7 +218,7 @@ export const WaConexaoCard: React.FC<WaConexaoCardProps> = ({
         <div className="bg-success-50 px-4 py-2 border-b border-success-100 flex items-center justify-between">
           <span className="text-[9px] font-bold text-success-800 uppercase tracking-widest flex items-center gap-1.5">
             <ShieldCheck className="w-3 h-3" />
-            Sessão Segura
+            {instancia.tipoIntegracao === 'META_CLOUD' ? 'Meta Cloud API' : 'Evolution API'}
           </span>
           <span className="flex items-center gap-1.5 text-[9px] font-bold text-success-700 bg-success-100/50 px-1.5 py-0.5 rounded uppercase">
             <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
@@ -254,16 +254,18 @@ export const WaConexaoCard: React.FC<WaConexaoCardProps> = ({
         </div>
         
         <div className="p-3 border-t border-neutral-100 flex gap-2">
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={() => onConectar(instancia.id)}
-            loading={!!isCreating}
-            className="font-bold flex-1 h-8 text-[10px]"
-          >
-            <RefreshCw className="w-3 h-3 mr-1.5" />
-            Reconectar
-          </Button>
+          {instancia.tipoIntegracao !== 'META_CLOUD' && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => onConectar(instancia.id)}
+              loading={!!isCreating}
+              className="font-bold flex-1 h-8 text-[10px]"
+            >
+              <RefreshCw className="w-3 h-3 mr-1.5" />
+              Reconectar
+            </Button>
+          )}
           <Button 
             variant="danger" 
             size="sm" 

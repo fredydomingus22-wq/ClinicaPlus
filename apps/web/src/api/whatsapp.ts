@@ -3,6 +3,7 @@ import { apiClient } from './client';
 export interface WaInstancia {
   id: string;
   evolutionName: string;
+  tipoIntegracao?: 'BAILEYS' | 'META_CLOUD';
   estado: 'DESCONECTADO' | 'AGUARDA_QR' | 'CONECTADO' | 'ERRO';
   numeroTelefone?: string;
   qrCodeBase64?: string;
@@ -54,6 +55,11 @@ export const whatsappApi = {
 
   async conectar(): Promise<WaInstancia> {
     const res = await apiClient.post<WaInstancia>('/whatsapp/instancias');
+    return res.data;
+  },
+
+  async conectarMeta(data: { metaPhoneNumberId: string, metaWabaId: string, metaAccessToken: string }): Promise<WaInstancia> {
+    const res = await apiClient.post<WaInstancia>('/whatsapp/instancias/meta', data);
     return res.data;
   },
 

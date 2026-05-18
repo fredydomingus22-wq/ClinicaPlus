@@ -608,6 +608,62 @@ class WaFormatter:
         }
 
     @staticmethod
+    def especialidades_meta_lista(especialidades: list[str]) -> dict:
+        """Payload para Meta List Message (Especialidades)."""
+        rows = [{"id": esp, "title": esp[:24]} for esp in especialidades[:10]]
+        return {
+            "type": "list",
+            "payload": {
+                "bodyText": "Escolha a especialidade para a sua consulta:",
+                "buttonText": "Ver Especialidades",
+                "sections": [{"title": "Disponíveis", "rows": rows}]
+            }
+        }
+
+    @staticmethod
+    def medicos_meta_lista(medicos: list[Medico]) -> dict:
+        """Payload para Meta List Message (Médicos)."""
+        rows = [{"id": m.id, "title": m.nome[:24], "description": f"Preço: {fmt_kz(m.preco)}"} for m in medicos[:10]]
+        return {
+            "type": "list",
+            "payload": {
+                "bodyText": "Selecione o médico pretendido:",
+                "buttonText": "Ver Médicos",
+                "sections": [{"title": "Corpo Clínico", "rows": rows}]
+            }
+        }
+
+    @staticmethod
+    def slots_meta_lista(slots: list[SlotDisponivel]) -> dict:
+        """Payload para Meta List Message (Horários)."""
+        rows = [
+            {"id": s.dataHora.isoformat(), "title": fmt_dt(s.dataHora)[:24], "description": f"Consultório: {s.medicoNome[:50]}"}
+            for s in slots[:10]
+        ]
+        return {
+            "type": "list",
+            "payload": {
+                "bodyText": "Estes são os horários mais próximos. Selecione um:",
+                "buttonText": "Ver Horários",
+                "sections": [{"title": "Horários", "rows": rows}]
+            }
+        }
+
+    @staticmethod
+    def confirmacao_meta_botoes(texto: str) -> dict:
+        """Payload para Meta Button Message."""
+        return {
+            "type": "button",
+            "payload": {
+                "bodyText": texto,
+                "buttons": [
+                    {"id": "sim", "title": "Sim, confirmar"},
+                    {"id": "nao", "title": "Não, alterar"}
+                ]
+            }
+        }
+
+    @staticmethod
     def slots_como_poll(slots: list[SlotDisponivel]) -> dict:
         """Slots disponíveis como Poll de horários."""
         opcoes = [fmt_dt(s.dataHora) for s in slots]

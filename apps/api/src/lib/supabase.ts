@@ -1,17 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config';
 
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase credentials not found. Upload functionality will be disabled.');
+}
+
 /**
- * Cliente Supabase para operações administrativas (Service Role).
- * Usado para gerar Signed URLs e gerir a storage de laudos.
+ * Supabase client instance bypassing RLS.
+ * Use carefully and always enforce business logic in the API.
  */
-export const supabase = createClient(
-  config.SUPABASE_URL,
-  config.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});

@@ -27,3 +27,11 @@ export function useExportReceita() {
       relatoriosApi.exportReceita(filters),
   });
 }
+
+export function useMapaFaturacao(filters: Omit<RelatorioFilters, 'agrupamento' | 'tipo'>) {
+  return useQuery({
+    queryKey: ['relatorios', 'mapa-faturacao', filters],
+    queryFn: () => relatoriosApi.getMapaFaturacao(filters),
+    enabled: false, // Manual trigger
+  });
+}

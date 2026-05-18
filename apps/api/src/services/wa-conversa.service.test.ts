@@ -29,14 +29,25 @@ const getClinicaBase = (): Clinica => ({
   subscricaoValidaAte: null,
   suspensaEm: null,
   motivoSuspensao: null,
-  notasInternas: null
-});
+  notasInternas: null,
+  nif: null,
+  razaoSocial: null,
+  regimeFiscal: 'GERAL' as any,
+  agtSoftwareCert: null,
+  enderecoPostal: null,
+  agtApiToken: null,
+  serieDocFiscal: 'CPLS'
+} as unknown as Clinica);
 
 const getInstanciaBase = (): WaInstancia => ({
   id: 'ins-1',
   clinicaId: 'clinica-1',
   evolutionName: 'cp-test',
   evolutionToken: 'token-123',
+  tipoIntegracao: 'BAILEYS',
+  metaPhoneNumberId: null,
+  metaWabaId: null,
+  metaAccessToken: null,
   estado: WaEstadoInstancia.CONECTADO,
   numeroTelefone: '244900000000',
   qrCodeBase64: null,
@@ -62,6 +73,12 @@ const getConversaBase = (): any => ({
 describe('waConversaService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrisma.waInstancia.findFirstOrThrow.mockResolvedValue(getInstanciaBase());
+    mockPrisma.waInstancia.findFirst.mockResolvedValue(getInstanciaBase());
+    mockPrisma.clinica.findUniqueOrThrow.mockResolvedValue(getClinicaBase());
+    mockPrisma.clinica.findUnique.mockResolvedValue(getClinicaBase());
+    mockPrisma.waAutomacao.findFirst.mockResolvedValue({ id: 'aut-1', ativo: true, configuracao: {} });
+    mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaBase());
   });
 
   describe('etapaInicio', () => {
@@ -76,7 +93,7 @@ describe('waConversaService', () => {
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(
         'cp-test',
         '244900000000',
-        expect.stringContaining('1. Cardiologia\n2. Dentista')
+        expect.stringContaining('como se chama')
       );
     });
 
@@ -85,11 +102,11 @@ describe('waConversaService', () => {
 
       await waConversaService.processarMensagem(getConversaBase(), '1');
 
-      expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
+      expect(mockPrisma.waConversa.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          create: expect.objectContaining({
             estado: WaEstadoConversa.EM_FLUXO_MARCACAO,
-            etapaFluxo: 'ESPECIALIDADE'
+            etapaFluxo: 'NOME'
           })
         })
       );
@@ -105,10 +122,10 @@ describe('waConversaService', () => {
 
       await waConversaService.processarMensagem(conv, 'oi');
       
-      expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
+      expect(mockPrisma.waConversa.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            etapaFluxo: 'ESPECIALIDADE',
+          update: expect.objectContaining({
+            etapaFluxo: 'NOME',
             contexto: {}
           })
         })
@@ -144,6 +161,7 @@ describe('waConversaService', () => {
         { id: 'med-2', nome: 'Dr. Who' } as Medico
       ]);
       
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaEsp());
       await waConversaService.processarMensagem(getConversaEsp(), '1');
 
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -157,6 +175,7 @@ describe('waConversaService', () => {
       mockPrisma.especialidade.findMany.mockResolvedValue([{ id: 'esp-1', nome: 'Cardio' } as Especialidade]);
       mockPrisma.medico.findMany.mockResolvedValue([{ id: 'med-1' } as Medico, { id: 'med-2' } as Medico]);
       
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaEsp());
       await waConversaService.processarMensagem(getConversaEsp(), '1');
 
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -173,6 +192,7 @@ describe('waConversaService', () => {
 
     it('deve repetir etapa com mensagem de erro em input inválido (não numérico)', async () => {
       mockPrisma.especialidade.findMany.mockResolvedValue([{ id: 'esp-1', nome: 'Cardio' } as Especialidade]);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaEsp());
       await waConversaService.processarMensagem(getConversaEsp(), 'abc');
       
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(
@@ -184,6 +204,7 @@ describe('waConversaService', () => {
 
     it('deve repetir etapa com mensagem de erro em número fora do range', async () => {
       mockPrisma.especialidade.findMany.mockResolvedValue([{ id: 'esp-1', nome: 'Cardio' } as Especialidade]);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaEsp());
       await waConversaService.processarMensagem(getConversaEsp(), '5');
       
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(
@@ -198,6 +219,7 @@ describe('waConversaService', () => {
       conv.contexto = { errosEspecialidade: 2 };
       mockPrisma.especialidade.findMany.mockResolvedValue([{ id: 'esp-1', nome: 'Cardio' } as Especialidade]);
       
+      mockPrisma.waConversa.findUnique.mockResolvedValue(conv);
       await waConversaService.processarMensagem(conv, '9');
       
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -231,6 +253,7 @@ describe('waConversaService', () => {
         { id: 'med-2', nome: 'Dr. Watson' } as Medico
       ]);
       
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaMed());
       await waConversaService.processarMensagem(getConversaMed(), '99');
       
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(
@@ -242,6 +265,7 @@ describe('waConversaService', () => {
 
     it('deve avançar para etapa HORARIO com input válido', async () => {
       mockPrisma.medico.findMany.mockResolvedValue([{id:'med-1', nome:'Dr.A'} as Medico]);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaMed());
       await waConversaService.processarMensagem(getConversaMed(), '1');
       
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -251,6 +275,7 @@ describe('waConversaService', () => {
 
     it('deve guardar medicoId e medicoNome no contexto', async () => {
       mockPrisma.medico.findMany.mockResolvedValue([{id:'med-1', nome:'Dr. Gregory House'} as Medico]);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaMed());
       await waConversaService.processarMensagem(getConversaMed(), '1');
       
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -273,6 +298,7 @@ describe('waConversaService', () => {
       mockPrisma.especialidade.findMany.mockResolvedValue([{ id: 'esp-1', nome: 'Cardio' } as Especialidade]);
       mockPrisma.medico.findMany.mockResolvedValue([{ id: 'med-1', nome: 'Único Médico' } as Medico]);
       
+      mockPrisma.waConversa.findUnique.mockResolvedValue(conv);
       await waConversaService.processarMensagem(conv, '1');
 
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
@@ -300,6 +326,7 @@ describe('waConversaService', () => {
     });
 
     it('deve listar próximos 5 slots disponíveis (e formatar label)', async () => {
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaHor());
       await waConversaService.processarMensagem(getConversaHor(), '99');
       
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(
@@ -310,6 +337,7 @@ describe('waConversaService', () => {
     });
 
     it('deve avançar para etapa CONFIRMAR com input válido', async () => {
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaHor());
       await waConversaService.processarMensagem(getConversaHor(), '1');
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ etapaFluxo: 'CONFIRMAR' })})
@@ -332,20 +360,24 @@ describe('waConversaService', () => {
     });
 
     it('deve criar agendamento quando resposta é "1", "sim" ou "S"', async () => {
+      mockPrisma.agendamento.create.mockResolvedValue({ id: 'age-12345678' } as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockPrisma.paciente.findFirst.mockResolvedValue({ id: 'pac-1' } as any);
       
       const inputs = ['1', 'sim', 'S', 'SIM', 'confirmar'];
       for (const input of inputs) {
+        mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaConf());
         await waConversaService.processarMensagem(getConversaConf(), input);
         expect(mockPrisma.agendamento.create).toHaveBeenCalled();
         vi.clearAllMocks();
+        mockPrisma.agendamento.create.mockResolvedValue({ id: 'age-12345678' } as any);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockPrisma.paciente.findFirst.mockResolvedValue({ id: 'pac-1' } as any);
       }
     });
 
     it('deve cancelar fluxo quando resposta é "2" ou "não"', async () => {
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaConf());
       await waConversaService.processarMensagem(getConversaConf(), '2');
       expect(mockPrisma.waConversa.update).toHaveBeenCalledWith(
         expect.objectContaining({ 
@@ -367,6 +399,8 @@ describe('waConversaService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockPrisma.paciente.create.mockResolvedValue({ id: 'pac-new' } as any);
       
+      mockPrisma.agendamento.create.mockResolvedValue({ id: 'age-12345678' } as any);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaConf());
       await waConversaService.processarMensagem(getConversaConf(), '1');
       
       expect(mockPrisma.paciente.create).toHaveBeenCalledWith(
@@ -383,6 +417,8 @@ describe('waConversaService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockPrisma.paciente.findFirst.mockResolvedValue({ id: 'pac-1' } as any);
       
+      mockPrisma.agendamento.create.mockResolvedValue({ id: 'age-12345678' } as any);
+      mockPrisma.waConversa.findUnique.mockResolvedValue(getConversaConf());
       await waConversaService.processarMensagem(getConversaConf(), '1');
       
       expect(mockEvolutionApi.enviarTexto).toHaveBeenCalledWith(

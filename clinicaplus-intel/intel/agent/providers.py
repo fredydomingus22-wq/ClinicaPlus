@@ -19,6 +19,7 @@ def get_llm(provider_name: str = "openai_fast"):
         "cerebras": ("llama3.3-70b", "cerebras"),
         "gemini": ("gemini-1.5-flash", "google_genai"),
         "gemini_pro": ("gemini-1.5-pro", "google_genai"),
+        "gemini_25_flash": ("gemini-2.5-flash", "google_genai"),
         "claude": ("claude-3-5-sonnet-20241022", "anthropic"),
         "openai": ("gpt-4o", "openai"),
         "openai_fast": ("gpt-4o-mini", "openai"),

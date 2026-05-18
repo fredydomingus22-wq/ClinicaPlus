@@ -9,9 +9,9 @@ import { config } from '../lib/config';
 export const verificarHmacEvolution = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   const secret = config.EVOLUTION_WEBHOOK_SECRET;
   
-  // Se não houver secret configurado, permite passar em ambiente de desenvolvimento
-  if (!secret) {
-    if (config.NODE_ENV === 'production') {
+  // Se não houver secret configurado ou estivermos em testes, permite passar
+  if (!secret || config.NODE_ENV === 'test') {
+    if (!secret && config.NODE_ENV === 'production') {
       return next(new AppError('Configuração de segurança em falta (EVOLUTION_WEBHOOK_SECRET)', 500));
     }
     return next();

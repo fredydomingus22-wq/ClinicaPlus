@@ -45,7 +45,13 @@ export async function seedPermissoes(prisma: PrismaClient): Promise<void> {
     // Plataforma
     { codigo: 'apikey:manage', descricao: 'Gerir chaves de API', modulo: 'plataforma' },
     { codigo: 'webhook:manage', descricao: 'Gerir webhooks', modulo: 'plataforma' },
+    { codigo: 'whatsapp:manage', descricao: 'Gerir Bots de WhatsApp (Typebot, N8N)', modulo: 'plataforma' },
     { codigo: 'auditlog:read', descricao: 'Ver logs de auditoria', modulo: 'plataforma' },
+
+    // Tratamentos & Reabilitação
+    { codigo: 'tratamento:read', descricao: 'Ver planos de tratamento e sessões', modulo: 'tratamentos' },
+    { codigo: 'tratamento:create', descricao: 'Prescrever novos planos de tratamento', modulo: 'tratamentos' },
+    { codigo: 'sessao:update', descricao: 'Registar realização ou falta em sessões', modulo: 'tratamentos' },
   ];
 
   // 1. Upsert Permissions
@@ -65,7 +71,8 @@ export async function seedPermissoes(prisma: PrismaClient): Promise<void> {
         'paciente:read', 'paciente:create', 'paciente:update',
         'agendamento:read', 'agendamento:create', 'agendamento:update', 'agendamento:cancel',
         'fatura:read', 'fatura:create', 'pagamento:create',
-        'medico:read', 'configuracao:read'
+        'medico:read', 'configuracao:read',
+        'tratamento:read' // Recepcionista só lê, não prescreve nem marca sessões como feitas
       ],
     },
     {
@@ -74,12 +81,13 @@ export async function seedPermissoes(prisma: PrismaClient): Promise<void> {
         'paciente:read',
         'agendamento:read', 'agendamento:create', 'agendamento:update',
         'relatorio:read',
-        'medico:read'
+        'medico:read',
+        'tratamento:read', 'tratamento:create', 'sessao:update' // Médico tem controlo total clínico
       ],
     },
     {
       papel: Papel.ADMIN,
-      codigos: permissoes.map(p => p.codigo), // ADMIN has everything by default
+      codigos: [...permissoes.map(p => p.codigo), 'whatsapp:manage'], // ADMIN has everything by default
     },
   ];
 

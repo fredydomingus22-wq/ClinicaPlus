@@ -64,7 +64,9 @@ async def tenant_loader(state: AgentState, config: RunnableConfig, *, store: Bas
     updates = {
         "clinic_config": clinic_config,
         "patient_data": patient_data,
-        "last_activity_ts": datetime.now(timezone.utc).isoformat()
+        "last_activity_ts": datetime.now(timezone.utc).isoformat(),
+        "ui_payload": None,
+        "is_session_finished": False
     }
     
     # 4. Gerar Novo SystemMessage Contextualizado com Memória

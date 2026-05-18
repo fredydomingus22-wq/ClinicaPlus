@@ -43,7 +43,7 @@ export function useAgendamentosHoje(medicoId?: string) {
 export function useMeusAgendamentos(query?: { estado?: EstadoAgendamento }) {
   return useQuery({
     queryKey: agendamentosKeys.meus(),
-    queryFn:  () => agendamentosApi.getMeus(query),
+    queryFn:  () => agendamentosApi.getMeus({ page: 1, limit: 100, ...query }),
     staleTime: 1000 * 60 * 5, // 5min
     gcTime: 1000 * 60 * 60 * 24, // 24h
     placeholderData: (prev) => prev,

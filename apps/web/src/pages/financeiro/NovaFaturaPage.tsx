@@ -41,7 +41,7 @@ export default function NovaFaturaPage() {
     resolver: zodResolver(FaturaCreateSchema) as unknown as Resolver<FaturaCreateInput>,
     defaultValues: {
       tipo: TipoFatura.PARTICULAR,
-      itens: [{ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0 }],
+      itens: [{ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0, taxaIva: 14, codigoIva: 'IVA' }],
       desconto: 0,
     }
   });
@@ -203,6 +203,8 @@ function Step1PacienteSelection() {
                       setValue('itens.0.precoUnit', preco);
                       setValue('itens.0.quantidade', 1);
                       setValue('itens.0.desconto', 0);
+                      setValue('itens.0.taxaIva', 14);
+                      setValue('itens.0.codigoIva', 'IVA');
                     }
                   }}
                   className={`
@@ -261,7 +263,7 @@ function Step2ItemsDrafting() {
   const globalDesconto = watch('desconto') || 0;
 
   const subtotal = useMemo(() => {
-    return (itens || []).reduce((acc: number, item: { quantidade: number; precoUnit: number; desconto: number }) => {
+    return (itens || []).reduce((acc: number, item) => {
       const q = item.quantidade || 0;
       const p = item.precoUnit || 0;
       const d = item.desconto || 0;
@@ -297,7 +299,7 @@ function Step2ItemsDrafting() {
             type="button" 
             variant="ghost" 
             size="sm" 
-            onClick={() => append({ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0 })}
+            onClick={() => append({ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0, taxaIva: 14, codigoIva: 'IVA' })}
           >
             <Plus className="h-4 w-4 mr-1" /> Adicionar Item
           </Button>
@@ -426,7 +428,7 @@ function Step3Review() {
            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4">Itens Selecionados</p>
            <table className="w-full text-xs">
              <tbody className="divide-y divide-neutral-50">
-               {(data.itens || []).map((item: { descricao: string; quantidade: number; precoUnit: number }, idx: number) => (
+               {(data.itens || []).map((item, idx: number) => (
                  <tr key={idx}>
                    <td className="py-2">{item.descricao}</td>
                    <td className="py-2 text-right">{item.quantidade}x</td>
@@ -440,7 +442,7 @@ function Step3Review() {
         <div className="pt-6 mt-6 border-t-2 border-neutral-100 flex justify-between items-center">
           <p className="text-sm font-bold text-neutral-600">Total Final</p>
           <p className="text-2xl font-black text-primary-600 font-mono">
-            {formatKwanza((data.itens || []).reduce((acc: number, i: { quantidade: number; precoUnit: number; desconto: number }) => acc + (i.quantidade * i.precoUnit) - i.desconto, 0) - (data.desconto || 0))}
+            {formatKwanza((data.itens || []).reduce((acc: number, i) => acc + (i.quantidade * i.precoUnit) - i.desconto, 0) - (data.desconto || 0))}
           </p>
         </div>
       </Card>

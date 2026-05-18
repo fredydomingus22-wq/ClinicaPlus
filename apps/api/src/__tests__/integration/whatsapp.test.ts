@@ -39,24 +39,45 @@ vi.mock('../../middleware/tenant', () => ({
   }
 }));
 
+vi.mock('../../middleware/verificarHmacEvolution', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mocking request and response
+  verificarHmacEvolution: (req: any, _res: any, next: any): void => {
+    next();
+  }
+}));
+
+vi.mock('../../middleware/requirePlan', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mocking
+  requirePlan: () => (req: any, _res: any, next: any): void => {
+    next();
+  }
+}));
+
+vi.mock('../../middleware/requirePermission', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mocking
+  requirePermission: () => (req: any, _res: any, next: any): void => {
+    next();
+  }
+}));
+
 describe('WhatsApp Routes (Integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('POST /api/whatsapp/instancia', () => {
-    it('deve criar uma instância e retornar 200', async () => {
+  describe('POST /api/whatsapp/instancias', () => {
+    it('deve criar uma instância e retornar 201', async () => {
       const mockInstancia = { id: 'inst-1', evolutionName: 'cp-test' };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Casting vi.fn to any for mockResolvedValue
       (waInstanciaService.criar as any).mockResolvedValue(mockInstancia);
 
       const response = await request(app)
-        .post('/api/whatsapp/instancia')
+        .post('/api/whatsapp/instancias')
         .send();
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toEqual(mockInstancia);
-      expect(waInstanciaService.criar).toHaveBeenCalledWith('clinica-1');
+      expect(waInstanciaService.criar).toHaveBeenCalledWith('clinica-1', 'user-1');
     });
   });
 

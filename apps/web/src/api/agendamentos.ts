@@ -18,7 +18,7 @@ export const agendamentosApi = {
     apiClient.get<{ data: AgendamentoDTO[] }>('/agendamentos/hoje', { params: { medicoId } })
       .then(r => r.data.data),
 
-  getMeus: (query?: { estado?: EstadoAgendamento }) =>
+  getMeus: (query?: AgendamentoListQuery) =>
     apiClient.get<{ data: PaginatedResult<AgendamentoDTO> }>('/agendamentos/meus', { params: query })
       .then(r => r.data.data),
 

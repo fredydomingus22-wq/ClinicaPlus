@@ -24,6 +24,16 @@ model Clinica {
   atualizadoEm        DateTime              @updatedAt
   subscricaoValidaAte DateTime?
   subscricaoEstado    EstadoSubscricao      @default(TRIAL)
+
+  // Campos Fiscais (AGT)
+  nif                 String?
+  razaoSocial         String?
+  regimeFiscal        RegimeFiscal          @default(GERAL)
+  agtSoftwareCert     String?               // Número de certificação do software
+  enderecoPostal      String?               // Logradouro, Número, etc. por SAF-T
+  agtApiToken         String?               // Token de integração e-Factura
+  serieDocFiscal      String                @default("CPLS") // Série documental (ex: CPLS, 2026, etc)
+
   // migration_009: campos de suspensão e notas internas do super admin
   suspensaEm          DateTime?             // null = activa
   motivoSuspensao     String?
@@ -51,6 +61,8 @@ model Clinica {
   planosTratamento    PlanoTratamento[]
   tiposTratamento     TipoTratamento[]
   tiposExamesClinica  TipoExameClinica[]
+  botIntegracoes      BotIntegracao[]
+  sequencias          SequenciaDocFiscal[]
 
   @@index([slug])
   @@index([suspensaEm])  // para filtrar clinicas activas/suspensas
@@ -129,6 +141,8 @@ model Paciente {
   email          String?
   endereco       String?
   provincia      String?
+  cidade         String?
+  nif            String?       @default("999999999")
   seguroSaude    Boolean       @default(false)
   seguradora     String?
   ativo          Boolean       @default(true)
@@ -429,10 +443,33 @@ model Fatura {
   estado         EstadoFatura @default(RASCUNHO)
   subtotal       Int
   desconto       Int          @default(0)
+  totalIva       Int          @default(0)
   total          Int
   notas          String?
   dataEmissao    DateTime?
   dataVencimento DateTime?
+
+  // Campos Fiscais (AGT)
+  tipoDocFiscal  TipoDocumentoFiscal @default(FT)
+  serieDocFiscal String              @default("CPLS")
+  valorExtenso   String?             // Total por extenso (obrigatório AGT)
+  retencaoFonte  Int                 @default(0)
+  valorPago      Int                 @default(0) // Cache para parcelamento/display
+  moeda          String              @default("AOA")
+  fiscalHash     String?             // Assinatura RSA de 172 chars
+  hashControl    String?             @default("1") // Versão do algoritmo
+  documentoChave String?             // Dados concatenados para assinatura
+  statusEnvio    String              @default("PENDENTE") // PENDENTE, ENVIADO, ERRO
+  agtRequestID   String?             // Token retornado pela AGT
+
+  // Relações de Anulação (NC)
+  faturaOriginalId String?
+  motivoAnulacao   String?
+  faturaOriginal   Fatura?  @relation("FaturaAnulacao", fields: [faturaOriginalId], references: [id])
+  notasCredito     Fatura[] @relation("FaturaAnulacao")
+
+  snapshot       FaturaSnapshot?
+
   criadoEm       DateTime     @default(now())
   atualizadoEm   DateTime     @updatedAt
   agendamento    Agendamento? @relation(fields: [agendamentoId], references: [id])
@@ -446,6 +483,7 @@ model Fatura {
   @@index([clinicaId, estado])
   @@index([clinicaId, pacienteId])
   @@index([clinicaId, dataEmissao])
+  @@index([clinicaId, serieDocFiscal, tipoDocFiscal, estado])
   @@map("faturas")
 }
 
@@ -454,9 +492,12 @@ model ItemFatura {
   faturaId   String
   descricao  String
   quantidade Int    @default(1)
-  precoUnit  Int
-  desconto   Int    @default(0)
-  total      Int
+  precoUnit      Int
+  desconto       Int    @default(0)
+  taxaIva        Float  @default(0)    // Ex: 14.0
+  codigoIva      String @default("ISE") // Ex: IVA, ISE
+  motivoIsencao  String?               // Requisito se taxaIva = 0
+  total          Int
   fatura     Fatura @relation(fields: [faturaId], references: [id], onDelete: Cascade)
 
   @@map("itens_fatura")
@@ -575,22 +616,72 @@ model Documento {
 }
 
 model WaInstancia {
-  id             String            @id @default(cuid())
+  id             String             @id @default(cuid())
   clinicaId      String
-  evolutionName  String            @unique
+  /// Nome da instância na Evolution API ("cp-slug-abc123"). Pode ser vazio em instâncias Meta puras.
+  evolutionName  String             @unique
   evolutionToken String
-  estado         WaEstadoInstancia @default(DESCONECTADO)
+  estado         WaEstadoInstancia  @default(DESCONECTADO)
   numeroTelefone String?
   qrCodeBase64   String?
   qrExpiresAt    DateTime?
-  criadoEm       DateTime          @default(now())
-  atualizadoEm   DateTime          @updatedAt
+  criadoEm       DateTime           @default(now())
+  atualizadoEm   DateTime           @updatedAt
+
+  // ── Meta Cloud API (migration_meta_cloud) ───────────────────────────────
+  /// Tipo de integração: BAILEYS (padrão, via Evolution API) ou META_CLOUD (API oficial Meta)
+  tipoIntegracao     WaTipoIntegracao  @default(BAILEYS)
+  /// Meta: Phone Number ID obtido no Meta Business Suite → WhatsApp → API Setup
+  metaPhoneNumberId  String?
+  /// Meta: WhatsApp Business Account ID
+  metaWabaId         String?
+  /// Meta: System User Access Token (armazenar encriptado em produção)
+  metaAccessToken    String?
+  // ────────────────────────────────────────────────────────────────────────
+
   conversas      WaConversa[]
   automacoes     WaAutomacao[]
-  clinica        Clinica           @relation(fields: [clinicaId], references: [id])
+  botIntegracao  BotIntegracao?
+  clinica        Clinica            @relation(fields: [clinicaId], references: [id])
 
   @@index([clinicaId])
+  @@index([tipoIntegracao])
   @@map("wa_instancias")
+}
+
+model BotIntegracao {
+  id             String      @id @default(cuid())
+  clinicaId      String
+  instanciaId    String?     @unique
+  
+  provedor       ProvedorBot @default(TYPEBOT)
+  
+  apiUrl         String?
+  flowId         String?
+  apiToken       String?
+  
+  variaveisGlobais Json      @default("{}") 
+  
+  triggerKeyword   String?
+  expireTime       Int         @default(20)
+  unknownMessage   String?
+  
+  ativo          Boolean     @default(true)
+  criadoEm       DateTime    @default(now())
+  atualizadoEm   DateTime    @updatedAt
+
+  clinica        Clinica      @relation(fields: [clinicaId], references: [id])
+  instancia      WaInstancia? @relation(fields: [instanciaId], references: [id])
+
+  @@index([clinicaId])
+  @@map("bot_integracoes")
+}
+
+enum ProvedorBot {
+  TYPEBOT
+  DIALOGFLOW
+  N8N
+  DIFY
 }
 
 model WaAutomacao {
@@ -927,6 +1018,11 @@ enum WaEstadoInstancia {
   ERRO
 }
 
+enum WaTipoIntegracao {
+  BAILEYS
+  META_CLOUD
+}
+
 enum WaTipoAutomacao {
   MARCACAO_CONSULTA
   LEMBRETE_24H
@@ -1082,4 +1178,56 @@ model SessaoTratamento {
   @@index([clinicaId, planoId])
   @@index([clinicaId, dataHora])
   @@map("sessao_tratamento")
+}
+
+// ─── SEQUÊNCIA DOCUMENTAL ──────────────────────────────────────────────
+
+model SequenciaDocFiscal {
+  id            String              @id @default(cuid())
+  clinicaId     String
+  tipoDoc       TipoDocumentoFiscal
+  serie         String              @default("CPLS")
+  anoFiscal     Int
+  ultimoNumero  Int                 @default(0)
+
+  clinica       Clinica  @relation(fields: [clinicaId], references: [id])
+
+  @@unique([clinicaId, tipoDoc, serie, anoFiscal])
+  @@map("sequencia_doc_fiscal")
+}
+
+// ─── SNAPSHOT FISCAL ────────────────────────────────────────────────────
+
+model FaturaSnapshot {
+  id                 String   @id @default(cuid())
+  faturaId           String   @unique
+  emitenteNif        String
+  emitenteNome       String
+  emitenteEndereco   String
+  emitenteCidade     String?
+  emitenteProvincia  String?
+  clienteNome        String
+  clienteNif         String   @default("999999990")
+  clienteEndereco    String?
+  serieDocFiscal     String   @default("CPLS")
+  regimeFiscal       RegimeFiscal
+  criadoEm           DateTime @default(now())
+
+  fatura             Fatura   @relation(fields: [faturaId], references: [id])
+
+  @@map("fatura_snapshots")
+}
+
+enum TipoDocumentoFiscal {
+  FT
+  FR
+  VD
+  NC
+  ND
+}
+
+enum RegimeFiscal {
+  GERAL
+  SIMPLIFICADO
+  EXUSA
 }

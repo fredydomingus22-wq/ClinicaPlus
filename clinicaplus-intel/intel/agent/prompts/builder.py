@@ -161,7 +161,7 @@ Guia por slot:
 - date                → "Consigo ajudar com isso. Para que dia queres marcar? (ex: segunda-feira ou amanhã)"
 - time                → "Ótimo. Que período preferes — manhã (8h-12h) ou tarde (14h-17h)?"
 - confirmation        → "Confirmamos então para: {booking_summary}? Posso avançar?"
-- appointment_reference → "Com certeza, podes dar-me o número da consulta ou o nome do médico para eu tratar disso?"
+- appointment_reference → "Já vi que tens consultas marcadas: {available_slots_info}. Qual delas queres cancelar? (Pode dizer o número ou o médico)" se existirem consultas. Se NÃO houverem consultas na lista: "Dá-me o número da consulta ou o nome do médico para eu cancelar."
 
 Histórico recente:
 {recent_messages}
