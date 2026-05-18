@@ -226,7 +226,8 @@ export class AgtApiClient {
             seriesStatus: 'A',
             documentType: request.documentType || 'FT',
             seriesCreationDate: new Date().toISOString(),
-            invoicingMethod: 'E',
+            invoicingMethod: 'FESF',
+            seriesContingencyIndicator: 'N',
             nif: request.taxRegistrationNumber,
             nome: 'ClinicaPlus Mock User'
           }

@@ -289,33 +289,36 @@ export interface AgtListSeriesRequest {
   submissionTimeStamp: string;
   seriesCode?: string;
   seriesYear?: string;
-  seriesStatus?: string;
-  documentType?: string;
-  establishmentNumber?: string;
-  jwsSignature: string;
+  seriesStatus?: string; // A-Aberta, U-Em utilização, F-Fechada
+  documentType?: string; // FA, FT, FR, FG, GF, AC, AR, TV, RC, RG, RE, ND, NC, AF, RP, RA, CS, LD
+  establishmentNumber: string; // Obrigatório no Listar
+  jwsSignature: string; // Assinatura de taxRegistrationNumber + requestID (conforme manual)
   softwareInfo: AgtSoftwareInfo;
 }
 
 export interface AgtListSeriesResponse {
-  resultCode: string;
+  resultCode: string; // 0, 1, 2, 7, 8, 9
   errorList?: Array<{
     idError: string;
     descriptionError: string;
   }>;
-  seriesResultCount: string;
+  seriesResultCount: string | number;
   seriesInfo: Array<{
-    id: string;
+    id?: string;
     seriesCode: string;
-    seriesYear: string;
-    seriesStatus: string;
+    seriesYear: string | number;
+    seriesStatus: string; // A, U, F
     documentType: string;
     seriesCreationDate: string;
     firstDocumentCreated?: string;
     lastDocumentCreated?: string;
     firstDocumentNumber?: string;
-    invoicingMethod: string;
-    nif: string;
-    nome: string;
+    invoicingMethod: string; // FEPC, FESF, SF
+    seriesContingencyIndicator: string; // N, C
+    seriesStartTS?: string; // ISO 8601, obrigatório se C
+    seriesEndTS?: string; // ISO 8601, obrigatório se C
+    nif?: string;
+    nome?: string;
     dataAdesao?: string;
     tipoAdesao?: string;
   }>;
