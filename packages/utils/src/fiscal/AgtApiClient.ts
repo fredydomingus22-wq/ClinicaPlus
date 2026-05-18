@@ -260,8 +260,8 @@ export class AgtApiClient {
     const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
     if (mockEnabled) {
       return {
-        actionResultCode: '0',
-        documentStatusCode: 'V'
+        actionResultCode: 'C_OK',
+        documentStatusCode: 'S_V'
       };
     }
 

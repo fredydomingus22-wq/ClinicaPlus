@@ -329,16 +329,16 @@ export interface AgtValidateDocumentRequest {
   submissionTimeStamp: string;
   taxRegistrationNumber: string;
   softwareInfo: AgtSoftwareInfo;
-  jwsSignature: string;
+  jwsSignature: string; // taxRegistrationNumber + requestID (conforme manual)
   documentNo: string;
-  action: string;
-  deductibleVATPercentage?: string;
-  nonDeductibleAmount?: string;
+  action: string; // C - Confirmação, R - Rejeição
+  deductibleVATPercentage?: string | number; // Só um dos dois
+  nonDeductibleAmount?: string | number; // Só um dos dois
 }
 
 export interface AgtValidateDocumentResponse {
-  actionResultCode: string;
-  documentStatusCode: string;
+  actionResultCode: string; // C_OK, R_OK, C_NOK, R_NOK
+  documentStatusCode: string; // S_A, S_C, S_I, S_RG, S_RJ, S_V
   errorList?: Array<{
     idError: string;
     documentNo: string;
