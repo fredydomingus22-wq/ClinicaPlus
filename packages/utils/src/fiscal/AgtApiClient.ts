@@ -15,7 +15,8 @@ import {
   AgtListSeriesRequest,
   AgtListSeriesResponse,
   AgtValidateDocumentRequest,
-  AgtValidateDocumentResponse
+  AgtValidateDocumentResponse,
+  AgtError
 } from './types';
 
 /**
@@ -64,8 +65,12 @@ export class AgtApiClient {
         }
       });
       return response.data;
-    } catch (error) {
-      if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao registar factura na AGT`);
+    } catch (error: any) {
+      if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao admitir facturas na AGT`);
+      
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
@@ -94,8 +99,12 @@ export class AgtApiClient {
         }
       });
       return response.data;
-    } catch (error) {
-      if (this.logger) this.logger.error({ error, requestID: request.requestID }, `Erro ao obter estado da AGT`);
+    } catch (error: any) {
+      if (this.logger) this.logger.error({ error, requestID: request.requestID }, `Erro ao obter estado na AGT`);
+      
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
@@ -204,8 +213,12 @@ export class AgtApiClient {
         }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao solicitar série na AGT`);
+      
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
@@ -246,8 +259,12 @@ export class AgtApiClient {
         }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao listar séries na AGT`);
+      
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
@@ -274,8 +291,12 @@ export class AgtApiClient {
         }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao validar documento na AGT`);
+      
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
