@@ -48,8 +48,12 @@ export function useAnamneseTemplateManagement(especialidadeId?: string) {
   });
 
   const updateTemplate = useMutation({
-    mutationFn: (payload: { templateId: string; titulo?: string; questoes?: TemplateQuestao[] }) =>
-      anamneseTemplateApi.update(payload.templateId, { titulo: payload.titulo, questoes: payload.questoes }),
+    mutationFn: (payload: { templateId: string; titulo?: string; questoes?: TemplateQuestao[] }) => {
+      const updatePayload: { titulo?: string; questoes?: TemplateQuestao[] } = {};
+      if (payload.titulo !== undefined) updatePayload.titulo = payload.titulo;
+      if (payload.questoes !== undefined) updatePayload.questoes = payload.questoes;
+      return anamneseTemplateApi.update(payload.templateId, updatePayload);
+    },
     onSuccess: () => {
       if (especialidadeId) {
         queryClient.invalidateQueries({ queryKey: anamneseTemplateKeys.byEspecialidade(especialidadeId) });
