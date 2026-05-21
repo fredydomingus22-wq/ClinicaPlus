@@ -198,6 +198,9 @@ async function main(): Promise<void> {
       }
     });
   }
+
+  // 12. Templates base de anamnese por especialidade
+  await seedAnamneseTemplates();
 }
 
 main()
