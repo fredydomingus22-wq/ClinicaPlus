@@ -52,6 +52,12 @@ import configTratamentosRouter from './routes/config-tratamentos.routes';
 import planosRouter from './routes/planos';
 import sessoesRouter from './routes/sessoes';
 import fiscalRouter from './routes/fiscal';
+import inventoryRouter from './routes/inventory';
+import anamnesesRouter from './routes/anamneses';
+import anamneseTemplatesRouter from './routes/anamneseTemplates';
+
+// Workers (BullMQ)
+import './workers/tratamento.worker';
 
 const app = express();
 
@@ -228,6 +234,9 @@ app.use('/api/config-tratamentos', configTratamentosRouter);
 app.use('/api/planos', planosRouter);
 app.use('/api/sessoes', sessoesRouter);
 app.use('/api/fiscal', fiscalRouter);
+app.use('/api/inventory', inventoryRouter);
+app.use('/api/anamneses', anamnesesRouter);
+app.use('/api/anamneseTemplates', anamneseTemplatesRouter);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -255,7 +264,10 @@ if (require.main === module) {
     
     // Verify Redis connection on startup
     redis.ping()
-      .then(() => logger.info('✅ Redis connection verified'))
+      .then(() => {
+        logger.info('✅ Redis connection verified');
+        logger.info('👷 Treatment Worker initialized and listening');
+      })
       .catch((err: unknown) => logger.error({ err }, '❌ Redis connection failed on startup'));
   });
 }

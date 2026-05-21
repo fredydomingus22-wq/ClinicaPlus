@@ -41,12 +41,17 @@ const AdminIntegracoes = React.lazy(() => import('./pages/admin/IntegracoesPage'
 const AdminServicosPrecos = React.lazy(() => import('./pages/admin/ServicosPrecosPage'));
 const AdminExames = React.lazy(() => import('./pages/admin/GestaoExamesPage'));
 const AdminTratamentos = React.lazy(() => import('./pages/admin/GestaoTratamentosPage'));
+const AnamneseTemplatesManagementPage = React.lazy(() => import('./pages/AnamneseTemplatesManagementPage'));
+const AdminInventarioCatalogo = React.lazy(() => import('./pages/inventario/CatalogoPage'));
+const AdminInventarioDashboard = React.lazy(() => import('./pages/inventario/DashboardPage'));
 const AdminRelatorios = React.lazy(() => import('./pages/financeiro/RelatoriosPage'));
+const AdminConsolaFiscal = React.lazy(() => import('./pages/financeiro/ConsolaFiscalPage'));
 const AdminAuditLog = React.lazy(() => import('./pages/admin/AuditLogPage'));
 const AdminWhatsApp = React.lazy(() => import('./pages/configuracoes/WhatsappPage').then(m => ({ default: m.WhatsappPage })));
 const SubscricaoPage = React.lazy(() => import('./pages/configuracoes/SubscricaoPage').then(m => ({ default: m.SubscricaoPage })));
 
 const FaturasPage = React.lazy(() => import('./pages/financeiro/FaturasPage'));
+const DocumentosFiscaisPage = React.lazy(() => import('./pages/financeiro/DocumentosFiscaisPage'));
 const NovaFaturaPage = React.lazy(() => import('./pages/financeiro/NovaFaturaPage'));
 const FaturaDetalhe = React.lazy(() => import('./pages/financeiro/FaturaDetalhe'));
 
@@ -390,6 +395,10 @@ export const router = createBrowserRouter([
             element: <FaturasPage />
           },
           {
+            path: '/recepcao/financeiro/documentos',
+            element: <DocumentosFiscaisPage />
+          },
+          {
             path: '/recepcao/financeiro/nova',
             element: <NovaFaturaPage />
           },
@@ -469,8 +478,16 @@ export const router = createBrowserRouter([
             element: <FaturasPage />
           },
           {
+            path: '/admin/financeiro/documentos',
+            element: <DocumentosFiscaisPage />
+          },
+          {
             path: '/admin/financeiro/nova',
             element: <NovaFaturaPage />
+          },
+          {
+            path: '/admin/financeiro/consola-fiscal',
+            element: <AdminConsolaFiscal />
           },
           {
             path: '/admin/financeiro/:id',
@@ -497,8 +514,20 @@ export const router = createBrowserRouter([
             element: <AdminTratamentos />
           },
           {
+            path: '/admin/anamneses/templates',
+            element: <AnamneseTemplatesManagementPage />
+          },
+          {
             path: '/admin/notificacoes',
             element: <NotificacoesPage />
+          },
+          {
+            path: '/admin/inventario/catalogo',
+            element: <AdminInventarioCatalogo />
+          },
+          {
+            path: '/admin/inventario/dashboard',
+            element: <AdminInventarioDashboard />
           }
         ]
       }
@@ -548,8 +577,20 @@ export const router = createBrowserRouter([
             element: <AdminTratamentos />
           },
           {
+            path: '/medico/anamneses/templates',
+            element: <AnamneseTemplatesManagementPage />
+          },
+          {
             path: '/medico/notificacoes',
             element: <NotificacoesPage />
+          },
+          {
+            path: '/medico/inventario/catalogo',
+            element: <AdminInventarioCatalogo />
+          },
+          {
+            path: '/medico/inventario/dashboard',
+            element: <AdminInventarioDashboard />
           }
         ]
       }
