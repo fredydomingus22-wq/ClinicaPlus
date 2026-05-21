@@ -2,12 +2,19 @@ import { Worker, type Job } from 'bullmq';
 import { redis } from '../lib/redis';
 import { logger as baseLogger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
-import { agtApiClient, certificationService } from '@clinicaplus/utils/server';
+import { agtApiClient, CertificationService } from '@clinicaplus/utils/server';
 import { AppError } from '@clinicaplus/utils';
 import { JobNames, ReportAgtJob } from '@clinicaplus/events';
 import * as crypto from 'crypto';
 
 const logger = baseLogger.child({ worker: 'report-agt' });
+
+function getAgtAuthToken(): string {
+  if (process.env.AGT_USERNAME && process.env.AGT_PASSWORD) {
+    return `${process.env.AGT_USERNAME}:${process.env.AGT_PASSWORD}`;
+  }
+  return '';
+}
 
 /**
  * Worker para reporte de faturas à AGT (e-Factura)
@@ -36,21 +43,26 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
         return;
       }
 
-      const apiToken = fatura.clinica.agtApiToken;
+      const apiToken = getAgtAuthToken();
       if (!apiToken && process.env.AGT_MOCK !== 'true') {
         throw new AppError('Token da API AGT não configurado', 400);
       }
 
       // 2. Preparar Software Info (Global SaaS)
       const softwareInfoDetail = {
-        productId: 'ClinicaPlus SaaS',
+        productId: 'DocAgen',
         productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0'
+        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
+        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
       };
 
       // A AGT diz: "Todos os campos do objecto softwareInfo devem ser usados na assinatura."
       // Assinamos o softwareInfoDetail que contém todos os campos informativos.
-      const jwsSoftwareSignature = certificationService.signJWS(softwareInfoDetail);
+      const certService = new CertificationService({
+        tenantPrivateKey: fatura.clinica.agtPrivateKey || undefined,
+        tenantPublicKey: fatura.clinica.agtPublicKey || undefined
+      });
+      const jwsSoftwareSignature = certService.signSoftwareJWS(softwareInfoDetail);
 
       // 3. Preparar Documento
       const documentDateFormatted = fatura.dataEmissao!.toISOString().split('T')[0];
@@ -74,6 +86,7 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
 
         return {
           lineNumber: (idx + 1).toString(),
+          operationType: 'SS',
           productCode: item.id.substring(0, 8).toUpperCase(),
           productDescription: item.descricao,
           quantity: item.quantidade.toString(),
@@ -106,7 +119,7 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
         documentTotals
       };
 
-      const jwsDocumentSignature = certificationService.signJWS(signingPayload);
+      const jwsDocumentSignature = certService.signDocumentJWS(signingPayload);
 
       const docBody = {
         documentNo: fatura.numeroFatura!,
@@ -125,7 +138,7 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
 
       // 4. Montar Request Final
       const requestPayload = {
-        schemaVersion: '1.0',
+        schemaVersion: '1.2',
         submissionUUID: crypto.randomUUID(),
         taxRegistrationNumber: fatura.clinica.nif || '999999999',
         submissionTimeStamp: new Date().toISOString(),
@@ -133,13 +146,13 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
           softwareInfoDetail,
           jwsSoftwareSignature
         },
-        numberOfEntries: "1",
+        numberOfEntries: 1,
         documents: [docBody]
       };
 
 
       // 5. Chamar API AGT
-      const result = await agtApiClient.registarFatura(requestPayload as any, apiToken || '');
+      const result = await agtApiClient.registarFactura(requestPayload as any, apiToken || '');
 
       // 6. Atualizar Estado da Fatura
       const hasErrors = result.errorList && result.errorList.length > 0;
@@ -148,7 +161,7 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
         where: { id: faturaId },
         data: {
           statusEnvio: hasErrors ? 'ERRO' : 'ENVIADO',
-          agtRequestID: result.requestID,
+          agtRequestID: result.requestID || null,
         }
       });
 

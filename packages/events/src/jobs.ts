@@ -11,6 +11,7 @@ export const JobNames = {
   WHATSAPP_MAINTENANCE: 'cp-whatsapp-maintenance',
   TRATAMENTO_GERAR_SESSOES: 'cp-tratamento-gerar-sessoes',
   REPORT_AGT: 'cp-report-agt',
+  APPOINTMENT_EXPIRATION: 'cp-appointment-expiration',
 } as const;
 
 export interface WhatsappMessageJob {

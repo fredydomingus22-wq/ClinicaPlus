@@ -12,7 +12,9 @@ model Clinica {
   id                  String                @id @default(cuid())
   nome                String
   slug                String                @unique
-  logo                String?
+  tipoEntidade        String?               @default("EMPRESA") // SINGULAR ou EMPRESA
+  logo                String?               @db.Text
+  logotipoUrl         String?               @db.Text
   telefone            String?
   email               String                @unique
   endereco            String?
@@ -29,15 +31,17 @@ model Clinica {
   nif                 String?
   razaoSocial         String?
   regimeFiscal        RegimeFiscal          @default(GERAL)
-  agtSoftwareCert     String?               // Número de certificação do software
-  enderecoPostal      String?               // Logradouro, Número, etc. por SAF-T
-  agtApiToken         String?               // Token de integração e-Factura
-  serieDocFiscal      String                @default("CPLS") // Série documental (ex: CPLS, 2026, etc)
+  agtSoftwareCert     String?               // NÃºmero de certificaÃ§Ã£o do software
+  enderecoPostal      String?               // Logradouro, NÃºmero, etc. por SAF-T
+  agtApiToken         String?               // Credenciais API (Basic Auth: username:password ou Base64)
+  agtPrivateKey       String?   @db.Text    // Chave privada emitida pela AGT para o contribuinte
+  agtPublicKey        String?   @db.Text    // Chave pÃºblica emitida pela AGT para o contribuinte
+  serieDocFiscal      String                @default("CPLS") // SÃ©rie documental (ex: CPLS, 2026, etc)
 
-  // migration_009: campos de suspensão e notas internas do super admin
+  // migration_009: campos de suspensÃ£o e notas internas do super admin
   suspensaEm          DateTime?             // null = activa
   motivoSuspensao     String?
-  notasInternas       String?               // visíveis APENAS ao super admin
+  notasInternas       String?               // visÃ­veis APENAS ao super admin
   subscricoes         Subscricao[]
   agendamentos        Agendamento[]
   apiKeys             ApiKey[]
@@ -63,6 +67,14 @@ model Clinica {
   tiposExamesClinica  TipoExameClinica[]
   botIntegracoes      BotIntegracao[]
   sequencias          SequenciaDocFiscal[]
+  // InventÃ¡rio
+  categoriasProduto   CategoriaProduto[]
+  produtos            Produto[]
+  lotesEstoque        EstoqueLote[]
+  movimentacoesEstoque MovimentacaoEstoque[]
+  anamneses           Anamnese[]
+  anamneseTemplates   AnamneseTemplate[]
+
 
   @@index([slug])
   @@index([suspensaEm])  // para filtrar clinicas activas/suspensas
@@ -88,6 +100,7 @@ model Utilizador {
   clinicaId            String?
   nome                 String
   email                String
+  avatarUrl            String?               @db.Text
   passwordHash         String
   papel                Papel
   ativo                Boolean               @default(true)
@@ -95,8 +108,8 @@ model Utilizador {
   atualizadoEm         DateTime              @updatedAt
   // migration_009: MFA para SUPER_ADMIN (TOTP)
   mfaSecret            String?               // secret TOTP encriptado com APP_SECRET
-  mfaPending           Boolean               @default(false) // true = setup iniciado mas não confirmado
-  mfaActivatedAt       DateTime?             // null = MFA não activado ainda
+  mfaPending           Boolean               @default(false) // true = setup iniciado mas nÃ£o confirmado
+  mfaActivatedAt       DateTime?             // null = MFA nÃ£o activado ainda
   medico               Medico?
   notificacoes         Notificacao[]
   paciente             Paciente?
@@ -133,6 +146,7 @@ model Paciente {
   numeroPaciente String
   utilizadorId   String?       @unique
   nome           String
+  avatarUrl      String?       @db.Text
   dataNascimento DateTime
   genero         String
   tipoSangue     String?
@@ -158,8 +172,9 @@ model Paciente {
   prontuarios    Prontuario[]
   receitas       Receita[]
   waConversas    WaConversa[]
-  perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessão Intel)
+  perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessÃ£o Intel)
   planosTratamento  PlanoTratamento[]
+  anamneses      Anamnese[]
 
 
   @@unique([clinicaId, numeroPaciente])
@@ -193,6 +208,7 @@ model Medico {
   prontuarios     Prontuario[]
   receitas        Receita[]
   planosTratamento PlanoTratamento[]
+  anamneses       Anamnese[]
 
   @@index([clinicaId])
   @@index([clinicaId, especialidadeId])
@@ -209,6 +225,7 @@ model Especialidade {
   atualizadoEm DateTime @updatedAt
   clinica      Clinica  @relation(fields: [clinicaId], references: [id])
   medicos      Medico[]
+  anamneseTemplate AnamneseTemplate?
 
   @@unique([clinicaId, nome])
   @@index([clinicaId])
@@ -244,7 +261,8 @@ model Agendamento {
   lembretes      LembreteAgendamento[]
   prontuario     Prontuario?
   receita        Receita?
-  confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // Confirmação via Intel
+  anamnese       Anamnese?
+  confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // ConfirmaÃ§Ã£o via Intel
 
 
   planosOrigem   PlanoTratamento[]     @relation("AgendamentoPlanoTratamento")
@@ -376,16 +394,16 @@ model Subscricao {
 
   // Datas de validade
   inicioEm          DateTime          @default(now())
-  validaAte         DateTime?         // data de expiração (null = não expira — ENTERPRISE vitalício)
-  trialAte          DateTime?         // só preenchido se estado = TRIAL
+  validaAte         DateTime?         // data de expiraÃ§Ã£o (null = nÃ£o expira â€” ENTERPRISE vitalÃ­cio)
+  trialAte          DateTime?         // sÃ³ preenchido se estado = TRIAL
 
   // Billing
   valorKz           Int?              // valor pago em Kwanzas (null se gratuito/trial)
-  referenciaInterna String?           // ex: "INV-2026-0042" — referência da invoice gerada
+  referenciaInterna String?           // ex: "INV-2026-0042" â€” referÃªncia da invoice gerada
 
-  // Histórico de mudança
+  // HistÃ³rico de mudanÃ§a
   razao             RazaoMudancaPlano @default(UPGRADE_MANUAL)
-  planoAnterior     Plano?            // null na primeira subscrição
+  planoAnterior     Plano?            // null na primeira subscriÃ§Ã£o
   alteradoPor       String            @default("SISTEMA")
   notas             String?           // notas internas do Super Admin
 
@@ -396,11 +414,11 @@ model Subscricao {
 
   @@index([clinicaId, estado])
   @@index([clinicaId, criadoEm(sort: Desc)])
-  @@index([validaAte])             // para o job nocturno de expiração
+  @@index([validaAte])             // para o job nocturno de expiraÃ§Ã£o
   @@map("subscricoes")
 }
 
-// Notificações de renovação agendadas
+// NotificaÃ§Ãµes de renovaÃ§Ã£o agendadas
 model SubscricaoNotificacao {
   id           String   @id @default(cuid())
   subscricaoId String
@@ -452,17 +470,18 @@ model Fatura {
   // Campos Fiscais (AGT)
   tipoDocFiscal  TipoDocumentoFiscal @default(FT)
   serieDocFiscal String              @default("CPLS")
-  valorExtenso   String?             // Total por extenso (obrigatório AGT)
+  valorExtenso   String?             // Total por extenso (obrigatÃ³rio AGT)
   retencaoFonte  Int                 @default(0)
   valorPago      Int                 @default(0) // Cache para parcelamento/display
   moeda          String              @default("AOA")
   fiscalHash     String?             // Assinatura RSA de 172 chars
-  hashControl    String?             @default("1") // Versão do algoritmo
+  hashControl    String?             @default("1") // VersÃ£o do algoritmo
   documentoChave String?             // Dados concatenados para assinatura
-  statusEnvio    String              @default("PENDENTE") // PENDENTE, ENVIADO, ERRO
+  statusEnvio    String              @default("PENDENTE") // PENDENTE, ENVIADO, ERRO, CONTINGENCIA
+  emContingencia Boolean             @default(false)     // Se foi emitida em contingência
   agtRequestID   String?             // Token retornado pela AGT
 
-  // Relações de Anulação (NC)
+  // RelaÃ§Ãµes de AnulaÃ§Ã£o (NC)
   faturaOriginalId String?
   motivoAnulacao   String?
   faturaOriginal   Fatura?  @relation("FaturaAnulacao", fields: [faturaOriginalId], references: [id])
@@ -511,6 +530,12 @@ model Pagamento {
   valor      Int
   referencia String?
   notas      String?
+
+  // Campos Fiscais (RC)
+  numeroRecibo String?  // Ex: RC CPLS/1
+  fiscalHash   String?  // Assinatura RSA do Recibo
+  documentoChave String? // Dados concatenados para assinatura
+
   criadoEm   DateTime         @default(now())
   criadoPor  String
   fatura     Fatura           @relation(fields: [faturaId], references: [id], onDelete: Cascade)
@@ -572,10 +597,10 @@ model Exame {
   dataPedido       DateTime     @default(now())
   dataResultado    DateTime?
   
-  // -- NOVOS CAMPOS DO MÓDULO (SPRINT I) --
-  tipoExameId      String?           // NOVO: Link opcional para o catálogo
-  descricao        String?           // NOVO: indicação clínica/observações
-  estado           EstadoExame       @default(PENDENTE) // NOVO: máquina de estados tipada
+  // -- NOVOS CAMPOS DO MÃ“DULO (SPRINT I) --
+  tipoExameId      String?           // NOVO: Link opcional para o catÃ¡logo
+  descricao        String?           // NOVO: indicaÃ§Ã£o clÃ­nica/observaÃ§Ãµes
+  estado           EstadoExame       @default(PENDENTE) // NOVO: mÃ¡quina de estados tipada
   dataRealizacao   DateTime?         // NOVO
   laudoUrl         String?           // NOVO: URL do ficheiro no Supabase
   laudoNota        String?           // NOVO: texto complementar ao ficheiro
@@ -618,7 +643,7 @@ model Documento {
 model WaInstancia {
   id             String             @id @default(cuid())
   clinicaId      String
-  /// Nome da instância na Evolution API ("cp-slug-abc123"). Pode ser vazio em instâncias Meta puras.
+  /// Nome da instÃ¢ncia na Evolution API ("cp-slug-abc123"). Pode ser vazio em instÃ¢ncias Meta puras.
   evolutionName  String             @unique
   evolutionToken String
   estado         WaEstadoInstancia  @default(DESCONECTADO)
@@ -628,16 +653,16 @@ model WaInstancia {
   criadoEm       DateTime           @default(now())
   atualizadoEm   DateTime           @updatedAt
 
-  // ── Meta Cloud API (migration_meta_cloud) ───────────────────────────────
-  /// Tipo de integração: BAILEYS (padrão, via Evolution API) ou META_CLOUD (API oficial Meta)
+  // â”€â”€ Meta Cloud API (migration_meta_cloud) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /// Tipo de integraÃ§Ã£o: BAILEYS (padrÃ£o, via Evolution API) ou META_CLOUD (API oficial Meta)
   tipoIntegracao     WaTipoIntegracao  @default(BAILEYS)
-  /// Meta: Phone Number ID obtido no Meta Business Suite → WhatsApp → API Setup
+  /// Meta: Phone Number ID obtido no Meta Business Suite â†’ WhatsApp â†’ API Setup
   metaPhoneNumberId  String?
   /// Meta: WhatsApp Business Account ID
   metaWabaId         String?
-  /// Meta: System User Access Token (armazenar encriptado em produção)
+  /// Meta: System User Access Token (armazenar encriptado em produÃ§Ã£o)
   metaAccessToken    String?
-  // ────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   conversas      WaConversa[]
   automacoes     WaAutomacao[]
@@ -716,7 +741,7 @@ model WaConversa {
   etapaFluxo       String?
   contexto         Json?
   ultimaMensagemEm DateTime?        @map("ultima_mensagem_em")
-  expiraEm         DateTime?        @map("expira_em") // Expiração da sessão Intel
+  expiraEm         DateTime?        @map("expira_em") // ExpiraÃ§Ã£o da sessÃ£o Intel
   criadoEm         DateTime         @default(now()) @map("criado_em")
 
   clinicaId        String
@@ -870,20 +895,20 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ─── migration_009_superadmin ──────────────────────────────────────────────
+// â”€â”€â”€ migration_009_superadmin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Sessões de impersonation: super admin entra como admin de uma clínica
+/// SessÃµes de impersonation: super admin entra como admin de uma clÃ­nica
 model ImpersonationSession {
   id              String    @id @default(cuid())
-  superAdminId    String    // quem está a impersonar
+  superAdminId    String    // quem estÃ¡ a impersonar
   targetClinicaId String
   targetAdminId   String
   token           String    @unique // SHA-256 do JWT raw token
   criadoEm        DateTime  @default(now())
   expiresAt       DateTime  // obrigatoriamente now() + 30min
-  terminadaEm     DateTime? // null = sessão ainda activa
+  terminadaEm     DateTime? // null = sessÃ£o ainda activa
   ip              String
-  motivo          String    // obrigatório — min 10 chars — para audit trail
+  motivo          String    // obrigatÃ³rio â€” min 10 chars â€” para audit trail
 
   superAdmin    Utilizador @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id])
   targetAdmin   Utilizador @relation("ImpersonatedSessions", fields: [targetAdminId], references: [id])
@@ -911,7 +936,7 @@ model SistemaEvento {
   @@map("sistema_eventos")
 }
 
-/// Feature flags por plano ou por clínica específica
+/// Feature flags por plano ou por clÃ­nica especÃ­fica
 model FeatureFlag {
   id           String   @id @default(cuid())
   codigo       String   @unique // ex: "whatsapp_bot", "ia_noshow"
@@ -945,13 +970,14 @@ enum EstadoAgendamento {
   CONCLUIDO
   CANCELADO
   NAO_COMPARECEU
+  ATRASADO
 }
 
 enum EstadoSubscricao {
-  TRIAL          // período experimental (14 dias por defeito)
+  TRIAL          // perÃ­odo experimental (14 dias por defeito)
   ACTIVA         // paga e dentro da validade
-  GRACE_PERIOD   // expirou há menos de 7 dias — funcional com aviso
-  SUSPENSA       // expirou há mais de 7 dias — só leitura
+  GRACE_PERIOD   // expirou hÃ¡ menos de 7 dias â€” funcional com aviso
+  SUSPENSA       // expirou hÃ¡ mais de 7 dias â€” sÃ³ leitura
   CANCELADA      // cancelada pelo admin ou pelo cliente
 }
 
@@ -1180,7 +1206,7 @@ model SessaoTratamento {
   @@map("sessao_tratamento")
 }
 
-// ─── SEQUÊNCIA DOCUMENTAL ──────────────────────────────────────────────
+// â”€â”€â”€ SEQUÃŠNCIA DOCUMENTAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model SequenciaDocFiscal {
   id            String              @id @default(cuid())
@@ -1190,13 +1216,19 @@ model SequenciaDocFiscal {
   anoFiscal     Int
   ultimoNumero  Int                 @default(0)
 
+  // Metadados de Contingência
+  isContingency Boolean             @default(false)
+  startTS       DateTime?
+  endTS         DateTime?
+  isRegistered  Boolean             @default(false)
+
   clinica       Clinica  @relation(fields: [clinicaId], references: [id])
 
   @@unique([clinicaId, tipoDoc, serie, anoFiscal])
   @@map("sequencia_doc_fiscal")
 }
 
-// ─── SNAPSHOT FISCAL ────────────────────────────────────────────────────
+// â”€â”€â”€ SNAPSHOT FISCAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model FaturaSnapshot {
   id                 String   @id @default(cuid())
@@ -1219,15 +1251,190 @@ model FaturaSnapshot {
 }
 
 enum TipoDocumentoFiscal {
+  FA
   FT
   FR
   VD
-  NC
+  FG
+  GF
+  AC
+  AR
+  TV
+  RC
+  RG
+  RE
   ND
+  NC
+  AF
+  RP
+  RA
+  CS
+  LD
 }
 
 enum RegimeFiscal {
   GERAL
   SIMPLIFICADO
   EXUSA
+}
+
+// â”€â”€â”€ INVENTÃRIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model CategoriaProduto {
+  id           String    @id @default(cuid())
+  clinicaId    String
+  nome         String
+  descricao    String?
+  cor          String?
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  clinica      Clinica   @relation(fields: [clinicaId], references: [id])
+  produtos     Produto[]
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("categorias_produto")
+}
+
+model Produto {
+  id               String          @id @default(cuid())
+  clinicaId        String
+  categoriaId      String
+  codigo           String?         // SKU / ReferÃªncia
+  nome             String
+  descricao        String?
+  precoCusto       Int             @default(0)
+  precoVenda       Int             @default(0)
+  taxaIva          Float           @default(14)
+  codigoIva        String          @default("IVA")
+  motivoIsencao    String?
+  tipo             TipoProduto     @default(PRODUTO)
+  gerenciaEstoque  Boolean         @default(true)
+  estoqueMinimo    Int             @default(0)
+  ativo            Boolean         @default(true)
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+
+  clinica          Clinica         @relation(fields: [clinicaId], references: [id])
+  categoria        CategoriaProduto @relation(fields: [categoriaId], references: [id])
+  lotes            EstoqueLote[]
+  movimentacoes    MovimentacaoEstoque[]
+
+  @@unique([clinicaId, codigo])
+  @@index([clinicaId])
+  @@index([categoriaId])
+  @@map("produtos")
+}
+
+model EstoqueLote {
+  id               String          @id @default(cuid())
+  clinicaId        String
+  produtoId        String
+  numeroLote       String
+  dataValidade     DateTime?
+  quantidade       Int             @default(0)
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+
+  clinica          Clinica         @relation(fields: [clinicaId], references: [id])
+  produto          Produto         @relation(fields: [produtoId], references: [id])
+  movimentacoes    MovimentacaoEstoque[]
+
+  @@index([clinicaId])
+  @@index([produtoId])
+  @@index([dataValidade])
+  @@map("estoque_lotes")
+}
+
+model MovimentacaoEstoque {
+  id               String           @id @default(cuid())
+  clinicaId        String
+  produtoId        String
+  loteId           String?
+  utilizadorId     String?
+  tipo             TipoMovimentacao
+  quantidade       Int
+  motivo           String?
+  documentoRef     String?          // Ex: "FT 2026/001"
+  criadoEm         DateTime         @default(now())
+
+  clinica          Clinica          @relation(fields: [clinicaId], references: [id])
+  produto          Produto          @relation(fields: [produtoId], references: [id])
+  lote             EstoqueLote?     @relation(fields: [loteId], references: [id])
+
+  @@index([clinicaId])
+  @@index([produtoId])
+  @@index([loteId])
+  @@map("estoque_movimentacoes")
+}
+
+enum TipoProduto {
+  PRODUTO
+  SERVICO
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+  AJUSTE
+  VENDA
+  ESTORNO
+  TRANSFERENCIA
+}
+
+
+model Anamnese {
+  id            String   @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String?  @unique
+  especialidade String   @default("ODONTOLOGIA")
+  respostas     Json     // { [questionId]: { value: any, observation?: string } }
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  clinica       Clinica      @relation(fields: [clinicaId], references: [id])
+  paciente      Paciente     @relation(fields: [pacienteId], references: [id])
+  medico        Medico       @relation(fields: [medicoId], references: [id])
+  agendamento   Agendamento? @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId, pacienteId])
+  @@map("anamneses")
+}
+
+// -------------------------------------------------
+// Anamnese Template models (per Especialidade)
+// -------------------------------------------------
+model AnamneseTemplate {
+  id               String                 @id @default(cuid())
+  clinicaId        String
+  especialidadeId  String                 @unique
+  titulo           String
+  criadoEm         DateTime               @default(now())
+  atualizadoEm     DateTime               @updatedAt
+  questoes         AnamneseTemplateQuestao[]
+  clinica          Clinica                @relation(fields: [clinicaId], references: [id])
+  especialidade    Especialidade          @relation(fields: [especialidadeId], references: [id])
+
+  @@unique([clinicaId, especialidadeId])
+  @@index([clinicaId])
+  @@map("anamnese_templates")
+}
+
+model AnamneseTemplateQuestao {
+  id               String                 @id @default(cuid())
+  templateId       String
+  ordem            Int                    @default(0)
+  pergunta         String
+  tipoResposta     String                 // "boolean", "select", "text", "date"
+  options          Json?                  // array of { value, label } when tipoResposta == "select"
+  criadoEm         DateTime               @default(now())
+  atualizadoEm     DateTime               @updatedAt
+  template         AnamneseTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("anamnese_template_questoes")
 }

@@ -88,7 +88,7 @@ export function TratamentoDetalheModal({ id, isOpen, onClose }: TratamentoDetalh
             </div>
             <div>
               <PlanoProgressBar 
-                sessoesRealizadas={plano.sessoesRealizadas || 0} 
+                sessoesRealizadas={plano.sessoes?.filter((s: any) => s.estado === 'REALIZADO').length ?? plano.sessoesRealizadas ?? 0} 
                 totalSessoes={plano.totalSessoes} 
               />
               <div className="mt-4 flex justify-between items-center text-xs text-neutral-500">
@@ -164,7 +164,7 @@ export function TratamentoDetalheModal({ id, isOpen, onClose }: TratamentoDetalh
                               variant="danger" 
                               onClick={() => handleUpdateSessao(sessao.id, 'FALTOU')}
                               loading={isUpdating}
-                            >Faltou</Button>
+                            >Não Compareceu</Button>
                             <Button 
                               size="sm" 
                               onClick={() => handleUpdateSessao(sessao.id, 'REALIZADO')}

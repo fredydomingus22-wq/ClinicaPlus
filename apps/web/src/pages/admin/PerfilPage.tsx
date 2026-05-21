@@ -30,6 +30,18 @@ import {
 import { getInitials } from '@clinicaplus/utils';
 import { UtilizadorUpdateInput } from '@clinicaplus/types';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
+import { ImageUploader } from '../../components/shared/ImageUploader';
+import { apiClient } from '../../api/client';
+
+const getAvatarUploadUrl = async (fileName: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-upload-url', { fileName });
+  return data.data;
+};
+
+const confirmAvatarUpload = async (path: string, provider: 'supabase'|'local', base64Data?: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-confirm', { path, provider, base64Data });
+  return data.data;
+};
 
 // ─── Types and Helper ────────────────────────────────────────────────────────
 interface ApiErrorResponse {
@@ -171,13 +183,20 @@ export default function AdminPerfilPage() {
           <Card className="p-8">
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="shrink-0">
-                <Avatar
-                  initials={getInitials(utilizador?.nome || 'A')}
-                  size="lg"
-                  className="border-4 border-white shadow-xl"
-                />
+                 <ImageUploader 
+                    initialImage={utilizador?.avatarUrl}
+                    onUploadSuccess={(url) => {
+                      if (utilizador) {
+                        const timestampedUrl = `${url}?t=${Date.now()}`;
+                        useAuthStore.getState().setUtilizador({ ...utilizador, avatarUrl: timestampedUrl });
+                      }
+                    }}
+                    getUploadUrlFn={getAvatarUploadUrl}
+                    confirmUploadFn={confirmAvatarUpload}
+                    label=""
+                  />
               </div>
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-4 pt-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                   <div>
                     <h2 className="text-2xl font-bold text-neutral-900">{utilizador?.nome}</h2>

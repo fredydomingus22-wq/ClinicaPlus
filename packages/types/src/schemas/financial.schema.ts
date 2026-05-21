@@ -21,6 +21,8 @@ export const FaturaCreateSchema = z.object({
   desconto: z.number().int().min(0).default(0),
   retencaoFonte: z.number().int().min(0).default(0),
   notas: z.string().optional(),
+  dataEmissao: z.string().optional(), // Retrodatação
+  retrodatar: z.boolean().default(false),
   dataVencimento: z.string().optional(),
 });
 
@@ -45,6 +47,13 @@ export const PagamentoCreateSchema = z.object({
 });
 
 export type PagamentoCreateInput = z.infer<typeof PagamentoCreateSchema>;
+
+export const NotaDebitoCreateSchema = z.object({
+  motivo: z.string().min(1, 'Motivo é obrigatório'),
+  itens: z.array(ItemFaturaSchema).min(1, 'Pelo menos um item é obrigatório'),
+});
+
+export type NotaDebitoCreateInput = z.infer<typeof NotaDebitoCreateSchema>;
 
 export const SeguroUpdateSchema = z.object({
   estado: z.nativeEnum(EstadoSeguro),
@@ -88,6 +97,9 @@ export interface PagamentoDTO {
   valor: number;
   referencia?: string;
   notas?: string;
+  numeroRecibo?: string;
+  fiscalHash?: string;
+  documentoChave?: string;
   criadoEm: string;
   criadoPor: string;
   seguro?: SeguroPagamentoDTO;
@@ -121,7 +133,9 @@ export interface FaturaDTO {
   hashAnterior?: string | null;
   hashControl?: string | null;
   documentoChave?: string | null;
+  serieDocFiscal?: string | null;
   statusEnvio?: string;
+  emContingencia?: boolean;
   agtRequestID?: string | null;
   itens?: ItemFaturaDTO[];
   pagamentos?: PagamentoDTO[];

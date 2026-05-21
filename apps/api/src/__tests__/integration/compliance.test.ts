@@ -33,7 +33,7 @@ describe('Fiscal Compliance & Integration', () => {
     }
   });
 
-  let faturas: any[] = [];
+  const faturas: any[] = [];
 
   it('1. Deve emitir uma sequência de 3 faturas e garantir a Hash Chain', async () => {
     for (let i = 1; i <= 3; i++) {

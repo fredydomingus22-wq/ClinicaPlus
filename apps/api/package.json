@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "dotenv -e .env -- vitest",
+    "test": "dotenv -e .env -- npx vitest --config ./vitest.config.mjs",
     "db:fix-webhooks": "ts-node src/scripts/fix_evolution_webhooks.ts",
     "db:reprovision-all": "ts-node src/reprovision_all.ts"
   },

@@ -26,6 +26,7 @@ function toClinicaDTO(c: ClinicaPayload | Prisma.ClinicaGetPayload<Record<string
     nome: c.nome,
     slug: c.slug,
     logo: c.logo || null,
+    logotipoUrl: c.logotipoUrl || null,
     telefone: c.telefone || null,
     email: c.email as string,
     endereco: c.endereco || null,

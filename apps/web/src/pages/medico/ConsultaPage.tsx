@@ -16,8 +16,10 @@ import {
   StatusBadge,
   Textarea,
   ReceitaPrint,
-  Modal
+  Modal,
+  Tabs
 } from '@clinicaplus/ui';
+import { AnamneseTab } from '../../components/consultation/AnamneseTab';
 import { 
   Activity, 
   FileText, 
@@ -62,6 +64,7 @@ export default function ConsultaPage() {
   const [showPlanoModal, setShowPlanoModal] = useState(false);
   const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('evolucao');
   const { data: clinica } = useClinicaMe();
   const { utilizador } = useAuthStore();
   const { addToast } = useUIStore();
@@ -383,7 +386,29 @@ export default function ConsultaPage() {
 
         {/* Right Column (8/12) */}
         <div className="xl:col-span-8 flex flex-col gap-6">
-          {isReadOnly ? (
+          <Card className="p-0 border-neutral-200 overflow-hidden">
+            <Tabs 
+              items={[
+                { id: 'evolucao', label: 'Evolução Clínica' },
+                { id: 'anamnese', label: 'Anamnese' }
+              ]}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              className="bg-white border-b border-neutral-100"
+            />
+          </Card>
+
+          {activeTab === 'anamnese' ? (
+            <Card className="p-6 border-primary-200 shadow-xl shadow-primary-500/5 min-h-[650px]">
+              <AnamneseTab 
+                agendamentoId={agendamento.id}
+                pacienteId={paciente.id}
+                medicoId={utilizador?.medico?.id || ''}
+                especialidade={utilizador?.medico?.especialidade?.nome || 'ODONTOLOGIA'}
+                isReadOnly={isReadOnly}
+              />
+            </Card>
+          ) : isReadOnly ? (
             /* ─── READ-ONLY SUMMARY MODE ─── */
             <>
               <Card className="p-0 overflow-hidden shadow-sm border-neutral-200">

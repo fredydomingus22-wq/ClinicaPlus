@@ -8,6 +8,7 @@ import { webhookWorker } from './workers/webhook.worker';
 import { reportWorker } from './workers/report.worker';
 import { reportAgtWorker } from './workers/report-agt.worker';
 import { criarSessoesWorker } from './workers/criarSessoes.worker';
+import { appointmentExpirationWorker } from './workers/appointment-expiration.worker';
 import { schedulerService } from './services/scheduler.service';
 
 /**
@@ -36,14 +37,15 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down gracefully...');
     
-    healthServer.close();
     await Promise.all([
+      healthServer.close(),
       emailWorker.close(),
       reminderWorker.close(),
       webhookWorker.close(),
       reportWorker.close(),
       reportAgtWorker.close(),
       criarSessoesWorker.close(),
+      appointmentExpirationWorker.close(),
     ]);
 
     await redis.quit();

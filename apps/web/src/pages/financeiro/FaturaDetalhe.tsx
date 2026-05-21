@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useFatura, useEmitirFatura, useAnularFatura, useRegistarPagamento, useSubmeterSeguro, useRegistarRespostaSeguro } from '../../hooks/useFaturas';
+import { useFatura, useEmitirFatura, useAnularFatura, useNotaDebito, useRegistarPagamento, useSubmeterSeguro, useRegistarRespostaSeguro } from '../../hooks/useFaturas';
 import { useClinicaMe } from '../../hooks/useClinicas';
 import { 
   Button, 
@@ -42,6 +42,7 @@ export default function FaturaDetalhe() {
   
   const emitirMutation = useEmitirFatura();
   const anularMutation = useAnularFatura();
+  const notaDebitoMutation = useNotaDebito();
   
   const submeterSeguro = useSubmeterSeguro();
   const registarResposta = useRegistarRespostaSeguro();
@@ -56,7 +57,13 @@ export default function FaturaDetalhe() {
 
   const [isPagamentoModalOpen, setIsPagamentoModalOpen] = useState(false);
   const [isAnularModalOpen, setIsAnularModalOpen] = useState(false);
+  const [isNDModalOpen, setIsNDModalOpen] = useState(false);
   const [motivoAnulacao, setMotivoAnulacao] = useState('');
+  
+  // Estados para Nota de Débito expandida
+  const [ndDescricao, setNdDescricao] = useState('');
+  const [ndPrecoUnit, setNdPrecoUnit] = useState(0);
+  const [ndQuantidade, setNdQuantidade] = useState(1);
 
   const handlePrint = () => {
     window.print();
@@ -95,9 +102,41 @@ export default function FaturaDetalhe() {
     try {
       await anularMutation.mutateAsync({ id: fatura.id, motivo: motivoAnulacao });
       setIsAnularModalOpen(false);
-      toast.success('Fatura anulada.');
+      toast.success('Nota de Crédito (Anulação) gerada com sucesso.');
     } catch {
       toast.error('Erro ao anular fatura.');
+    }
+  };
+
+  const handleND = async () => {
+    if (!ndDescricao || ndPrecoUnit <= 0) {
+      toast.error('Descrição e valor são obrigatórios');
+      return;
+    }
+    try {
+      await notaDebitoMutation.mutateAsync({ 
+        id: fatura.id, 
+        motivo: ndDescricao,
+        itens: [{
+          descricao: ndDescricao,
+          quantidade: ndQuantidade,
+          precoUnit: ndPrecoUnit,
+          taxaIva: 14, // Padrão
+          codigoIva: 'IVA',
+          desconto: 0
+        }]
+      });
+      setIsNDModalOpen(false);
+      setNdDescricao('');
+      setNdPrecoUnit(0);
+      toast.success('Nota de Débito (Complementar) gerada e emitida.');
+    } catch (err: unknown) {
+      let msg = 'Erro ao gerar nota de débito.';
+      if (err && typeof err === 'object' && 'response' in (err as object)) {
+        const error = err as { response?: { data?: { message?: string } } };
+        msg = error.response?.data?.message || msg;
+      }
+      toast.error(msg);
     }
   };
 
@@ -151,10 +190,15 @@ export default function FaturaDetalhe() {
                 <CreditCard className="h-4 w-4 mr-2" /> Registar Pagamento
              </Button>
           )}
-          {fatura.estado === EstadoFatura.EMITIDA && (
-             <Button variant="secondary" className="hover:text-red-600 hover:border-red-200" onClick={() => setIsAnularModalOpen(true)}>
-                <Ban className="h-4 w-4 mr-2" /> Anular
-             </Button>
+          {(fatura.estado === EstadoFatura.EMITIDA || fatura.estado === EstadoFatura.PAGA) && (
+            <>
+              <Button variant="secondary" className="hover:text-amber-600" onClick={() => setIsNDModalOpen(true)}>
+                <DollarSign className="h-4 w-4 mr-2" /> Nota Débito (ND)
+              </Button>
+              <Button variant="secondary" className="hover:text-red-600 hover:border-red-200" onClick={() => setIsAnularModalOpen(true)}>
+                <Ban className="h-4 w-4 mr-2" /> Anular (NC)
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -202,8 +246,11 @@ export default function FaturaDetalhe() {
                   { header: 'Descrição', accessor: 'descricao' },
                   { header: 'Qtd', accessor: 'quantidade', className: 'text-center' },
                   { header: 'Preço', accessor: (i: ItemFaturaDTO) => formatKwanza(i.precoUnit), className: 'text-right' },
+                  { header: 'Imposto', accessor: (i: ItemFaturaDTO) => <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-600 font-bold">{i.codigoIva || 'IVA'}</span>, className: 'text-center' },
+                  { header: 'Taxa', accessor: (i: ItemFaturaDTO) => `${i.taxaIva}%`, className: 'text-center' },
+                  { header: 'V. Imposto', accessor: (i: ItemFaturaDTO) => formatKwanza(Math.round(((i.precoUnit * i.quantidade) - (i.desconto || 0)) * (i.taxaIva / 100))), className: 'text-right' },
                   { header: 'Desconto', accessor: (i: ItemFaturaDTO) => i.desconto > 0 ? `-${formatKwanza(i.desconto)}` : '---', className: 'text-right' },
-                  { header: 'Total', accessor: (i: ItemFaturaDTO) => <span className="font-bold">{formatKwanza(i.total)}</span>, className: 'text-right' },
+                  { header: 'Total', accessor: (i: ItemFaturaDTO) => <span className="font-extrabold text-neutral-900">{formatKwanza(i.total)}</span>, className: 'text-right' },
                 ]}
                 data={fatura.itens || []}
                 keyExtractor={(i) => i.id}
@@ -212,15 +259,19 @@ export default function FaturaDetalhe() {
                  <div className="flex justify-end">
                     <div className="w-64 space-y-2">
                       <div className="flex justify-between text-xs text-neutral-500">
-                        <span>Subtotal</span>
+                        <span>Subtotal (Incidência)</span>
                         <span className="font-mono">{formatKwanza(fatura.subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-red-600">
                         <span>Desconto Global</span>
                         <span className="font-mono">-{formatKwanza(fatura.desconto)}</span>
                       </div>
+                      <div className="flex justify-between text-xs text-neutral-500">
+                        <span>Total Imposto (IVA)</span>
+                        <span className="font-mono">+{formatKwanza(fatura.total - (fatura.subtotal - fatura.desconto))}</span>
+                      </div>
                       <div className="flex justify-between text-lg font-bold text-primary-700 pt-2 border-t border-neutral-200">
-                        <span>Total</span>
+                        <span>Total a Pagar</span>
                         <span className="font-mono">{formatKwanza(fatura.total)}</span>
                       </div>
                     </div>
@@ -261,18 +312,42 @@ export default function FaturaDetalhe() {
             </Card>
 
             <Card className="p-0 overflow-hidden">
-              <div className="p-4 bg-neutral-50 border-b border-neutral-100">
+              <div className="p-4 bg-neutral-50 border-b border-neutral-100 flex justify-between items-center">
                  <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500">Histórico de Pagamentos</h3>
+                 <p className="text-[10px] text-neutral-400 font-medium">Liquidação de FT</p>
               </div>
               {fatura.pagamentos && fatura.pagamentos.length > 0 ? (
                 <div className="divide-y divide-neutral-100">
                   {fatura.pagamentos.map(p => (
-                    <div key={p.id} className="p-4 space-y-1">
+                    <div key={p.id} className="p-4 group hover:bg-neutral-50 transition-colors">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-bold text-neutral-900">{formatKwanza(p.valor)}</p>
-                        <Badge variant="outline" className="text-[9px]">{p.metodo}</Badge>
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-neutral-900">{formatKwanza(p.valor)}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px] h-4">{p.metodo}</Badge>
+                            {p.numeroRecibo && (
+                              <span className="text-[10px] font-mono text-primary-600 font-bold">{p.numeroRecibo}</span>
+                            )}
+                          </div>
+                        </div>
+                        {p.numeroRecibo && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity" 
+                            title="Imprimir Recibo (RC)"
+                            onClick={() => {
+                              const printWindow = window.open('', '_blank');
+                              if (printWindow) {
+                                toast.success('Gerando documento para impressão...');
+                              }
+                            }}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                      <div className="flex justify-between items-center text-[10px] text-neutral-500">
+                      <div className="flex justify-between items-center text-[10px] text-neutral-500 mt-2">
                         <span>{new Date(p.criadoEm).toLocaleString()}</span>
                         {p.referencia && <span>Ref: {p.referencia}</span>}
                       </div>
@@ -418,13 +493,28 @@ export default function FaturaDetalhe() {
         seguradoras={clinica?.configuracao?.seguradoras || []}
       />
 
-      <Modal isOpen={isAnularModalOpen} onClose={() => setIsAnularModalOpen(false)} title="Anular Fatura">
+      <Modal isOpen={isAnularModalOpen} onClose={() => setIsAnularModalOpen(false)} title="Anular Fatura (Nota de Crédito)">
         <div className="space-y-4 pt-2">
-          <p className="text-sm text-neutral-600">Tem a certeza que deseja anular esta fatura?</p>
-          <Input label="Motivo" value={motivoAnulacao} onChange={(e) => setMotivoAnulacao(e.target.value)} />
+          <p className="text-sm text-neutral-600">Deseja gerar uma Nota de Crédito para anular esta fatura?</p>
+          <Input label="Motivo da Anulação" placeholder="Ex: Erro nos dados do cliente..." value={motivoAnulacao} onChange={(e) => setMotivoAnulacao(e.target.value)} />
           <div className="flex gap-3 pt-4">
             <Button variant="ghost" fullWidth onClick={() => setIsAnularModalOpen(false)}>Cancelar</Button>
-            <Button variant="secondary" fullWidth className="text-red-600" onClick={handleAnular} loading={anularMutation.isPending}>Confirmar</Button>
+            <Button variant="secondary" fullWidth className="text-red-600" onClick={handleAnular} loading={anularMutation.isPending}>Gerar NC</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isNDModalOpen} onClose={() => setIsNDModalOpen(false)} title="Gerar Nota de Débito (ND)">
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-neutral-600">A Nota de Débito é usada para retificações positivas ou encargos adicionais.</p>
+          <Input label="Descrição do Ajuste" placeholder="Ex: Encargos adicionais de transporte..." value={ndDescricao} onChange={(e) => setNdDescricao(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Valor Unitário (Kz)" type="number" value={ndPrecoUnit} onChange={(e) => setNdPrecoUnit(Number(e.target.value))} />
+            <Input label="Quantidade" type="number" value={ndQuantidade} onChange={(e) => setNdQuantidade(Number(e.target.value))} />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <Button variant="ghost" fullWidth onClick={() => setIsNDModalOpen(false)}>Cancelar</Button>
+            <Button fullWidth onClick={handleND} loading={notaDebitoMutation.isPending}>Emitir Nota de Débito</Button>
           </div>
         </div>
       </Modal>
@@ -468,8 +558,13 @@ function PagamentoModal({ isOpen, onClose, faturaId, valorPendente, seguradoras 
       toast.success('Pagamento registado!');
       reset();
       onClose();
-    } catch {
-      toast.error('Erro ao registar pagamento.');
+    } catch (err: unknown) {
+      let msg = 'Erro ao registar pagamento.';
+      if (err && typeof err === 'object' && 'response' in (err as object)) {
+        const error = err as { response?: { data?: { message?: string } } };
+        msg = error.response?.data?.message || msg;
+      }
+      toast.error(msg);
     }
   };
 

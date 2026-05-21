@@ -23,17 +23,28 @@ function toClinicaDTO(
     nome: c.nome,
     slug: c.slug,
     logo: c.logo,
+    logotipoUrl: c.logotipoUrl || c.logo,
     telefone: c.telefone,
     email: c.email,
     endereco: c.endereco,
     cidade: c.cidade,
     provincia: c.provincia,
+    tipoEntidade: (c.tipoEntidade as ClinicaDTO['tipoEntidade']) ?? null,
     plano: c.plano as ClinicaDTO['plano'],
     subscricaoEstado: c.subscricaoEstado as ClinicaDTO['subscricaoEstado'],
     subscricaoValidaAte: c.subscricaoValidaAte ? c.subscricaoValidaAte.toISOString() : null,
     ativo: c.ativo,
     criadoEm: c.criadoEm.toISOString(),
     atualizadoEm: c.atualizadoEm.toISOString(),
+    nif: c.nif,
+    razaoSocial: c.razaoSocial,
+    regimeFiscal: (c.regimeFiscal as ClinicaDTO['regimeFiscal']) || 'GERAL',
+    agtSoftwareCert: '0/AGT/2026',
+    enderecoPostal: c.enderecoPostal,
+    serieDocFiscal: c.serieDocFiscal,
+    agtApiToken: c.agtApiToken,
+    agtPrivateKey: c.agtPrivateKey,
+    agtPublicKey: c.agtPublicKey,
   };
 
   if (config) {
@@ -211,6 +222,13 @@ export const clinicasService = {
   async update(clinicaId: string, data: ClinicaUpdateInput): Promise<ClinicaDTO> {
     // Prevent changing slug or plano via this endpoint
     const { configuracao, ...safeData } = data;
+
+    // Sync logo and logotipoUrl if any is provided
+    if (safeData.logo && !safeData.logotipoUrl) {
+      (safeData as any).logotipoUrl = safeData.logo;
+    } else if (safeData.logotipoUrl && !safeData.logo) {
+      (safeData as any).logo = safeData.logotipoUrl;
+    }
 
     const clinica = await prisma.clinica.update({
       where: { id: clinicaId },

@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/authenticate';
 import { tenantMiddleware } from '../middleware/tenant';
 import { requireRole } from '../middleware/requireRole';
 import { Papel } from '@clinicaplus/types';
+import { storageService } from '../services/storage.service';
 
 const router = Router();
 
@@ -150,6 +151,30 @@ router.put('/:id/permissoes/:codigo', authenticate, tenantMiddleware, requireRol
   } catch (err) {
     next(err);
   }
+});
+
+/**
+ * POST /utilizadores/me/avatar-upload-url
+ * Auth: ALL — generates upload url for the user avatar
+ */
+router.post('/me/avatar-upload-url', authenticate, tenantMiddleware, async (req, res, next) => {
+  try {
+    const { fileName } = req.body;
+    const result = await storageService.getUploadUrl(req.clinica!.id, 'user_avatar', req.user!.id, fileName || 'avatar.png');
+    return res.json({ success: true, data: result });
+  } catch (err) { return next(err); }
+});
+
+/**
+ * POST /utilizadores/me/avatar-confirm
+ * Auth: ALL — confirms avatar upload and saves it to db
+ */
+router.post('/me/avatar-confirm', authenticate, tenantMiddleware, async (req, res, next) => {
+  try {
+    const { path, provider, base64Data } = req.body;
+    const url = await storageService.confirmUpload(req.clinica!.id, 'user_avatar', req.user!.id, path, provider, base64Data);
+    return res.json({ success: true, data: { avatarUrl: url } });
+  } catch (err) { return next(err); }
 });
 
 export default router;

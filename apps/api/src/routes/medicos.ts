@@ -36,36 +36,6 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
- * GET /medicos/:id
- * Auth: All authenticated roles
- */
-router.get('/:id', async (req, res, next) => {
-  try {
-    const medico = await medicosService.getOne(
-      req.params.id as string,
-      req.clinica.id
-    );
-    return res.json({ success: true, data: medico });
-  } catch (err) { return next(err); }
-});
-
-/**
- * GET /medicos/:id/slots?data=YYYY-MM-DD
- * Auth: All authenticated roles
- */
-router.get('/:id/slots', async (req, res, next) => {
-  try {
-    const { data } = MedicoSlotQuerySchema.parse(req.query);
-    const slots = await medicosService.getSlots(
-      req.params.id as string,
-      data,
-      req.clinica.id
-    );
-    return res.json({ success: true, data: { slots } });
-  } catch (err) { return next(err); }
-});
-
-/**
  * GET /medicos/me
  * Auth: MEDICO — returns the logged-in médico's own profile.
  */
@@ -95,6 +65,36 @@ router.patch('/me',
     } catch (err) { return next(err); }
   }
 );
+
+/**
+ * GET /medicos/:id
+ * Auth: All authenticated roles
+ */
+router.get('/:id', async (req, res, next) => {
+  try {
+    const medico = await medicosService.getOne(
+      req.params.id as string,
+      req.clinica.id
+    );
+    return res.json({ success: true, data: medico });
+  } catch (err) { return next(err); }
+});
+
+/**
+ * GET /medicos/:id/slots?data=YYYY-MM-DD
+ * Auth: All authenticated roles
+ */
+router.get('/:id/slots', async (req, res, next) => {
+  try {
+    const { data } = MedicoSlotQuerySchema.parse(req.query);
+    const slots = await medicosService.getSlots(
+      req.params.id as string,
+      data,
+      req.clinica.id
+    );
+    return res.json({ success: true, data: { slots } });
+  } catch (err) { return next(err); }
+});
 
 router.post('/',
   requireRole([Papel.ADMIN]),

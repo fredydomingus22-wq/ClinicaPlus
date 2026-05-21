@@ -49,6 +49,7 @@ export function UserMenu() {
       >
         <Avatar 
           initials={getInitials(utilizador?.nome || '')} 
+          src={utilizador?.avatarUrl ?? undefined}
           size="sm"
         />
       </button>

@@ -1,21 +1,22 @@
 import React from 'react';
 import { cn } from '../utils/cn';
 
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
 }
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string | undefined;
   error?: string | undefined;
+  helperText?: string | undefined;
   options: SelectOption[];
   placeholder?: string;
   required?: boolean;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, options, placeholder, required, className, ...props }, ref) => {
+  ({ label, error, helperText, options, placeholder, required, className, ...props }, ref) => {
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {label && (
@@ -61,6 +62,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </div>
         </div>
         {error && <span className="text-[11px] font-medium text-danger-600 font-mono mt-0.5">{error}</span>}
+        {!error && helperText && <span className="text-[11px] text-neutral-500 font-sans mt-0.5">{helperText}</span>}
       </div>
     );
   }

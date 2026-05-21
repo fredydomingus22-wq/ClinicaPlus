@@ -1,22 +1,22 @@
 # ClinicaPlus - Script de Iniciação Completo
 # Certifica-te de que o Docker Desktop está a correr.
 
-Write-Host "🚀 A iniciar a infraestrutura ClinicaPlus..." -ForegroundColor Cyan
+Write-Host "A iniciar a infraestrutura ClinicaPlus..." -ForegroundColor Cyan
 
-# 1. Iniciar Base de Dados e Redis
-docker compose up -d
+# 1. Iniciar Base de Dados, Redis e Evolution
+docker compose up -d db redis evolution
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Erro ao iniciar containers Docker." -ForegroundColor Red
     exit $LASTEXITCODE
 }
 
-Write-Host "⏳ A aguardar que a Base de Dados esteja pronta..." -ForegroundColor Yellow"
+Write-Host "A aguardar que a Base de Dados esteja pronta..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
 # 2. Preparar Prisma e Base de Dados
-Write-Host "🛠️ A preparar o Prisma e a Base de Dados..." -ForegroundColor Cyan"
+Write-Host "A preparar o Prisma e a Base de Dados..." -ForegroundColor Cyan
 pnpm db:generate
-pnpm db:migrate deploy
+pnpm db:migrate
 pnpm db:seed
 
 if ($LASTEXITCODE -ne 0) {
@@ -25,5 +25,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 3. Iniciar Servidores de Desenvolvimento (API e WEB via Turbo)
-Write-Host "🔥 A iniciar os servidores de desenvolvimento (Turborepo)..."
+Write-Host "A iniciar os servidores de desenvolvimento (Turborepo)..."
 pnpm dev

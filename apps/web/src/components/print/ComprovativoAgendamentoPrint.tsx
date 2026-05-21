@@ -3,14 +3,15 @@ import { formatDate } from '@clinicaplus/utils';
 
 interface Props {
   clinicaNome: string;
-  clinicaEndereco?: string;
-  clinicaTelefone?: string;
+  clinicaEndereco?: string | null;
+  clinicaTelefone?: string | null;
   pacienteNome: string;
   pacienteNumero: string | number;
   medicoNome: string;
   especialidade: string | null;
   dataHora: string;
   tipoAgendamento: string;
+  clinicaLogoUrl?: string | null;
 }
 
 export const ComprovativoAgendamentoPrint = forwardRef<HTMLDivElement, Props>(
@@ -25,6 +26,7 @@ export const ComprovativoAgendamentoPrint = forwardRef<HTMLDivElement, Props>(
       especialidade,
       dataHora,
       tipoAgendamento,
+      clinicaLogoUrl,
     },
     ref
   ) => {
@@ -69,10 +71,15 @@ export const ComprovativoAgendamentoPrint = forwardRef<HTMLDivElement, Props>(
         `}</style>
 
         {/* Cabeçalho da clínica */}
-        <div style={{ borderBottom: '2px solid #000', paddingBottom: '12px', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: 0 }}>{clinicaNome}</h1>
-          {clinicaEndereco && <p style={{ margin: '4px 0 0', fontSize: '10pt', color: '#444' }}>{clinicaEndereco}</p>}
-          {clinicaTelefone && <p style={{ margin: '2px 0 0', fontSize: '10pt', color: '#444' }}>Tel: {clinicaTelefone}</p>}
+        <div style={{ borderBottom: '2px solid #000', paddingBottom: '12px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {clinicaLogoUrl && (
+            <img src={clinicaLogoUrl} alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+          )}
+          <div>
+            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: 0 }}>{clinicaNome}</h1>
+            {clinicaEndereco && <p style={{ margin: '4px 0 0', fontSize: '10pt', color: '#444' }}>{clinicaEndereco}</p>}
+            {clinicaTelefone && <p style={{ margin: '2px 0 0', fontSize: '10pt', color: '#444' }}>Tel: {clinicaTelefone}</p>}
+          </div>
         </div>
 
         {/* Título */}

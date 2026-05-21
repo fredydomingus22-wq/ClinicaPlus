@@ -15,6 +15,13 @@ interface Props {
 }
 
 export const RelatorioVendasPrint = forwardRef<HTMLDivElement, Props>(({ relatorio, clinica }, ref) => {
+  const safeFormatDate = (val?: string | Date | null) => {
+    if (!val) return '---';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '---';
+    return formatDate(d);
+  };
+
   return (
     <div ref={ref} className="relatorio-print-wrapper p-8 text-xs font-sans bg-white min-h-screen">
       <style>{`
@@ -36,20 +43,25 @@ export const RelatorioVendasPrint = forwardRef<HTMLDivElement, Props>(({ relator
 
       {/* Header */}
       <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
-        <div>
-          <h1 className="text-xl font-black uppercase">{clinica.nome}</h1>
-          <p className="mt-1">NIF: {clinica.nif}</p>
+        <div className="flex items-center gap-4">
+          {clinica.logotipoUrl && (
+            <img src={clinica.logotipoUrl} alt="Logo" className="w-16 h-16 object-contain shrink-0" />
+          )}
+          <div>
+            <h1 className="text-xl font-black uppercase">{clinica.nome}</h1>
+            <p className="mt-1">NIF: {clinica.nif}</p>
+          </div>
         </div>
         <div className="text-right">
           <h2 className="text-lg font-bold uppercase">Mapa de Faturação e Vendas</h2>
-          <p>Período: {formatDate(relatorio.inicio)} a {formatDate(relatorio.fim)}</p>
+          <p>Período: {safeFormatDate(relatorio.inicio)} a {safeFormatDate(relatorio.fim)}</p>
           <p className="text-[8px] text-gray-500 uppercase mt-1">Gerado em {new Date().toLocaleString('pt-AO')}</p>
         </div>
       </div>
 
       {/* Summary Table */}
       <div className="grid grid-cols-4 gap-4 mb-8">
-        <SummaryBox label="Documentos" value={relatorio.faturas.length} />
+        <SummaryBox label="Documentos" value={relatorio?.faturas?.length || 0} />
         <SummaryBox label="Total Ilíquido" value={formatKwanza(relatorio.totalFaturado + relatorio.totalDescontos)} />
         <SummaryBox label="Total Descontos" value={`-${formatKwanza(relatorio.totalDescontos)}`} color="text-red-600" />
         <SummaryBox label="Total Líquido (AOA)" value={formatKwanza(relatorio.totalFaturado)} isBold />
@@ -72,9 +84,9 @@ export const RelatorioVendasPrint = forwardRef<HTMLDivElement, Props>(({ relator
           </tr>
         </thead>
         <tbody>
-          {relatorio.faturas.map((f, i) => (
+          {(Array.isArray(relatorio?.faturas) ? relatorio.faturas : []).map((f, i) => (
             <tr key={i} className="text-[9px] hover:bg-gray-50">
-              <td className="p-2 border border-gray-200">{formatDate(f.dataEmissao || f.criadoEm)}</td>
+              <td className="p-2 border border-gray-200">{safeFormatDate(f.dataEmissao || f.criadoEm)}</td>
               <td className="p-2 border border-gray-200 font-bold">{f.numeroFatura || '---'}</td>
               <td className="p-2 border border-gray-200">{f.tipoDocFiscal || 'FT'}</td>
               <td className="p-2 border border-gray-200">{f.paciente?.nif || '999999999'}</td>

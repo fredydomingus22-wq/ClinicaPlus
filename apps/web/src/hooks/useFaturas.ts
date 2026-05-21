@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { faturasApi, type PagamentoInput } from '../api/faturas';
-import { EstadoFatura, FaturaCreateInput } from '@clinicaplus/types';
+import { EstadoFatura, FaturaCreateInput, NotaDebitoCreateInput } from '@clinicaplus/types';
 
 export const faturasKeys = {
   all: ['faturas'] as const,
@@ -50,6 +50,17 @@ export function useAnularFatura() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, motivo }: { id: string; motivo: string }) => faturasApi.anular(id, motivo),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: faturasKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: faturasKeys.detail(variables.id) });
+    },
+  });
+}
+
+export function useNotaDebito() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & NotaDebitoCreateInput) => faturasApi.criarNotaDebito(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: faturasKeys.lists() });
       queryClient.invalidateQueries({ queryKey: faturasKeys.detail(variables.id) });

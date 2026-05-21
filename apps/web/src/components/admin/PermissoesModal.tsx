@@ -39,7 +39,7 @@ const PermissoesModal: React.FC<PermissoesModalProps> = ({
     queryKey: ['utilizador-permissoes', utilizadorId],
     queryFn: async () => {
       const response = await apiClient.get(`/utilizadores/${utilizadorId}/permissoes`);
-      return response.data as PermissaoEfectiva[];
+      return (response.data?.data || response.data || []) as PermissaoEfectiva[];
     },
     enabled: isOpen
   });
@@ -53,11 +53,11 @@ const PermissoesModal: React.FC<PermissoesModalProps> = ({
     }
   });
 
-  const modulos = permissoes ? Array.from(new Set(permissoes.map((p) => p.modulo))) : [];
+  const modulos = Array.isArray(permissoes) ? Array.from(new Set(permissoes.map((p) => p.modulo))) : [];
 
-  const filteredPermissoes = permissoes?.filter((p) => 
+  const filteredPermissoes = Array.isArray(permissoes) ? permissoes.filter((p) => 
     activeModulo === 'all' || p.modulo === activeModulo
-  );
+  ) : [];
 
   const columns = [
     {

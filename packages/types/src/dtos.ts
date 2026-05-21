@@ -21,6 +21,7 @@ export interface ClinicaDTO {
   nome: string;
   slug: string;
   logo: string | null;
+  logotipoUrl: string | null;
   telefone: string | null;
   email: string;
   endereco: string | null;
@@ -34,10 +35,15 @@ export interface ClinicaDTO {
   atualizadoEm: string;
   // Campos Fiscais (AGT)
   nif?: string | null;
+  tipoEntidade?: 'SINGULAR' | 'EMPRESA' | null;
   razaoSocial?: string | null;
   regimeFiscal?: 'GERAL' | 'SIMPLIFICADO' | 'EXUSA' | null;
   agtSoftwareCert?: string | null;
   enderecoPostal?: string | null;
+  serieDocFiscal?: string | null;
+  agtApiToken?: string | null;
+  agtPrivateKey?: string | null;
+  agtPublicKey?: string | null;
   configuracao?: {
     id: string;
     lembrete24h: boolean;
@@ -59,6 +65,7 @@ export interface UtilizadorDTO {
   clinicaId: string | null;
   nome: string;
   email: string;
+  avatarUrl: string | null;
   papel: Papel;
   ativo: boolean;
   criadoEm: string;
@@ -78,6 +85,7 @@ export interface PacienteDTO {
   numeroPaciente: string;
   utilizadorId: string | null;
   nome: string;
+  avatarUrl: string | null;
   dataNascimento: string;
   genero: string;
   tipoSangue: string | null;
@@ -86,6 +94,7 @@ export interface PacienteDTO {
   email: string | null;
   endereco: string | null;
   provincia: string | null;
+  nif: string | null;
   seguroSaude: boolean;
   seguradora: string | null;
   ativo: boolean;

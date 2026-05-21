@@ -33,6 +33,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PacienteUpdateSchema, type PacienteUpdateInput } from '@clinicaplus/types';
 import { PROVINCES } from '@clinicaplus/utils';
+import { ImageUploader } from '../../components/shared/ImageUploader';
+import { apiClient } from '../../api/client';
+
+const getAvatarUploadUrl = async (fileName: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-upload-url', { fileName });
+  return data.data;
+};
+
+const confirmAvatarUpload = async (path: string, provider: 'supabase'|'local', base64Data?: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-confirm', { path, provider, base64Data });
+  return data.data;
+};
 
 export default function PerfilPage() {
   const { utilizador } = useAuthStore();
@@ -227,10 +239,20 @@ export default function PerfilPage() {
                   <User className="w-32 h-32" />
                 </div>
                 <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
-                  <div className="w-24 h-24 rounded-3xl bg-neutral-100 flex items-center justify-center shrink-0 border border-neutral-200">
-                    <User className="w-12 h-12 text-neutral-300" />
+                  <div className="shrink-0">
+                    <ImageUploader 
+                      initialImage={utilizador?.avatarUrl}
+                      onUploadSuccess={(url) => {
+                        if (utilizador) {
+                          useAuthStore.getState().setUtilizador({ ...utilizador, avatarUrl: url });
+                        }
+                      }}
+                      getUploadUrlFn={getAvatarUploadUrl}
+                      confirmUploadFn={confirmAvatarUpload}
+                      label=""
+                    />
                   </div>
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 space-y-4 pt-2">
                     <div className="flex justify-between items-start">
                       <div>
                         <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">{utilizador?.nome}</h2>

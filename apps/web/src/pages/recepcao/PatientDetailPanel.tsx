@@ -91,6 +91,10 @@ export function PatientDetailPanel({ id, onClose, onEdit, onNewBooking }: Patien
               <p className="text-sm text-neutral-900 font-medium">{paciente.genero}</p>
             </div>
             <div className="space-y-1">
+              <p className="text-[10px] text-neutral-600 uppercase font-bold tracking-wider">NIF</p>
+              <p className="text-sm text-neutral-900 font-medium font-mono">{paciente.nif || '---'}</p>
+            </div>
+            <div className="space-y-1">
               <p className="text-[10px] text-neutral-600 uppercase font-bold tracking-wider">Seguro de Saúde</p>
               <div>
                 <Badge variant={paciente.seguroSaude ? 'success' : 'neutral'}>

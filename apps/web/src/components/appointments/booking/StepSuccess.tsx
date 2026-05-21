@@ -4,6 +4,7 @@ import { CheckCircle2, AlertCircle, Printer } from 'lucide-react';
 import { formatDate } from '@clinicaplus/utils';
 import type { MedicoDTO, PacienteDTO } from '@clinicaplus/types';
 import { ComprovativoAgendamentoPrint } from '../../print/ComprovativoAgendamentoPrint';
+import { useClinicaMe } from '../../../hooks/useClinicas';
 
 interface StepSuccessProps {
   selectedMedico: MedicoDTO | undefined;
@@ -28,6 +29,7 @@ export const StepSuccess: React.FC<StepSuccessProps> = ({
   onViewAppointments,
   isStaff = false
 }) => {
+  const { data: clinica } = useClinicaMe();
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -103,7 +105,10 @@ export const StepSuccess: React.FC<StepSuccessProps> = ({
       {/* Hidden Print Component */}
       <ComprovativoAgendamentoPrint 
         ref={printRef}
-        clinicaNome="ClinicaPlus"
+        clinicaNome={clinica?.nome || 'ClinicaPlus'}
+        clinicaEndereco={clinica?.endereco || null}
+        clinicaTelefone={clinica?.telefone || null}
+        clinicaLogoUrl={clinica?.logotipoUrl || null}
         pacienteNome={selectedPaciente?.nome || 'Paciente não especificado'}
         pacienteNumero={selectedPaciente?.numeroPaciente || 'N/A'}
         medicoNome={selectedMedico?.nome.startsWith('Dr') ? selectedMedico.nome : `Dr. ${selectedMedico?.nome}`}

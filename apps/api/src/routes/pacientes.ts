@@ -5,11 +5,11 @@ import {
   PacienteListQuerySchema,
   Papel,
 } from '@clinicaplus/types';
-import { pacientesService } from '../services/pacientes.service';
 import { requirePermission } from '../middleware/requirePermission';
+import { storageService } from '../services/storage.service';
+import { pacientesService } from '../services/pacientes.service';
 
 const router = Router();
-// ... (rest of imports)
 
 /**
  * GET /pacientes
@@ -95,6 +95,52 @@ router.patch('/:id', async (req, res, next) => {
     const paciente = await pacientesService.update(id, body, req.clinica.id);
     return res.json({ success: true, data: paciente });
   } catch (err) { return next(err); }
+});
+
+/**
+ * POST /pacientes/:id/avatar-upload-url
+ */
+router.post('/:id/avatar-upload-url', async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    const { papel, id: userId } = req.user;
+    
+    if (papel === Papel.PACIENTE) {
+      const paciente = await pacientesService.getOne(id, req.clinica.id);
+      if (paciente.utilizadorId !== userId) {
+        return res.status(403).json({ success: false, error: { message: 'Acesso não permitido', code: 'FORBIDDEN' }});
+      }
+    } else if (papel !== Papel.ADMIN && papel !== Papel.RECEPCIONISTA && papel !== Papel.MEDICO) {
+       return res.status(403).json({ success: false, error: { message: 'Acesso não permitido', code: 'FORBIDDEN' }});
+    }
+
+    const { fileName } = req.body;
+    const result = await storageService.getUploadUrl(req.clinica.id, 'paciente_avatar', id, fileName || 'avatar.png');
+    return res.json({ success: true, data: result });
+  } catch(err) { return next(err); }
+});
+
+/**
+ * POST /pacientes/:id/avatar-confirm
+ */
+router.post('/:id/avatar-confirm', async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    const { papel, id: userId } = req.user;
+    
+    if (papel === Papel.PACIENTE) {
+      const paciente = await pacientesService.getOne(id, req.clinica.id);
+      if (paciente.utilizadorId !== userId) {
+        return res.status(403).json({ success: false, error: { message: 'Acesso não permitido', code: 'FORBIDDEN' }});
+      }
+    } else if (papel !== Papel.ADMIN && papel !== Papel.RECEPCIONISTA && papel !== Papel.MEDICO) {
+       return res.status(403).json({ success: false, error: { message: 'Acesso não permitido', code: 'FORBIDDEN' }});
+    }
+
+    const { path, provider, base64Data } = req.body;
+    const url = await storageService.confirmUpload(req.clinica.id, 'paciente_avatar', id, path, provider, base64Data);
+    return res.json({ success: true, data: { avatarUrl: url } });
+  } catch(err) { return next(err); }
 });
 
 export default router;

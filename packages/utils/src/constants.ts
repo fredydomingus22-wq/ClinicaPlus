@@ -39,6 +39,7 @@ export const APPOINTMENT_STATES: Record<EstadoAgendamento, { label: string; colo
   CANCELADO: { label: 'Cancelado', color: 'bg-red-100 text-red-800' },
   NAO_COMPARECEU: { label: 'Não Compareceu', color: 'bg-gray-100 text-gray-800' },
   EM_ESPERA: { label: 'A Aguardar', color: 'bg-indigo-100 text-indigo-800' },
+  ATRASADO: { label: 'Atrasado', color: 'bg-amber-100 text-amber-800' },
 };
 
 export const DIAS_SEMANA = [

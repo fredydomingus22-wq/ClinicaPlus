@@ -1,47 +1,154 @@
 import * as crypto from 'crypto';
 import { AppError } from '../errors';
-import { Logger } from './types';
 
 /**
- * Serviço responsável pela Assinatura Digital RSA-2048 e
- * integridade da Hash Chain exigida pela certificação da AGT.
+ * Serviço responsável por assinaturas digitais RSA-2048.
+ * Gere duas identidades:
+ * 1. Produtor (ClinicaPlus): Para jwsSoftwareSignature (fixa global).
+ * 2. Contribuinte (Clínica): Para jwsDocumentSignature e jwsSignature (específica por tenant).
  */
 export class CertificationService {
-  private privateKey: string;
-  private publicKey: string;
+  private producerPrivateKey: string;
+  private tenantPrivateKey: string | undefined;
+  private tenantPublicKey: string | undefined;
 
-  constructor(keys?: { privateKey?: string, publicKey?: string }) {
-    // Proteção contra ambiente browser (Vite/Bundler)
-    const env = typeof globalThis !== 'undefined' && (globalThis as any).process ? (globalThis as any).process.env : {};
-    this.privateKey = keys?.privateKey || env.AGT_PRIVATE_KEY || '';
-    this.publicKey = keys?.publicKey || env.AGT_PUBLIC_KEY || '';
-
-    if (this.privateKey) this.privateKey = this.privateKey.replace(/\\n/g, '\n');
-    if (this.publicKey) this.publicKey = this.publicKey.replace(/\\n/g, '\n');
+  constructor(keys?: { 
+    producerPrivateKey?: string | undefined, 
+    tenantPrivateKey?: string | undefined,
+    tenantPublicKey?: string | undefined 
+  }) {
+    // Carrega a chave do produtor do ambiente por defeito
+    const rawProducerKey = (keys?.producerPrivateKey || process.env.AGT_PRIVATE_KEY || '');
+    this.producerPrivateKey = rawProducerKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n').trim();
+    
+    // Chaves do tenant (passadas dinamicamente do banco de dados)
+    const rawTenantPrivateKey = (keys?.tenantPrivateKey || '');
+    this.tenantPrivateKey = rawTenantPrivateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n').trim() || undefined;
+    
+    const rawTenantPublicKey = (keys?.tenantPublicKey || '');
+    this.tenantPublicKey = rawTenantPublicKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n').trim() || undefined;
   }
 
-  private ensureKeys() {
-    const env = typeof globalThis !== 'undefined' && (globalThis as any).process ? (globalThis as any).process.env : {};
-    if (!this.privateKey) this.privateKey = (env.AGT_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-    if (!this.publicKey) this.publicKey = (env.AGT_PUBLIC_KEY || '').replace(/\\n/g, '\n');
+  private validateKeySize(key: string, label: string): void {
+    try {
+      const keyObj = crypto.createPrivateKey(key);
+      const { modulusLength } = (keyObj as any).asymmetricKeyDetails || {};
+      if (modulusLength && modulusLength < 2048) {
+        throw new AppError(`A chave privada do ${label} deve ter no mínimo 2048 bits.`, 400);
+      }
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(`Chave privada do ${label} inválida ou mal formatada.`, 400);
+    }
+  }
 
-    if (!this.privateKey) {
-      throw new AppError('Chave privada da AGT não configurada', 500);
+  private ensureProducerKey(): string {
+    if (!this.producerPrivateKey || this.producerPrivateKey.length < 32) {
+      throw new AppError('Chave privada do produtor não configurada ou inválida (AGT_PRIVATE_KEY)', 500);
+    }
+    // Validate RSA key size (>=2048 bits)
+    this.validateKeySize(this.producerPrivateKey, 'produtor');
+    return this.producerPrivateKey;
+  }
+
+  private ensureTenantKey(): string {
+    if (!this.tenantPrivateKey || this.tenantPrivateKey.length < 32) {
+      if (process.env.AGT_MOCK === 'true') {
+        // Em modo MOCK, se não houver chave do tenant, usamos a do produtor como fallback
+        // para evitar erros 400 em desenvolvimento.
+        return this.producerPrivateKey;
+      }
+      throw new AppError('Chave privada da clínica (contribuinte) não configurada ou inválida para esta conta', 400);
+    }
+    // Validate RSA key size (>=2048 bits)
+    this.validateKeySize(this.tenantPrivateKey, 'tenant');
+    return this.tenantPrivateKey;
+  }
+
+  /**
+   * Converte um objeto para JSON sem espaços e com chaves ordenadas (JSON Canónico)
+   */
+  private canonicalStringify(obj: any): string {
+    if (obj === null || typeof obj !== 'object') {
+      return JSON.stringify(obj);
+    }
+
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(item => this.canonicalStringify(item)).join(',') + ']';
+    }
+
+    const sortedKeys = Object.keys(obj).sort();
+    const result = sortedKeys.map(key => {
+      return `${JSON.stringify(key)}:${this.canonicalStringify(obj[key])}`;
+    });
+
+    return '{' + result.join(',') + '}';
+  }
+
+  /**
+   * Assinatura JWS genérica com uma chave específica
+   */
+  private signWithKey(payload: any, privateKey: string): string {
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT'
+    };
+
+    const jsonHeader = this.canonicalStringify(header);
+    const jsonPayload = this.canonicalStringify(payload);
+
+    const encodedHeader = Buffer.from(jsonHeader).toString('base64url');
+    const encodedPayload = Buffer.from(jsonPayload).toString('base64url');
+    
+    try {
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update(`${encodedHeader}.${encodedPayload}`);
+      sign.end();
+      
+      const signature = sign.sign(privateKey, 'base64url');
+      
+      return `${encodedHeader}.${encodedPayload}.${signature}`;
+    } catch (error: any) {
+      throw new AppError(`Erro ao gerar assinatura JWS: ${error.message}`, 500);
     }
   }
 
   /**
-   * Constrói e assina o payload do documento gerando um Hash RSA-256
-   * em Base64 com exatamente 172 caracteres.
+   * jwsSoftwareSignature: Assina com a chave do PRODUTOR
    */
-  assinarDocumento(params: {
+  public signSoftwareJWS(data: { productId: string, productVersion: string, softwareValidationNumber: string, signatureVersion?: number }): string {
+    const key = this.ensureProducerKey();
+    return this.signWithKey(data, key);
+  }
+
+  /**
+   * jwsDocumentSignature: Assina com a chave do TENANT (Contribuinte)
+   */
+  public signDocumentJWS(data: any): string {
+    const key = this.ensureTenantKey();
+    return this.signWithKey(data, key);
+  }
+
+  /**
+   * jwsSignature: Assina com a chave do TENANT (Contribuinte)
+   */
+  public signRequestJWS(data: { taxRegistrationNumber: string, requestID: string } | any): string {
+    const key = this.ensureTenantKey();
+    return this.signWithKey(data, key);
+  }
+
+  /**
+   * Assinatura legada para SAF-T e Hash Chain (faturas.fiscalHash)
+   * Usa a chave do TENANT.
+   */
+  public assinarDocumento(params: {
     dataEmissao: Date;
     dataDocumento: Date;
-    numero: string; // Ex: FT CPLS/1
+    numero: string;
     total: number;
     hashAnterior: string;
   }): { hash: string; hashControl: string } {
-    this.ensureKeys();
+    const key = this.ensureTenantKey();
     const { dataEmissao, dataDocumento, numero, total, hashAnterior } = params;
 
     const formattedDateEmissao = dataEmissao.toISOString().split('T')[0];
@@ -55,7 +162,7 @@ export class CertificationService {
       sign.update(payload);
       sign.end();
       
-      const signature = sign.sign(this.privateKey, 'base64');
+      const signature = sign.sign(key, 'base64');
       
       return {
         hash: signature,
@@ -67,31 +174,9 @@ export class CertificationService {
   }
 
   /**
-   * Assinatura JWS para integração real-time com a AGT (SaaS mode)
+   * Verifica a validade de um hash (Usa chave pública do TENANT)
    */
-  signJWS(payload: any): string {
-    this.ensureKeys();
-    const header = {
-      alg: 'RS256',
-      typ: 'JWT'
-    };
-
-    const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-    
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(`${encodedHeader}.${encodedPayload}`);
-    sign.end();
-    
-    const signature = sign.sign(this.privateKey, 'base64url');
-    
-    return `${encodedHeader}.${encodedPayload}.${signature}`;
-  }
-
-  /**
-   * Função utilitária para verificar validade do hash
-   */
-  verificarAssinatura(params: {
+  public verificarAssinatura(params: {
     dataEmissao: Date;
     dataDocumento: Date;
     numero: string;
@@ -99,6 +184,8 @@ export class CertificationService {
     hashAnterior: string;
     signatureBase64: string;
   }): boolean {
+    if (!this.tenantPublicKey) return false;
+    
     const { dataEmissao, dataDocumento, numero, total, hashAnterior, signatureBase64 } = params;
     
     const formattedDateEmissao = dataEmissao.toISOString().split('T')[0];
@@ -111,16 +198,12 @@ export class CertificationService {
       const verify = crypto.createVerify('RSA-SHA256');
       verify.update(payload);
       verify.end();
-      return verify.verify(this.publicKey, signatureBase64, 'base64');
+      return verify.verify(this.tenantPublicKey, signatureBase64, 'base64');
     } catch (error) {
       return false;
     }
   }
 }
 
-// Singleton apenas disponível em ambientes Node.js (API/Worker).
-export const certificationService: CertificationService = 
-  (typeof globalThis !== 'undefined' && (globalThis as any).process?.versions?.node)
-    ? new CertificationService()
-    : (null as unknown as CertificationService);
-
+// Singleton global (Produtor apenas)
+export const certificationService = new CertificationService();

@@ -43,3 +43,75 @@ export function useTestarConexaoAgt() {
     mutationFn: () => fiscalApi.testarConexao(),
   });
 }
+
+/**
+ * Hook para listar as séries de faturação da AGT.
+ */
+export function useSeriesAgt() {
+  return useQuery({
+    queryKey: [...fiscalKeys.all, 'series'],
+    queryFn: () => fiscalApi.listarSeries(),
+  });
+}
+
+/**
+ * Mutation para solicitar uma nova série à AGT.
+ */
+export function useSolicitarSerieAgt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { serieCode: string; authorizedQuantity: number; documentType: string }) => 
+      fiscalApi.solicitarSerie(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...fiscalKeys.all, 'series'] });
+    }
+  });
+}
+
+/**
+ * Hook para listar o histórico de faturas registadas na AGT.
+ */
+export function useHistoricoAgt(filters: { startDate: string; endDate: string }) {
+  return useQuery({
+    queryKey: [...fiscalKeys.all, 'historico', filters],
+    queryFn: () => fiscalApi.listarHistoricoAgt(filters.startDate, filters.endDate),
+    enabled: !!filters.startDate && !!filters.endDate,
+  });
+}
+
+/**
+ * Mutation para validar um documento local no portal AGT.
+ */
+export function useValidarDocumentoAgt() {
+  return useMutation({
+    mutationFn: (faturaId: string) => fiscalApi.validarDocumentoAgt(faturaId),
+  });
+}
+
+/**
+ * Mutation para fazer download do ficheiro SAF-T AO.
+ */
+export function useExportarSaft() {
+  return useMutation({
+    mutationFn: (filters: { dataInicio: string; dataFim: string }) => 
+      fiscalApi.exportSaft(filters.dataInicio, filters.dataFim),
+  });
+}
+
+/**
+ * Mutation para auditar a integridade da sequência de hashes
+ */
+export function useAuditHashChain() {
+  return useMutation({
+    mutationFn: () => fiscalApi.auditHashChain(),
+  });
+}
+
+/**
+ * Mutation para consultar uma fatura diretamente na AGT
+ */
+export function useConsultarFaturaAgt() {
+  return useMutation({
+    mutationFn: (numero: string) => fiscalApi.consultarFaturaAgt(numero),
+  });
+}

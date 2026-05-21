@@ -5,7 +5,7 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache openssl
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm
 
 WORKDIR /app
 
@@ -37,7 +37,7 @@ FROM node:20-alpine AS runner
 
 RUN apk add --no-cache openssl
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm
 
 WORKDIR /app
 

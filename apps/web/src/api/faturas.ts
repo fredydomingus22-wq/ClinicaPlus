@@ -5,7 +5,8 @@ import type {
   PaginatedResult,
   EstadoFatura,
   PagamentoCreateSchema,
-  PagamentoDTO
+  PagamentoDTO,
+  NotaDebitoCreateInput
 } from '@clinicaplus/types';
 import { z } from 'zod';
 
@@ -30,6 +31,10 @@ export const faturasApi = {
 
   anular: (id: string, motivo: string) =>
     apiClient.patch<{ data: FaturaDTO }>(`/faturas/${id}/anular`, { motivo })
+      .then(r => r.data.data),
+
+  criarNotaDebito: (id: string, data: NotaDebitoCreateInput) =>
+    apiClient.post<{ data: FaturaDTO }>(`/faturas/${id}/nota-debito`, data)
       .then(r => r.data.data),
 
   registarPagamento: (data: PagamentoInput) =>

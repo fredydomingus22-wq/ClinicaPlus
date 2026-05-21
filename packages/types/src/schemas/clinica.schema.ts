@@ -24,7 +24,7 @@ export const ClinicaCreateSchema = z.object({
   endereco: z.string().optional(),
   cidade: z.string().optional(),
   provincia: z.string().optional(),
-  logo: z.string().url('URL de logo inválida').optional().or(z.literal('')),
+  logo: z.string().optional().or(z.literal('')),
 });
 
 export type ClinicaCreateInput = z.infer<typeof ClinicaCreateSchema>;
@@ -48,10 +48,17 @@ export const ClinicaUpdateSchema = z.object({
   endereco: z.string().optional(),
   cidade: z.string().optional(),
   provincia: z.string().optional(),
-  logo: z.string().url('URL de logo inválida').optional().or(z.literal('')),
+  logo: z.string().optional().nullable().or(z.literal('')),
+  logotipoUrl: z.string().optional().nullable().or(z.literal('')),
   nif: z.string().optional(),
+  tipoEntidade: z.enum(['SINGULAR', 'EMPRESA']).optional(),
   razaoSocial: z.string().optional(),
+  enderecoPostal: z.string().optional(),
   regimeFiscal: z.enum(['GERAL', 'SIMPLIFICADO', 'EXUSA']).optional(),
+  serieDocFiscal: z.string().optional(),
+  agtApiToken: z.string().optional(),
+  agtPrivateKey: z.string().optional(),
+  agtPublicKey: z.string().optional(),
   configuracao: ConfiguracaoClinicaUpdateSchema.optional(),
 });
 

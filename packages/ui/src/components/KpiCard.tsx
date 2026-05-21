@@ -5,10 +5,11 @@ import { Spinner } from './Spinner';
 import { cn } from '../utils/cn';
 
 interface KpiCardProps {
-  label: string;
+  label?: string;
+  title?: string; // Compatibilidade com versões que usam 'title'
   value: string | number;
   icon: LucideIcon;
-  color?: 'blue' | 'amber' | 'green' | 'slate' | 'red';
+  color?: 'blue' | 'amber' | 'green' | 'slate' | 'red' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info';
   loading?: boolean;
   trend?: {
     value: number;
@@ -23,7 +24,8 @@ interface KpiCardProps {
  * Follows ClinicaPlus visual system tokens.
  */
 export function KpiCard({ 
-  label, 
+  label,
+  title, 
   value, 
   icon: Icon, 
   color = 'blue', 
@@ -32,7 +34,9 @@ export function KpiCard({
   badgeText = 'Estável',
   className
 }: KpiCardProps) {
-  const colorMap = {
+  const displayLabel = label || title || '';
+
+  const colorMap: Record<string, { bg: string, icon: string, num: string, badge: string }> = {
     blue: { 
       bg: 'bg-[var(--estado-confirmado-bg)]',  
       icon: 'text-[var(--estado-confirmado-text)]',  
@@ -65,7 +69,18 @@ export function KpiCard({
     },
   };
 
-  const styles = colorMap[color];
+  // Mapeamento de apelidos para cores base
+  const aliases: Record<string, string> = {
+    primary: 'blue',
+    secondary: 'slate',
+    success: 'green',
+    danger: 'red',
+    warning: 'amber',
+    info: 'blue'
+  };
+
+  const resolvedColor = (aliases[color] || color) as string;
+  const styles = (colorMap[resolvedColor] || colorMap.blue)!;
 
   return (
     <Card className={cn("p-5 relative", className)}>
@@ -79,7 +94,7 @@ export function KpiCard({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[9px] font-bold text-[#525252] uppercase tracking-[0.2em] font-mono leading-none mb-2">{label}</p>
+        <p className="text-[9px] font-bold text-[#525252] uppercase tracking-[0.2em] font-mono leading-none mb-2">{displayLabel}</p>
         
         {loading ? (
           <div className="h-7 w-20 bg-[#f5f5f5] animate-pulse" />

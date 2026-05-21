@@ -24,6 +24,7 @@ function toUtilizadorDTO(u: Utilizador): UtilizadorDTO {
     clinicaId: u.clinicaId,
     nome: u.nome,
     email: u.email,
+    avatarUrl: u.avatarUrl,
     papel: u.papel as UtilizadorDTO['papel'],
     ativo: u.ativo,
     criadoEm: u.criadoEm.toISOString(),

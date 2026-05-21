@@ -51,8 +51,9 @@ export const EstadoSessaoSchema = z.enum(['AGENDADO', 'REALIZADO', 'FALTOU', 'CA
 export type EstadoSessao = z.infer<typeof EstadoSessaoSchema>;
 
 export const AtualizarSessaoSchema = z.object({
-  estado: EstadoSessaoSchema,
-  notas: z.string().max(2000).optional()
+  estado: EstadoSessaoSchema.optional(),
+  notas: z.string().max(2000).optional(),
+  dataHora: z.coerce.date().optional()
 });
 export type AtualizarSessaoDto = z.infer<typeof AtualizarSessaoSchema>;
 

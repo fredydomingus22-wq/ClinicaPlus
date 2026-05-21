@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { faturasService } from '../services/faturas.service';
-import { FaturaCreateSchema, PagamentoCreateSchema } from '@clinicaplus/types';
+import { FaturaCreateSchema, PagamentoCreateSchema, NotaDebitoCreateSchema } from '@clinicaplus/types';
 import { z } from 'zod';
 import { requirePermission } from '../middleware/requirePermission';
 
@@ -65,6 +65,19 @@ faturasRouter.patch('/:id/anular', requirePermission('fatura', 'void'), async (r
     
     const data = AnularSchema.parse(req.body);
     const fatura = await faturasService.criarNotaCredito(faturaId, clinicaId, data.motivo, utilizadorId);
+    res.json({ success: true, data: fatura });
+  } catch (err) { next(err); }
+});
+
+faturasRouter.post('/:id/nota-debito', requirePermission('fatura', 'create'), async (req: Request, res: Response, next) => {
+  try {
+    const clinicaId = req.clinica.id;
+    const faturaId = req.params.id;
+    if (!faturaId) return;
+    const utilizadorId = req.user!.id;
+
+    const data = NotaDebitoCreateSchema.parse(req.body);
+    const fatura = await faturasService.criarNotaDebito(faturaId, clinicaId, data, utilizadorId);
     res.json({ success: true, data: fatura });
   } catch (err) { next(err); }
 });

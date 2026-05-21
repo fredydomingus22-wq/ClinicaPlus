@@ -160,7 +160,7 @@ export default function AgendamentosPage() {
     { value: EstadoAgendamento.EM_PROGRESSO, label: 'Em Progresso' },
     { value: EstadoAgendamento.CONCLUIDO, label: 'Concluído' },
     { value: EstadoAgendamento.CANCELADO, label: 'Cancelado' },
-    { value: EstadoAgendamento.NAO_COMPARECEU, label: 'Faltou' },
+    { value: EstadoAgendamento.NAO_COMPARECEU, label: 'Não Compareceu' },
   ];
 
   const tiposOptions = [

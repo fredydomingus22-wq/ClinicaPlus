@@ -46,6 +46,12 @@ export const schedulerService = {
       } catch (err) {
         logger.error({ err }, 'Scheduler: Error in processPendingReminders cycle');
       }
+      try {
+        const { contingencySyncService } = await import('./fiscal/ContingencySyncService');
+        await contingencySyncService.syncAllPending();
+      } catch (err) {
+        logger.error({ err }, 'Scheduler: Error in contingencySyncService.syncAllPending cycle');
+      }
     });
 
     // Monthly audit cleanup (archiving > 2 years) - Run on the 1st of every month at 03:00

@@ -1,10 +1,11 @@
 import { EstadoAgendamento } from '@clinicaplus/types';
 
 const ALLOWED_TRANSITIONS: Record<EstadoAgendamento, EstadoAgendamento[]> = {
-  PENDENTE: ['CONFIRMADO', 'EM_PROGRESSO', 'CANCELADO', 'EM_ESPERA'] as EstadoAgendamento[],
-  CONFIRMADO: ['EM_PROGRESSO', 'CANCELADO', 'NAO_COMPARECEU', 'EM_ESPERA'] as EstadoAgendamento[],
+  PENDENTE: ['CONFIRMADO', 'EM_PROGRESSO', 'CANCELADO', 'EM_ESPERA', 'ATRASADO'] as EstadoAgendamento[],
+  CONFIRMADO: ['EM_PROGRESSO', 'CANCELADO', 'NAO_COMPARECEU', 'EM_ESPERA', 'ATRASADO'] as EstadoAgendamento[],
   EM_ESPERA: ['EM_PROGRESSO', 'CANCELADO', 'NAO_COMPARECEU'] as EstadoAgendamento[],
   EM_PROGRESSO: ['CONCLUIDO', 'CANCELADO'] as EstadoAgendamento[],
+  ATRASADO: ['EM_PROGRESSO', 'NAO_COMPARECEU', 'CANCELADO'] as EstadoAgendamento[],
   CONCLUIDO: [],
   CANCELADO: [],
   NAO_COMPARECEU: [],

@@ -33,7 +33,12 @@ relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (
     const { inicio, fim, agruparPor = 'day', medicoId, tipo } = req.query as ReceitaQuery;
 
     let dataInicio = inicio ? new Date(inicio) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    dataInicio.setHours(0, 0, 0, 0);
+
     const dataFim = fim ? new Date(fim) : new Date();
+    if (fim) {
+      dataFim.setHours(23, 59, 59, 999);
+    }
 
     const now = new Date();
     let minDate: Date | null = null;
@@ -63,7 +68,7 @@ relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (
     }
     if (tipo) {
       params.push(tipo);
-      extraWhere += ` AND f.tipo = $${params.length}`;
+      extraWhere += ` AND f.tipo::text = $${params.length}`;
     }
 
     const results = await prisma.$queryRawUnsafe<ReceitaResult[]>(`
@@ -72,20 +77,20 @@ relatoriosRouter.get('/receita', requirePermission('relatorio', 'read'), async (
         f."medicoId" AS medico_id,
         m.nome AS medico_nome,
         COUNT(DISTINCT f.id)::int AS consultas,
-        SUM(CASE WHEN f.estado IN ('EMITIDA', 'PAGA') THEN f.total ELSE 0 END)::int AS receita,
-        SUM(CASE WHEN f.estado IN ('EMITIDA', 'PAGA') THEN f."totalIva" ELSE 0 END)::int AS total_iva,
-        SUM(CASE WHEN f.estado = 'RASCUNHO' THEN f.total ELSE 0 END)::int AS receita_prevista,
-        COUNT(DISTINCT CASE WHEN f.estado = 'RASCUNHO' THEN f.id ELSE NULL END)::int AS rascunhos,
-        SUM(CASE WHEN f.tipo = 'SEGURO' AND sp.estado = 'PENDENTE' THEN f.total ELSE 0 END)::int AS seguros_pendentes
+        SUM(CASE WHEN f.estado::text IN ('EMITIDA', 'PAGA') THEN f.total ELSE 0 END)::int AS receita,
+        SUM(CASE WHEN f.estado::text IN ('EMITIDA', 'PAGA') THEN f."totalIva" ELSE 0 END)::int AS total_iva,
+        SUM(CASE WHEN f.estado::text = 'RASCUNHO' THEN f.total ELSE 0 END)::int AS receita_prevista,
+        COUNT(DISTINCT CASE WHEN f.estado::text = 'RASCUNHO' THEN f.id ELSE NULL END)::int AS rascunhos,
+        SUM(CASE WHEN f.tipo::text = 'SEGURO' AND sp.estado::text = 'PENDENTE' THEN f.total ELSE 0 END)::int AS seguros_pendentes
       FROM faturas f
       LEFT JOIN medicos m ON f."medicoId" = m.id
       LEFT JOIN pagamentos p ON p."faturaId" = f.id
       LEFT JOIN seguros_pagamento sp ON sp."pagamentoId" = p.id
       WHERE f."clinicaId" = $1
         AND (
-          (f.estado IN ('EMITIDA', 'PAGA') AND f."dataEmissao" BETWEEN $2 AND $3)
+          (f.estado::text IN ('EMITIDA', 'PAGA') AND f."dataEmissao" BETWEEN $2 AND $3)
           OR 
-          (f.estado = 'RASCUNHO' AND f."criadoEm" BETWEEN $2 AND $3)
+          (f.estado::text = 'RASCUNHO' AND f."criadoEm" BETWEEN $2 AND $3)
         )
         ${extraWhere}
       GROUP BY DATE_TRUNC('${interval}', f."dataEmissao"), f."medicoId", m.nome

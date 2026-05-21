@@ -88,7 +88,7 @@ export const planosService = {
    * Lists all treatment plans for a clinic with optional filters.
    */
   async listAll(clinicaId: string, filters: { estado?: string; q?: string }): Promise<unknown[]> {
-    return prisma.planoTratamento.findMany({
+    const planos = await prisma.planoTratamento.findMany({
       where: { 
         clinicaId,
         ...(filters.estado ? { estado: filters.estado as EstadoPlano } : {}),
@@ -107,6 +107,25 @@ export const planosService = {
       },
       orderBy: { criadoEm: 'desc' },
     });
+
+    if (planos.length === 0) return [];
+
+    // Buscar contagem de sessões realizadas de forma eficiente
+    const realizedCounts = await prisma.sessaoTratamento.groupBy({
+      by: ['planoId'],
+      where: {
+        planoId: { in: planos.map(p => p.id) },
+        estado: 'REALIZADO'
+      },
+      _count: { id: true }
+    });
+
+    const countMap = new Map(realizedCounts.map(c => [c.planoId, c._count.id]));
+
+    return planos.map(p => ({
+      ...p,
+      sessoesRealizadas: countMap.get(p.id) || 0
+    }));
   },
 
   /**
@@ -114,7 +133,7 @@ export const planosService = {
    * Scoped to clinicId.
    */
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<unknown[]> {
-    return prisma.planoTratamento.findMany({
+    const planos = await prisma.planoTratamento.findMany({
       where: { clinicaId, pacienteId },
       include: { 
         tipoTratamento: true,
@@ -126,6 +145,11 @@ export const planosService = {
       },
       orderBy: { criadoEm: 'desc' }
     });
+
+    return planos.map(p => ({
+      ...p,
+      sessoesRealizadas: p.sessoes.filter(s => s.estado === 'REALIZADO').length
+    }));
   },
 
   async update(clinicaId: string, id: string, data: AtualizarPlanoDto): Promise<unknown> {

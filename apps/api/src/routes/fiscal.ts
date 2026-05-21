@@ -4,7 +4,6 @@ import { fiscalController } from '../controllers/fiscal/FiscalController';
 import { authenticate } from '../middleware/authenticate';
 import { tenantMiddleware } from '../middleware/tenant';
 import { prisma } from '../lib/prisma';
-import { agtApiClient } from '../services/fiscal/AgtApiClient'; // In case we need it directly
 
 const router = Router();
 
@@ -51,5 +50,41 @@ router.post('/testar-conexao', fiscalController.testarConexao);
  * @desc Valida a integridade da sequência de faturas
  */
 router.get('/audit/hash-chain', fiscalController.auditHashChain);
+
+/**
+ * @route GET /api/fiscal/series
+ * @desc Lista as séries de facturação registadas na AGT
+ */
+router.get('/series', fiscalController.listarSeriesAgt);
+
+/**
+ * @route POST /api/fiscal/series/solicitar
+ * @desc Solicita uma nova série de facturação à AGT
+ */
+router.post('/series/solicitar', fiscalController.solicitarSerieAgt);
+
+/**
+ * @route POST /api/fiscal/submissao/estado
+ * @desc Consulta estado assíncrono de submissão AGT por requestID
+ */
+router.post('/submissao/estado', fiscalController.consultarEstadoSubmissaoAgt);
+
+/**
+ * @route POST /api/fiscal/listar-facturas-agt
+ * @desc Lista facturas registadas no servidor da AGT
+ */
+router.post('/listar-facturas-agt', fiscalController.listarFacturasAgt);
+
+/**
+ * @route GET /api/fiscal/consultar-factura-agt/:numero
+ * @desc Consulta detalhes de uma factura específica na AGT
+ */
+router.get('/consultar-factura-agt/:numero', fiscalController.consultarFacturaAgt);
+
+/**
+ * @route POST /api/fiscal/validar-documento-agt/:faturaId
+ * @desc Valida um documento local contra a AGT
+ */
+router.post('/validar-documento-agt/:faturaId', fiscalController.validarDocumentoAgt);
 
 export default router;

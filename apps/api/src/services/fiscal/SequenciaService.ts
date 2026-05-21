@@ -22,7 +22,7 @@ export async function proximoNumero(
   // Usamos SQL nativo para garantir que o incremento e o retorno do valor sejam uma operação atómica única
   // Isso previne que dois processos leiam o mesmo número antes de incrementar.
   const id = crypto.randomUUID();
-  const seq = await tx.$queryRawUnsafe<any[]>(
+  const seq = await tx.$queryRawUnsafe<{ultimoNumero: number}[]>(
     `INSERT INTO sequencia_doc_fiscal (id, "clinicaId", "tipoDoc", serie, "anoFiscal", "ultimoNumero")
      VALUES ($1, $2, CAST($3::text AS "public"."TipoDocumentoFiscal"), $4, $5, 1)
      ON CONFLICT ("clinicaId", "tipoDoc", serie, "anoFiscal")
@@ -35,11 +35,12 @@ export async function proximoNumero(
     anoFiscal
   );
 
-  if (!seq || seq.length === 0) {
+  const [first] = seq;
+  if (!first) {
     throw new Error('Falha ao gerar sequência documental: nenhum resultado retornado.');
   }
 
-  const ultimoNumero = seq[0].ultimoNumero;
+  const { ultimoNumero } = first;
   const formatado = `${tipoDoc} ${serie}/${ultimoNumero}`;
 
   return { numero: ultimoNumero, formatado };

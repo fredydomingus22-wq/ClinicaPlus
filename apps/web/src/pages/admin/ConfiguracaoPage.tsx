@@ -45,6 +45,18 @@ import { PROVINCES } from '@clinicaplus/utils';
 import { useUIStore } from '../../stores/ui.store';
 import { Link } from 'react-router-dom';
 import ServicosPrecosPage from './ServicosPrecosPage';
+import { ImageUploader } from '../../components/shared/ImageUploader';
+import { apiClient } from '../../api/client';
+
+const getLogoUploadUrl = async (fileName: string): Promise<{ uploadUrl: string; path: string; provider: 'supabase' | 'local' }> => {
+  const { data } = await apiClient.post('/clinicas/me/logo-upload-url', { fileName });
+  return data.data;
+};
+
+const confirmLogoUpload = async (path: string, provider: 'supabase'|'local', base64Data?: string) => {
+  const { data } = await apiClient.post('/clinicas/me/logo-confirm', { path, provider, base64Data });
+  return data.data;
+};
 
 export default function ConfiguracaoPage() {
   const { data: clinica, isLoading, error } = useClinicaMe();
@@ -74,7 +86,7 @@ export default function ConfiguracaoPage() {
         logo: clinica.logo || '',
         nif: clinica.nif || '',
         razaoSocial: clinica.razaoSocial || '',
-        regimeFiscal: clinica.regimeFiscal as any,
+        regimeFiscal: clinica.regimeFiscal as 'GERAL' | 'SIMPLIFICADO' | 'EXUSA',
       });
       setLocalContactos(clinica.contactos?.map(c => ({
         tipo: c.tipo as 'TELEFONE' | 'WHATSAPP' | 'EMAIL' | 'OUTRO',
@@ -129,47 +141,34 @@ export default function ConfiguracaoPage() {
                 error={form.formState.errors.email?.message}
               />
               <Input 
-                label="Razão Social" 
-                placeholder="Ex: Clínica Plus, Lda"
-                {...form.register('razaoSocial')}
-                error={form.formState.errors.razaoSocial?.message}
-              />
-              <Input 
-                label="NIF (Número de Identificação Fiscal)" 
-                placeholder="Ex: 5000000000"
-                {...form.register('nif')}
-                error={form.formState.errors.nif?.message}
-              />
-              <Select 
-                label="Regime Fiscal (AGT)"
-                options={[
-                  { value: 'GERAL', label: 'Regime Geral' },
-                  { value: 'SIMPLIFICADO', label: 'Regime Simplificado' },
-                  { value: 'EXUSA', label: 'Regime de Exclusão' },
-                ]}
-                {...form.register('regimeFiscal')}
-                error={form.formState.errors.regimeFiscal?.message}
-              />
-              <Input 
                 label="Telefone Geral" 
                 placeholder="Ex: +244 923 000 000"
                 {...form.register('telefone')}
                 error={form.formState.errors.telefone?.message}
               />
-              <div className="space-y-1">
-                <label className="text-sm font-bold text-neutral-900">Identidade Visual (Logo)</label>
-                <div className="flex gap-3">
+              <div className="col-span-1 md:col-span-2 mt-4 space-y-1 w-full flex items-center gap-6 p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                <div className="shrink-0 -mt-2">
+                  <ImageUploader 
+                    initialImage={clinica?.logo}
+                    onUploadSuccess={(url) => {
+                      const timestampedUrl = `${url}?t=${Date.now()}`;
+                      form.setValue('logo', timestampedUrl, { shouldValidate: true, shouldDirty: true });
+                      updateClinica({ logo: timestampedUrl });
+                    }}
+                    getUploadUrlFn={getLogoUploadUrl}
+                    confirmUploadFn={confirmLogoUpload}
+                    label=""
+                  />
+                </div>
+                <div className="flex-grow space-y-2">
+                  <label className="text-sm font-bold text-neutral-900">Identidade Visual (Logo)</label>
                   <Input 
-                    placeholder="URL da imagem..."
+                    placeholder="Ou digite o URL direto da imagem..."
                     {...form.register('logo')}
-                    className="flex-grow"
+                    className="bg-white"
                     error={form.formState.errors.logo?.message}
                   />
-                  {clinica?.logo && (
-                    <div className="w-10 h-10 rounded-xl border border-neutral-100 overflow-hidden shrink-0 bg-neutral-50 p-1 ring-1 ring-neutral-200">
-                      <img src={clinica.logo} alt="Logo" className="w-full h-full object-contain" />
-                    </div>
-                  )}
+                  <p className="text-xs font-medium text-neutral-500">A imagem gráfica do logotipo aparecerá nas suas faturas, recibos, prescrições e no portal do paciente. Recomenda-se dimensões 200x200px.</p>
                 </div>
               </div>
             </div>

@@ -58,6 +58,17 @@ export const schedulerService = {
       }
     }, { timezone });
 
+    // Every 30min — Appointment Expirations
+    cron.schedule('*/30 * * * *', async () => {
+      logger.info('Starting appointment expiration checks');
+      try {
+        const { appointmentExpirationQueue } = await import('../lib/queues');
+        await appointmentExpirationQueue.add('check-overdue', {});
+      } catch (err) {
+        logger.error({ err }, 'Error in appointment expiration job trigger');
+      }
+    }, { timezone });
+
     logger.info('Worker scheduler started with all jobs');
   }
 };

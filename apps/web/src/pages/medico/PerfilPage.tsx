@@ -33,6 +33,18 @@ import {
 import { getInitials } from '@clinicaplus/utils';
 import type { MedicoSelfUpdateInput, MedicoHorario } from '@clinicaplus/types';
 import { MedicoSelfUpdateSchema } from '@clinicaplus/types';
+import { ImageUploader } from '../../components/shared/ImageUploader';
+import { apiClient } from '../../api/client';
+
+const getAvatarUploadUrl = async (fileName: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-upload-url', { fileName });
+  return data.data;
+};
+
+const confirmAvatarUpload = async (path: string, provider: 'supabase'|'local', base64Data?: string) => {
+  const { data } = await apiClient.post('/utilizadores/me/avatar-confirm', { path, provider, base64Data });
+  return data.data;
+};
 
 // ─── Password form schema ─────────────────────────────────────────────────────
 const PasswordSchema = z.object({
@@ -202,14 +214,20 @@ export default function PerfilPage() {
               </div>
             ) : (
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="shrink-0">
-                  <Avatar
-                    initials={getInitials(utilizador?.nome || 'M')}
-                    size="lg"
-                    className="border-4 border-white shadow-xl"
+                <div className="shrink-0 -mt-2">
+                  <ImageUploader 
+                    initialImage={utilizador?.avatarUrl}
+                    onUploadSuccess={(url) => {
+                      if (utilizador) {
+                        useAuthStore.getState().setUtilizador({ ...utilizador, avatarUrl: url });
+                      }
+                    }}
+                    getUploadUrlFn={getAvatarUploadUrl}
+                    confirmUploadFn={confirmAvatarUpload}
+                    label=""
                   />
                 </div>
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-4 pt-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                     <div>
                       <h2 className="text-2xl font-bold text-neutral-900">{utilizador?.nome}</h2>

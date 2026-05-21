@@ -15,5 +15,7 @@ export * from './schemas/clinical.schema';
 export * from './schemas/platform.schema';
 export * from './schemas/documento.schema';
 export * from './schemas/financial.schema';
+export * from './schemas/inventory.schema';
 export * from './tratamentos';
 export * from './faturacao';
+export * from './anamnese/templates';

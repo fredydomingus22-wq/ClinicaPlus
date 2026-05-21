@@ -4,6 +4,21 @@ import { EstadoExame } from '@prisma/client';
 import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
 
+const TRANSICOES_EXAME: Record<EstadoExame, EstadoExame[]> = {
+  PENDENTE: ['AGENDADO', 'CANCELADO'],
+  AGENDADO: ['REALIZADO', 'CANCELADO'],
+  REALIZADO: ['LAUDADO'],
+  LAUDADO: [],
+  CANCELADO: [],
+};
+
+function assertExameTransicaoValida(actual: EstadoExame, destino: EstadoExame): void {
+  const validas = TRANSICOES_EXAME[actual];
+  if (!validas.includes(destino)) {
+    throw new AppError(`Não é possível passar de "${actual}" para "${destino}"`, 400);
+  }
+}
+
 export const examesService = {
   /**
    * Lists exams for a patient, handling legacy data mappings.
@@ -99,9 +114,9 @@ export const examesService = {
 
     if (!current) throw new AppError('Exame não encontrado', 404);
 
-    // Validação de transição de estado (Simples para Sprint I)
-    if (data.estado && current.estado === 'CANCELADO') {
-      throw new AppError('Não é possível alterar o estado de um exame cancelado', 400);
+    // Validação de transição de estado
+    if (data.estado) {
+      assertExameTransicaoValida(current.estado, data.estado as EstadoExame);
     }
 
     const updated = await prisma.exame.update({

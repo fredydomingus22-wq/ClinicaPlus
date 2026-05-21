@@ -25,6 +25,7 @@ function toPacienteDTO(p: Paciente): PacienteDTO {
     numeroPaciente: p.numeroPaciente,
     utilizadorId: p.utilizadorId,
     nome: p.nome,
+    avatarUrl: p.avatarUrl,
     dataNascimento: p.dataNascimento.toISOString(),
     genero: p.genero,
     tipoSangue: p.tipoSangue,
@@ -33,6 +34,7 @@ function toPacienteDTO(p: Paciente): PacienteDTO {
     email: p.email,
     endereco: p.endereco,
     provincia: p.provincia,
+    nif: p.nif,
     seguroSaude: p.seguroSaude,
     seguradora: p.seguradora,
     ativo: p.ativo,
@@ -119,6 +121,7 @@ export const pacientesService = {
         alergias: data.alergias ?? [],
         telefone: data.telefone ?? null,
         email: data.email || null,
+        nif: data.nif || null,
         endereco: data.endereco ?? null,
         provincia: data.provincia ?? null,
         seguroSaude: data.seguroSaude ?? false,
@@ -153,6 +156,7 @@ export const pacientesService = {
     if (data.alergias !== undefined)        updateData.alergias = data.alergias;
     if (data.telefone !== undefined)        updateData.telefone = data.telefone ?? null;
     if (data.email !== undefined)           updateData.email = data.email || null;
+    if (data.nif !== undefined)             updateData.nif = data.nif || null;
     if (data.endereco !== undefined)        updateData.endereco = data.endereco ?? null;
     if (data.provincia !== undefined)       updateData.provincia = data.provincia ?? null;
     if (data.seguroSaude !== undefined)     updateData.seguroSaude = data.seguroSaude;

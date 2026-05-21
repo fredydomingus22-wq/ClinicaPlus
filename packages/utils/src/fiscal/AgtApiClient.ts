@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import https from 'https';
 import { AppError } from '../errors';
 import { 
   Logger, 
@@ -26,18 +27,53 @@ export class AgtApiClient {
   private client: AxiosInstance;
   private logger: Logger | undefined;
   private isMock: boolean;
+  private isSandbox: boolean;
 
   constructor(baseURL: string, logger?: Logger, isMock: boolean = false) {
+    // Definir URLs base oficiais da AGT
+    const isSandbox = baseURL.includes('sandbox') || baseURL.includes('hml') || !baseURL.includes('sifp.minfin.gov.ao');
+    this.isSandbox = isSandbox;
+    const officialBaseURL = isSandbox 
+      ? 'https://sifphml.minfin.gov.ao/sigt/fe/ws/v1' 
+      : 'https://sifp.minfin.gov.ao/sigt/fe/v1';
+
+    const timeoutMs = Number(process.env.AGT_TIMEOUT_MS || 90000);
+    const httpsAgent = new https.Agent({
+      keepAlive: true,
+      minVersion: 'TLSv1.2',
+      family: 4
+    });
+
     this.client = axios.create({
-      baseURL,
+      baseURL: officialBaseURL,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      timeout: 30000
+      timeout: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 90000,
+      httpsAgent
     });
     this.logger = logger;
     this.isMock = isMock;
+  }
+
+  /**
+   * Constrói o header de autorização (Basic Auth)
+   */
+  private getAuthHeader(auth: string): string {
+    if (!auth) return '';
+    if (auth.startsWith('Basic ')) return auth;
+    
+    // Se contiver ':' tratamos como user:pass e convertemos para base64
+    if (auth.includes(':')) {
+      const b64 = typeof Buffer !== 'undefined' 
+        ? Buffer.from(auth).toString('base64')
+        : btoa(auth);
+      return `Basic ${b64}`;
+    }
+
+    // Caso contrário, assumimos que já é o valor base64 ou token directo
+    return `Basic ${auth}`;
   }
 
   /**
@@ -57,11 +93,13 @@ export class AgtApiClient {
     }
 
     try {
-      const response = await this.client.post('/registarFactura', request, {
+      const registarUrl = this.isSandbox
+        ? 'https://sifphml.minfin.gov.ao/sigt/fe/v1/registarFactura'
+        : '/registarFactura';
+
+      const response = await this.client.post(registarUrl, request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -91,11 +129,13 @@ export class AgtApiClient {
     }
 
     try {
-      const response = await this.client.post('/obterEstado', request, {
+      const statusUrl = this.isSandbox
+        ? 'https://sifphml.minfin.gov.ao/sigt/fe/v1/obterEstado'
+        : '/obterEstado';
+
+      const response = await this.client.post(statusUrl, request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -127,9 +167,7 @@ export class AgtApiClient {
     try {
       const response = await this.client.post('/listarFacturas', request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -174,9 +212,7 @@ export class AgtApiClient {
     try {
       const response = await this.client.post('/consultarFactura', request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -194,7 +230,7 @@ export class AgtApiClient {
     const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
     if (mockEnabled) {
       return {
-        resultCode: '0',
+        resultCode: 1,
         seriesFEResult: {
           seriesCode: 'CPLS-SR1',
           authorizedQuantity: '1000',
@@ -207,9 +243,7 @@ export class AgtApiClient {
     try {
       const response = await this.client.post('/solicitarSerie', request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -253,9 +287,7 @@ export class AgtApiClient {
     try {
       const response = await this.client.post('/listarSeries', request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
@@ -285,9 +317,7 @@ export class AgtApiClient {
     try {
       const response = await this.client.post('/validarDocumento', request, {
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Username': request.taxRegistrationNumber,
-          'Password': apiToken
+          'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;

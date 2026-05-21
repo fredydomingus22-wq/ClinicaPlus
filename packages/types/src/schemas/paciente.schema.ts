@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PacienteCreateSchema = z.object({
   nome: z.string().min(3).max(100).trim(),
   email: z.string().email().max(100).trim().toLowerCase().optional().or(z.literal('')),
+  nif: z.string().min(9).max(13).trim().optional().or(z.literal('')),
   telefone: z.string().max(20).trim().optional(),
   dataNascimento: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Data de nascimento inválida",

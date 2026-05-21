@@ -1,8 +1,15 @@
+import { Prisma, TipoDocumentoFiscal as PrismaTipoDocFiscal } from '@prisma/client';
 import { CertificationService as BaseCertificationService } from '@clinicaplus/utils/server';
-import { AppError } from '@clinicaplus/utils';
-import { prisma } from '../../lib/prisma';
 
 export class CertificationService extends BaseCertificationService {
+  constructor(keys?: { 
+    producerPrivateKey?: string | undefined, 
+    tenantPrivateKey?: string | undefined,
+    tenantPublicKey?: string | undefined 
+  }) {
+    super(keys);
+  }
+
   /**
    * Obtém o hash do documento anterior na mesma série para construir a cadeia.
    * Requer transação activa para garantir precisão atómica.
@@ -10,14 +17,14 @@ export class CertificationService extends BaseCertificationService {
    * @param clinicaId ID da Clínica
    * @param serieDocFiscal Série (ex: CPLS)
    * @param tipoDocFiscal Tipo (ex: FT, NC)
-   * @param tx Objeto PrismaTransaction
+   * @param tx Objeto PrismaTransaction proxy
    * @returns O hash do documento anterior ou string vazia se for o primeiro
    */
   async obterHashAnterior(
     clinicaId: string,
     serieDocFiscal: string,
-    tipoDocFiscal: string,
-    tx: any // PrismaTransaction
+    tipoDocFiscal: PrismaTipoDocFiscal,
+    tx: Prisma.TransactionClient
   ): Promise<string> {
     const lastDoc = await tx.fatura.findFirst({
       where: {
@@ -36,6 +43,33 @@ export class CertificationService extends BaseCertificationService {
 
     return lastDoc?.fiscalHash || '';
   }
+
+  /**
+   * Obtém o hash do recibo (RC) anterior.
+   */
+  async obterHashAnteriorRecibo(
+    clinicaId: string,
+    serieDocFiscal: string,
+    tx: Prisma.TransactionClient
+  ): Promise<string> {
+    const lastRC = await tx.pagamento.findFirst({
+      where: {
+        clinicaId,
+        fatura: { serieDocFiscal },
+        numeroRecibo: { not: null }
+      },
+      orderBy: {
+        numeroRecibo: 'desc'
+      },
+      select: {
+        fiscalHash: true
+      }
+    });
+
+    return lastRC?.fiscalHash || '';
+  }
 }
 
 export const certificationService = new CertificationService();
+
+export default certificationService;

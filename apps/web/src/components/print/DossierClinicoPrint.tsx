@@ -107,12 +107,17 @@ export const DossierClinicoPrint = forwardRef<HTMLDivElement, Props>(
 
         {/* Cabeçalho da Clínica */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #000', paddingBottom: '15px', marginBottom: '25px' }}>
-          <div>
-            <h1 style={{ fontSize: '22pt', fontWeight: 'bold', margin: '0', textTransform: 'uppercase' }}>{clinica.nome}</h1>
-            <p style={{ margin: '5px 0', fontSize: '11pt' }}>{clinica.endereco || 'Endereço não disponível'}</p>
-            <p style={{ margin: '0', fontSize: '11pt' }}>
-              <strong>Tel:</strong> {clinica.telefone || '---'} | <strong>Email:</strong> {clinica.email}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {clinica.logotipoUrl && (
+              <img src={clinica.logotipoUrl} alt="Logótipo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+            )}
+            <div>
+              <h1 style={{ fontSize: '22pt', fontWeight: 'bold', margin: '0', textTransform: 'uppercase' }}>{clinica.nome}</h1>
+              <p style={{ margin: '5px 0', fontSize: '11pt' }}>{clinica.endereco || 'Endereço não disponível'}</p>
+              <p style={{ margin: '0', fontSize: '11pt' }}>
+                <strong>Tel:</strong> {clinica.telefone || '---'} | <strong>Email:</strong> {clinica.email}
+              </p>
+            </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <h2 style={{ fontSize: '16pt', margin: '0', letterSpacing: '1px' }}>DOSSIER CLÍNICO</h2>

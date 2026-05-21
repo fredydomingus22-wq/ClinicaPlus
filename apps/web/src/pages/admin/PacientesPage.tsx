@@ -29,6 +29,8 @@ import type { z } from 'zod';
 import { PROVINCES } from '@clinicaplus/utils';
 import { PatientDetailPanel } from '../recepcao/PatientDetailPanel';
 import { BookingWizard } from '../../components/appointments/BookingWizard';
+import { ImageUploader } from '../../components/shared/ImageUploader';
+import { apiClient } from '../../api/client';
 
 export default function PacientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -338,6 +340,32 @@ export default function PacientesPage() {
         size="lg"
       >
         <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-6 pt-2">
+          {pacienteToEdit && (
+            <div className="flex items-center gap-6 pb-4 border-b border-neutral-100">
+              <div className="shrink-0 -mt-2">
+                 <ImageUploader 
+                    initialImage={pacienteToEdit.avatarUrl}
+                    onUploadSuccess={(url) => {
+                       setPacienteToEdit(prev => prev ? { ...prev, avatarUrl: url } : null);
+                    }}
+                    getUploadUrlFn={async (fileName: string) => {
+                        const { data } = await apiClient.post(`/pacientes/${pacienteToEdit.id}/avatar-upload-url`, { fileName });
+                        return data.data;
+                    }}
+                    confirmUploadFn={async (path: string, provider: 'supabase'|'local', base64Data?: string) => {
+                        const { data } = await apiClient.post(`/pacientes/${pacienteToEdit.id}/avatar-confirm`, { path, provider, base64Data });
+                        return data.data;
+                    }}
+                    label=""
+                  />
+              </div>
+              <div className="space-y-1">
+                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Fotografia de Perfil</p>
+                 <p className="text-sm font-medium text-neutral-900">{pacienteToEdit.nome}</p>
+                 <p className="text-[10px] text-neutral-500 mt-1">Clique na imagem para alterar a foto.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Nome Completo" 

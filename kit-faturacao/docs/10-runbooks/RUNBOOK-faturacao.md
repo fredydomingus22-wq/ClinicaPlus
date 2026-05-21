@@ -181,14 +181,22 @@ xmllint --schema saft-ao.xsd saft-test.xml --noout
 ## 7. Autenticação AGT falha (401/403)
 
 ```bash
-# Verificar credenciais no .env:
-# AGT_API_URL=https://efatura.minfin.gov.ao/api/v1  (URL de produção)
-# AGT_API_URL=https://efatura-staging.minfin.gov.ao/api/v1  (staging)
-# AGT_SOFTWARE_ID=<ID do software certificado>
-# AGT_API_TOKEN=<Token JWT ou API Key fornecida pela AGT>
+# Confirmar credenciais no .env:
+#
+# URLs OFICIAIS AGT (fonte: Manual Integração FE DS.120)
+#
+# Homologação (testes / sandbox):
+#   AGT_API_URL=https://sifphml.minfin.gov.ao/sigt/fe/ws/v1
+#
+# Produção:
+#   AGT_API_URL=https://sifp.minfin.gov.ao/sigt/fe/v1
+#
+# AGT_SOFTWARE_CERT=<JWS do certificado do software — obtido na certificação AGT>
+# AGT_API_TOKEN=<Username:Password — o AgtApiClient converterá para Basic Auth automaticamente>
+# AGT_MOCK=true  # Desativa envio real (só em desenvolvimento)
 
-# Se 401: Token expirado ou inválido → Regenerar no portal AGT
-# Se 403: Software não certificado ou certificação expirada → Contactar AGT
+# A AGT utiliza Basic Authentication (Authorization: Basic Base64(user:pass))
+# As credenciais devem ser solicitadas via e-mail para: produtores.dfe.dcrr.agt@minfin.gov.ao
 
 # Em desenvolvimento, simular sem AGT real:
 # NODE_ENV=development → O AgtApiClient opera em mode mock (log only)

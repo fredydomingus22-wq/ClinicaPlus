@@ -72,7 +72,8 @@ export default function RelatoriosPage() {
     inicio: dateRange.inicio as string,
     fim: dateRange.fim as string,
     medicoId: filters.medicoId ? (filters.medicoId as string) : undefined
-  } as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as unknown as any);
 
   const handleExport = async () => {
     if (clinica?.plano === Plano.BASICO) {
@@ -280,7 +281,8 @@ export default function RelatoriosPage() {
         <RelatorioVendasPrint 
           ref={reportPrintRef}
           clinica={clinica}
-          relatorio={{ inicio: filters.inicio, fim: filters.fim, faturas: mapaData as any, totalFaturado: 0, totalIva: 0, totalDescontos: 0 }}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          relatorio={{ inicio: filters.inicio, fim: filters.fim, faturas: mapaData as unknown as any[], totalFaturado: 0, totalIva: 0, totalDescontos: 0 }}
         />
       )}
     </PlanGate>

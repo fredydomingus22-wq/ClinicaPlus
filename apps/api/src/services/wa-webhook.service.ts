@@ -5,7 +5,6 @@ import { WaInstancia, WaEstadoConversa, WaDirecao } from '@prisma/client';
 
 import axios from 'axios';
 import { waInstanciaService } from './wa-instancia.service';
-import { waAutomacaoService } from './wa-automacao.service';
 import { ClinicaMessageDTO } from '@clinicaplus/types';
 
 // Webhook interfaces (defined in common types usually, but here for context if needed)

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, FormProvider, useFormContext, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   FaturaCreateSchema, 
   EstadoAgendamento,
   TipoFatura, 
+  TipoDocumentoFiscal,
   type FaturaCreateInput
 } from '@clinicaplus/types';
 import { 
@@ -29,22 +30,65 @@ import {
 import { useListaPacientes } from '../../hooks/usePacientes';
 import { useListaAgendamentos } from '../../hooks/useAgendamentos';
 import { useCreateFatura } from '../../hooks/useFaturas';
-import { formatKwanza } from '@clinicaplus/utils';
+import { formatKwanza, calcularFatura } from '@clinicaplus/utils';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useConfiguracaoFiscal } from '../../hooks/useFiscal';
 
 export default function NovaFaturaPage() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
   const createFatura = useCreateFatura();
+  const [searchParams] = useSearchParams();
+  const tipoDocParam = searchParams.get('tipo');
+
+  const { data: config } = useConfiguracaoFiscal();
+  const regimeFiscal = config?.regimeFiscal || 'GERAL';
+  
+  const defaultTaxaIva = useMemo(() => {
+    switch(regimeFiscal) {
+      case 'GERAL': return 14;
+      case 'SIMPLIFICADO': return 7;
+      case 'EXUSA': return 0;
+      default: return 14;
+    }
+  }, [regimeFiscal]);
+
+  const defaultCodigoIva = useMemo(() => {
+    switch(regimeFiscal) {
+      case 'GERAL': return 'IVA';
+      case 'SIMPLIFICADO': return 'RED';
+      case 'EXUSA': return 'ISE';
+      default: return 'IVA';
+    }
+  }, [regimeFiscal]);
 
   const methods = useForm<FaturaCreateInput>({
     resolver: zodResolver(FaturaCreateSchema) as unknown as Resolver<FaturaCreateInput>,
     defaultValues: {
       tipo: TipoFatura.PARTICULAR,
-      itens: [{ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0, taxaIva: 14, codigoIva: 'IVA' }],
+      tipoDocFiscal: (tipoDocParam as TipoDocumentoFiscal) || TipoDocumentoFiscal.FR,
+      itens: [{ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0, taxaIva: defaultTaxaIva, codigoIva: defaultCodigoIva }],
       desconto: 0,
     }
   });
+
+  React.useEffect(() => {
+    if (config) {
+      const currentValues = methods.getValues();
+      // Se tivermos apenas um item vazio (estado inicial padrão) ou se algum item ainda estiver com o default de 14% mas o regime for outro
+      const isInitialState = currentValues.itens?.length === 1 && currentValues.itens[0]?.descricao === '' && currentValues.itens[0]?.precoUnit === 0;
+      const hasIncorrectDefaults = (currentValues.itens || []).some(item => item.taxaIva === 14 && regimeFiscal !== 'GERAL' && item.precoUnit === 0);
+      
+      if (isInitialState || hasIncorrectDefaults) {
+        const updatedItens = (currentValues.itens || []).map(item => ({
+          ...item,
+          taxaIva: item.precoUnit === 0 ? defaultTaxaIva : item.taxaIva,
+          codigoIva: item.precoUnit === 0 ? defaultCodigoIva : item.codigoIva
+        }));
+        methods.setValue('itens', updatedItens);
+      }
+    }
+  }, [config, defaultTaxaIva, defaultCodigoIva, methods, regimeFiscal]);
 
   const { handleSubmit, watch } = methods;
   const selectedPacienteId = watch('pacienteId');
@@ -203,8 +247,6 @@ function Step1PacienteSelection() {
                       setValue('itens.0.precoUnit', preco);
                       setValue('itens.0.quantidade', 1);
                       setValue('itens.0.desconto', 0);
-                      setValue('itens.0.taxaIva', 14);
-                      setValue('itens.0.codigoIva', 'IVA');
                     }
                   }}
                   className={`
@@ -238,7 +280,7 @@ function Step1PacienteSelection() {
         </Card>
       )}
 
-      <Card className="p-6">
+      <Card className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select 
           label="Tipo de Fatura"
           options={[
@@ -246,6 +288,19 @@ function Step1PacienteSelection() {
             { value: TipoFatura.SEGURO, label: 'Seguro de Saúde' },
           ]}
           {...register('tipo')}
+        />
+        <Select 
+          label="Documento Fiscal"
+          options={[
+            { value: TipoDocumentoFiscal.FT, label: 'Factura (FT)' },
+            { value: TipoDocumentoFiscal.FR, label: 'Factura-Recibo (FR)' },
+          ]}
+          {...register('tipoDocFiscal')}
+          helperText={
+            watch('tipoDocFiscal') === TipoDocumentoFiscal.FR 
+              ? 'Factura-Recibo (FR): Documento que comprova a transmissão de bens ou prestação de serviços e o respectivo pagamento imediato. Ideal para pronto pagamento.' 
+              : 'Factura (FT): Documento que comprova a transmissão de bens ou prestação de serviços. O pagamento deve ser registado posteriormente através de um Recibo (RC).'
+          }
         />
       </Card>
     </div>
@@ -264,9 +319,9 @@ function Step2ItemsDrafting() {
 
   const subtotal = useMemo(() => {
     return (itens || []).reduce((acc: number, item) => {
-      const q = item.quantidade || 0;
-      const p = item.precoUnit || 0;
-      const d = item.desconto || 0;
+      const q = Number(item.quantidade) || 0;
+      const p = Number(item.precoUnit) || 0;
+      const d = Number(item.desconto) || 0;
       return acc + (q * p) - d;
     }, 0);
   }, [itens]);
@@ -299,7 +354,14 @@ function Step2ItemsDrafting() {
             type="button" 
             variant="ghost" 
             size="sm" 
-            onClick={() => append({ descricao: '', quantidade: 1, precoUnit: 0, desconto: 0, taxaIva: 14, codigoIva: 'IVA' })}
+            onClick={() => append({ 
+              descricao: '', 
+              quantidade: 1, 
+              precoUnit: 0, 
+              desconto: 0, 
+              taxaIva: watch('itens.0.taxaIva') ?? 14, 
+              codigoIva: watch('itens.0.codigoIva') ?? 'IVA' 
+            })}
           >
             <Plus className="h-4 w-4 mr-1" /> Adicionar Item
           </Button>
@@ -337,9 +399,9 @@ function Step2ItemsDrafting() {
 function ItemRow({ index, onRemove }: { index: number; onRemove: () => void }) {
   const { register, watch } = useFormContext<FaturaCreateInput>();
   
-  const q = watch(`itens.${index}.quantidade`) || 0;
-  const p = watch(`itens.${index}.precoUnit`) || 0;
-  const d = watch(`itens.${index}.desconto`) || 0;
+  const q = Number(watch(`itens.${index}.quantidade`)) || 0;
+  const p = Number(watch(`itens.${index}.precoUnit`)) || 0;
+  const d = Number(watch(`itens.${index}.desconto`)) || 0;
   const rowTotal = (q * p) - d;
 
   return (
@@ -390,8 +452,25 @@ function ItemRow({ index, onRemove }: { index: number; onRemove: () => void }) {
 }
 
 function Step3Review() {
-  const { watch } = useFormContext<FaturaCreateInput>();
+  const { watch, register } = useFormContext<FaturaCreateInput>();
   const data = watch();
+  const { data: config } = useConfiguracaoFiscal();
+  const regimeFiscal = (config?.regimeFiscal || 'GERAL') as 'GERAL' | 'SIMPLIFICADO' | 'EXUSA';
+
+  const calculo = useMemo(() => {
+    const itensCalculo = (data.itens || []).map(i => ({
+      precoUnit: Number(i.precoUnit) || 0,
+      quantidade: Number(i.quantidade) || 0,
+      desconto: Number(i.desconto) || 0,
+      taxaIva: Number(i.taxaIva) || 0,
+      codigoIva: i.codigoIva || 'IVA'
+    }));
+    return calcularFatura(itensCalculo, regimeFiscal);
+  }, [data.itens, regimeFiscal]);
+
+  const descontoGlobal = Number(data.desconto) || 0;
+  const descontoTotal = calculo.totalDesconto + descontoGlobal;
+  const totalFinal = Math.max(0, calculo.total - descontoGlobal);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
@@ -431,28 +510,92 @@ function Step3Review() {
                {(data.itens || []).map((item, idx: number) => (
                  <tr key={idx}>
                    <td className="py-2">{item.descricao}</td>
-                   <td className="py-2 text-right">{item.quantidade}x</td>
-                   <td className="py-2 text-right font-mono">{formatKwanza(item.precoUnit)}</td>
+                   <td className="py-2 text-right text-neutral-500">{item.quantidade}x</td>
+                   <td className="py-2 text-right font-mono">{formatKwanza(Number(item.precoUnit) || 0)}</td>
                  </tr>
                ))}
              </tbody>
            </table>
         </div>
 
-        <div className="pt-6 mt-6 border-t-2 border-neutral-100 flex justify-between items-center">
-          <p className="text-sm font-bold text-neutral-600">Total Final</p>
-          <p className="text-2xl font-black text-primary-600 font-mono">
-            {formatKwanza((data.itens || []).reduce((acc: number, i) => acc + (i.quantidade * i.precoUnit) - i.desconto, 0) - (data.desconto || 0))}
-          </p>
+        <div className="pt-6 mt-6 border-t border-neutral-100 space-y-3">
+          <div className="flex justify-between items-center text-neutral-600">
+            <p className="text-sm">Subtotal</p>
+            <p className="text-sm font-mono">{formatKwanza(calculo.subtotal)}</p>
+          </div>
+          {descontoTotal > 0 && (
+            <div className="flex justify-between items-center text-red-500">
+              <p className="text-sm">Descontos</p>
+              <p className="text-sm font-mono">-{formatKwanza(descontoTotal)}</p>
+            </div>
+          )}
+          <div className="flex justify-between items-center text-neutral-600">
+            <p className="text-sm">Imposto ({regimeFiscal})</p>
+            <div className="text-right">
+              <p className="text-sm font-mono">{formatKwanza(calculo.totalIva)}</p>
+              <p className="text-[10px] text-neutral-400">Taxa aplicada: {calculo.itensCalculados[0]?.taxaIva}% ({calculo.itensCalculados[0]?.codigoIva})</p>
+            </div>
+          </div>
+          <div className="pt-3 border-t-2 border-neutral-100 flex justify-between items-center">
+            <p className="text-sm font-bold text-neutral-900">Total Final</p>
+            <p className="text-2xl font-black text-primary-600 font-mono">
+              {formatKwanza(totalFinal)}
+            </p>
+          </div>
         </div>
       </Card>
       
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
-         <Plus className="h-5 w-5 text-amber-500 shrink-0" />
-         <div className="text-xs text-amber-800 space-y-1">
-            <p className="font-bold">Aviso de Emissão</p>
-            <p>A fatura será guardada inicialmente como <strong>RASCUNHO</strong>. Poderá emití-la e imprimir na página de detalhes após a criação.</p>
-         </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-6 space-y-4">
+          <h3 className="text-sm font-bold flex items-center gap-2 text-neutral-700">
+            <Calendar className="h-4 w-4" /> Opções Avançadas
+          </h3>
+          
+          <div className="space-y-4 border-t border-neutral-100 pt-4">
+            <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+              <input 
+                type="checkbox" 
+                id="retrodatar"
+                {...register('retrodatar')} 
+                className="h-4 w-4 text-primary-600 rounded border-neutral-300 focus:ring-primary-500"
+              />
+              <label htmlFor="retrodatar" className="text-sm font-medium text-neutral-700 cursor-pointer">
+                Emitir com data retroactiva
+              </label>
+            </div>
+
+            {data.retrodatar && (
+              <Input 
+                label="Data de Emissão" 
+                type="date" 
+                {...register('dataEmissao')} 
+                helperText="A data escolhida será usada no documento fiscal assinado."
+              />
+            )}
+
+            <Input 
+              label="Data de Vencimento" 
+              type="date" 
+              {...register('dataVencimento')} 
+            />
+          </div>
+        </Card>
+
+        <div className="space-y-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+             <Plus className="h-5 w-5 text-amber-500 shrink-0" />
+             <div className="text-xs text-amber-800 space-y-1">
+                <p className="font-bold">Aviso de Emissão</p>
+                <p>A fatura será guardada inicialmente como <strong>RASCUNHO</strong>. Poderá emití-la e imprimir na página de detalhes após a criação.</p>
+             </div>
+          </div>
+          
+          <Card className="p-4 bg-primary-50 border-primary-100">
+             <p className="text-xs text-primary-700">
+               Ao clicar em <strong>Finalizar</strong>, o rascunho será gerado e associado ao paciente <strong>{data.pacienteId}</strong>.
+             </p>
+          </Card>
+        </div>
       </div>
     </div>
   );

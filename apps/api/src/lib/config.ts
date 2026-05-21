@@ -33,9 +33,11 @@ const configSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_LAUDOS_BUCKET: z.string().default('laudos'),
+  SUPABASE_PUBLIC_BUCKET: z.string().default('assets'),
   // Typebot integration
   TYPEBOT_VIEWER_URL: z.string().url().default('http://localhost:8082'),
   TYPEBOT_TRIAGEM_FLOW_ID: z.string().default('cp-triagem-bot'),
+  STORAGE_PROVIDER: z.enum(['supabase', 'local']).default('local'),
 }).refine((data) => data.JWT_SECRET !== data.JWT_REFRESH_SECRET, {
   message: "JWT_SECRET and JWT_REFRESH_SECRET must be different",
   path: ["JWT_REFRESH_SECRET"],
@@ -53,4 +55,5 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const config = parsed.data;
+export type AppConfig = z.infer<typeof configSchema>;
+export const config = parsed.data as AppConfig;

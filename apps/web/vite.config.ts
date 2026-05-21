@@ -100,7 +100,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@clinicaplus/types', '@clinicaplus/utils'],
+    include: [],
   },
   build: {
     chunkSizeWarningLimit: 1000,

@@ -1,7 +1,7 @@
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { redis } from './redis';
-import { EmailJob, ReminderJob, WebhookJob, ReportJob, JobNames, TratamentoGerarSessoesJob } from '@clinicaplus/events';
+import { EmailJob, ReminderJob, WebhookJob, ReportJob, JobNames, TratamentoGerarSessoesJob, ReportAgtJob } from '@clinicaplus/events';
 
 const connection = redis;
 
@@ -23,3 +23,4 @@ export const reminderQueue = new Queue<ReminderJob>(JobNames.REMINDER_SCHEDULE, 
 export const webhookQueue = new Queue<WebhookJob>(JobNames.WEBHOOK_TRIGGER, defaultOptions);
 export const reportQueue = new Queue<ReportJob>(JobNames.REPORT_GENERATE, defaultOptions);
 export const tratamentoQueue = new Queue<TratamentoGerarSessoesJob>(JobNames.TRATAMENTO_GERAR_SESSOES, defaultOptions);
+export const reportAgtQueue = new Queue<ReportAgtJob>(JobNames.REPORT_AGT, defaultOptions);

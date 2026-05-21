@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/authenticate';
 import { requireRole } from '../middleware/requireRole';
 import { Papel } from '@clinicaplus/types';
 import { AppError } from '../lib/AppError';
+import { storageService } from '../services/storage.service';
 
 const router = Router();
 const COOKIE_NAME = 'cp_refresh';
@@ -90,6 +91,38 @@ router.put('/me/contactos',
       }
       const clinica = await clinicasService.updateContactos(req.user.clinicaId!, contactos);
       return res.json({ success: true, data: clinica, message: 'Contactos atualizados com sucesso' });
+    } catch (err) { return next(err); }
+  }
+);
+
+/**
+ * POST /clinicas/me/logo-upload-url
+ * Auth: ADMIN — generates upload url for the clinic logo
+ */
+router.post('/me/logo-upload-url',
+  authenticate,
+  requireRole([Papel.ADMIN]),
+  async (req, res, next) => {
+    try {
+      const { fileName } = req.body;
+      const result = await storageService.getUploadUrl(req.user.clinicaId!, 'clinica_logo', req.user.clinicaId!, fileName || 'logo.png');
+      return res.json({ success: true, data: result });
+    } catch (err) { return next(err); }
+  }
+);
+
+/**
+ * POST /clinicas/me/logo-confirm
+ * Auth: ADMIN — confirms logo upload and saves it to db
+ */
+router.post('/me/logo-confirm',
+  authenticate,
+  requireRole([Papel.ADMIN]),
+  async (req, res, next) => {
+    try {
+      const { path, provider, base64Data } = req.body;
+      const url = await storageService.confirmUpload(req.user.clinicaId!, 'clinica_logo', req.user.clinicaId!, path, provider, base64Data);
+      return res.json({ success: true, data: { logoUrl: url } });
     } catch (err) { return next(err); }
   }
 );

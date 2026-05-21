@@ -189,6 +189,12 @@ export default function PacientesPage() {
               {...form.register('genero')}
               error={form.formState.errors.genero?.message}
             />
+            <Input
+              label="NIF"
+              placeholder="Ex: 0000000000 ou 0000000000000"
+              {...form.register('nif')}
+              error={form.formState.errors.nif?.message}
+            />
             <Input 
               label="Telefone" 
               placeholder="Ex: 923 000 000"

@@ -19,4 +19,6 @@ export * from './Switch';
 export * from './Tabs';
 export * from './Pagination';
 export * from './EmptyState';
+export * from './AnamneseAnswer';
 export * from './print/ReceitaPrint';
+export * from './SelectionToggle';

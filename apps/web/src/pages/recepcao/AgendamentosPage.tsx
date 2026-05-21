@@ -74,6 +74,7 @@ export default function AgendamentosPage() {
     { value: 'CONCLUIDO', label: 'Concluído' },
     { value: 'CANCELADO', label: 'Cancelado' },
     { value: 'NAO_COMPARECEU', label: 'Não Compareceu' },
+    { value: 'ATRASADO', label: 'Atrasado' },
   ];
 
   const columns = [

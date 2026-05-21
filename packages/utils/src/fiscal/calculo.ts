@@ -1,16 +1,15 @@
-import { RegimeFiscal } from "@clinicaplus/types";
 
 export interface ItemCalculo {
   precoUnit: number; // Kwanza inteiro
   quantidade: number;
   desconto: number; // Kwanza inteiro
-  taxaIva?: number; // Override se necessário
-  codigoIva?: string; // IVA | ISE | RED
-  motivoIsencao?: string;
+  taxaIva?: number | undefined; // Override se necessário
+  codigoIva?: string | undefined; // IVA | ISE | RED
+  motivoIsencao?: string | undefined;
 }
 
 export interface ItemCalculado {
-  descricao?: string;
+  descricao?: string | undefined;
   precoUnit: number;
   quantidade: number;
   desconto: number;
@@ -19,7 +18,7 @@ export interface ItemCalculado {
   base: number;
   iva: number;
   total: number;
-  motivoIsencao?: string;
+  motivoIsencao?: string | undefined;
 }
 
 export interface ResultadoCalculo {
@@ -42,7 +41,7 @@ export interface ResultadoCalculo {
  */
 export function calcularFatura(
   itens: ItemCalculo[],
-  regimeFiscal: RegimeFiscal,
+  regimeFiscal: 'GERAL' | 'SIMPLIFICADO' | 'EXUSA',
 ): ResultadoCalculo {
   const taxaPadrao = {
     GERAL: 14,
@@ -59,7 +58,15 @@ export function calcularFatura(
     const baseComDesconto = Math.max(0, baseItem - descontoItem);
     
     // 3. Definir taxa de IVA
-    const taxa = item.taxaIva ?? taxaPadrao;
+    // Se o regime for SIMPLIFICADO ou EXUSA, forçamos a taxa do regime 
+    // exceto se o item já vier com taxa 0 (isenção explícita).
+    let taxa = item.taxaIva ?? taxaPadrao;
+    
+    if (regimeFiscal === 'SIMPLIFICADO' && taxa !== 0) {
+      taxa = 7;
+    } else if (regimeFiscal === 'EXUSA') {
+      taxa = 0;
+    }
     
     // 4. Calcular IVA (Arredondado ao Kwanza mais próximo)
     const ivaItem = Math.round(baseComDesconto * (taxa / 100));
@@ -87,7 +94,7 @@ export function calcularFatura(
     totalDesconto,
     totalIva,
     total,
-    retencaoFonte: 0, // Implementação futura se necessário
+    retencaoFonte: 0, 
     itensCalculados,
   };
 }

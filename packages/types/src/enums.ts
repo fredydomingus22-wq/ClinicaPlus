@@ -23,7 +23,8 @@ export enum EstadoAgendamento {
   EM_PROGRESSO = 'EM_PROGRESSO',
   CONCLUIDO = 'CONCLUIDO',
   CANCELADO = 'CANCELADO',
-  NAO_COMPARECEU = 'NAO_COMPARECEU'
+  NAO_COMPARECEU = 'NAO_COMPARECEU',
+  ATRASADO = 'ATRASADO'
 }
 export const EstadoAgendamentoSchema = z.nativeEnum(EstadoAgendamento);
 
@@ -164,13 +165,27 @@ export enum WaDirecao {
 export const WaDirecaoSchema = z.nativeEnum(WaDirecao);
 
 export enum TipoDocumentoFiscal {
+  FA = 'FA',
   FT = 'FT',
   FR = 'FR',
-  VD = 'VD',
+  FG = 'FG',
+  GF = 'GF',
+  AC = 'AC',
+  AR = 'AR',
+  TV = 'TV',
+  RC = 'RC',
+  RG = 'RG',
+  RE = 'RE',
+  ND = 'ND',
   NC = 'NC',
-  ND = 'ND'
+  AF = 'AF',
+  RP = 'RP',
+  RA = 'RA',
+  CS = 'CS',
+  LD = 'LD'
 }
 export const TipoDocumentoFiscalSchema = z.nativeEnum(TipoDocumentoFiscal);
+
 
 export enum RegimeFiscal {
   GERAL = 'GERAL',
@@ -178,3 +193,21 @@ export enum RegimeFiscal {
   EXUSA = 'EXUSA'
 }
 export const RegimeFiscalSchema = z.nativeEnum(RegimeFiscal);
+
+// --- INVENTÁRIO ---
+
+export enum TipoProduto {
+  PRODUTO = 'PRODUTO',
+  SERVICO = 'SERVICO'
+}
+export const TipoProdutoSchema = z.nativeEnum(TipoProduto);
+
+export enum TipoMovimentacao {
+  ENTRADA = 'ENTRADA',
+  SAIDA = 'SAIDA',
+  AJUSTE = 'AJUSTE',
+  VENDA = 'VENDA',
+  ESTORNO = 'ESTORNO',
+  TRANSFERENCIA = 'TRANSFERENCIA'
+}
+export const TipoMovimentacaoSchema = z.nativeEnum(TipoMovimentacao);

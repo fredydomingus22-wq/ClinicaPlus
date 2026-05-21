@@ -1,5 +1,6 @@
 import { PrismaClient, Papel, EstadoAgendamento } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { seedAnamneseTemplates } from './seed/anamneseTemplates';
 
 const prisma = new PrismaClient();
 

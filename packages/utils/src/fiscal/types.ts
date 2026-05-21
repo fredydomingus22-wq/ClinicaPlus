@@ -12,6 +12,7 @@ export interface AgtSoftwareInfoDetail {
   productId: string;
   productVersion: string;
   softwareValidationNumber: string;
+  signatureVersion: number;
 }
 
 export interface AgtSoftwareInfo {
@@ -21,6 +22,7 @@ export interface AgtSoftwareInfo {
 
 export interface AgtDocumentLine {
   lineNumber: string;
+  operationType: string;
   productCode: string;
   productDescription: string;
   quantity: string;
@@ -84,7 +86,7 @@ export interface AgtElectronicInvoiceRequest {
   taxRegistrationNumber: string;
   submissionTimeStamp: string;
   softwareInfo: AgtSoftwareInfo;
-  numberOfEntries: string; // NOVO: Total de documentos no array
+  numberOfEntries: number; // Total de documentos no array
   documents: AgtDocument[];
 }
 
@@ -238,37 +240,61 @@ export interface AgtConsultResponse {
   }>;
 }
 
+/** Tipos de documento aceites pela AGT (FE DS.120) */
+export type AgtDocumentType =
+  | 'FA' // Factura de Adiantamento
+  | 'FT' // Factura
+  | 'FR' // Factura/Recibo
+  | 'FG' // Factura Global
+  | 'GF' // Factura Genérica
+  | 'AC' // Aviso de Cobrança
+  | 'AR' // Aviso de Cobrança/Recibo
+  | 'TV' // Talão de Venda
+  | 'RC' // Recibo em numerário (cash)
+  | 'RG' // Recibo Geral
+  | 'RE' // Estorno ou Recibo de Estorno
+  | 'ND' // Nota de Débito
+  | 'NC' // Nota de Crédito
+  | 'AF' // Factura/Recibo de Autofacturação
+  | 'RP' // Prémio ou Recibo de Prémio
+  | 'RA' // Resseguro Aceite
+  | 'CS' // Imputação a Co-seguradoras
+  | 'LD'; // Imputação a Co-seguradora Líder
+
 export interface AgtSeriesRequest {
   schemaVersion: string;
-  submissionUUID: string; // N (identificador único da requisição)
+  submissionUUID: string;
   taxRegistrationNumber: string;
   submissionTimeStamp: string;
   softwareInfo: AgtSoftwareInfo;
-  jwsSignature: string; // Assinatura de taxRegistrationNumber + submissionUUID (ou requestID conforme manual)
+  /**
+   * Assinatura RS256 dos campos:
+   * taxRegistrationNumber, establishmentNumber, seriesYear, documentType
+   */
+  jwsSignature: string;
   seriesYear: string;
-  documentType: string; // FA, FT, FR, FG, GF, AC, AR, TV, RC, RG, RE, ND, NC, AF, RP, RA, CS
+  documentType: AgtDocumentType;
+  /** Código do estabelecimento; usar "SEDE" para testes / contribuinte de localização única */
   establishmentNumber: string;
-  seriesContingencyIndicator: string;
+  /** "N" = regime normal; "C" = contingência */
+  seriesContingencyIndicator: 'N' | 'C';
+  seriesStartTS?: string;
+  seriesEndTS?: string;
 }
 
 export interface AgtSeriesResponse {
-  requestID?: string;
-  resultCode: string; // 0-Sucesso, 1-Parcial, 2-Erro, 7-Prematuro, 8-Em curso, 9-Cancelado
-  taxRegistrationNumber?: string;
-  seriesFEResult?: {
-    seriesCode: string;
-    authorizedQuantity: string | number;
-    firstDocumentNo: string;
-    lastDocumentNo: string;
-  };
-  requestErrorList?: Array<{
-    idError: string;
-    descriptionError: string;
-  }>;
+  /** 1 = sucesso (doc oficial usa número inteiro, não string) */
+  resultCode: number;
   errorList?: Array<{
     idError: string;
     descriptionError: string;
   }>;
+  seriesFEResult?: {
+    seriesCode: string;
+    authorizedQuantity: string;
+    firstDocumentNo: string;
+    lastDocumentNo: string;
+  };
 }
 
 // Para compatibilidade com o worker atual até refactor completo

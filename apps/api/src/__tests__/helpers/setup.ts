@@ -38,6 +38,10 @@ vi.mock('bullmq', () => ({
     close = vi.fn().mockResolvedValue(undefined);
     on = vi.fn();
   },
+  Worker: class {
+    close = vi.fn().mockResolvedValue(undefined);
+    on = vi.fn().mockImplementation(function (this: any) { return this; });
+  },
 }));
 
 vi.mock('../../lib/redis', () => ({

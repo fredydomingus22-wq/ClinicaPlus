@@ -17,6 +17,7 @@ import { FaturaStatusBadge } from '../../components/financeiro/FaturaStatusBadge
 import { FaturaPrint } from '../../components/print/FaturaPrint';
 import { PlanGate, UpgradeInline } from '../../components/PlanGate';
 import { useExportReceita } from '../../hooks/useRelatorios';
+import ConsolaFiscalPage from './ConsolaFiscalPage';
 
 const ESTADO_FATURA_TABS = [
   { id: 'EMITIDA', label: 'Emitidas' },
@@ -26,6 +27,7 @@ const ESTADO_FATURA_TABS = [
 ];
 
 export default function FaturasPage() {
+  const [activeMainTab, setActiveMainTab] = useState<'faturas' | 'consola'>('faturas');
   const [tab, setTab] = useState<EstadoFatura>(EstadoFatura.EMITIDA);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -129,29 +131,76 @@ export default function FaturasPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Facturação</h1>
-          <p className="text-neutral-500 text-sm">Gestão de faturas, pagamentos e histórico financeiro.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            {activeMainTab === 'faturas' ? 'Facturação' : 'Consola Fiscal AGT'}
+          </h1>
+          <p className="text-neutral-500 text-sm">
+            {activeMainTab === 'faturas' 
+              ? 'Gestão de faturas, pagamentos e histórico financeiro.' 
+              : 'Monitorização e gestão da conformidade fiscal com a AGT.'
+            }
+          </p>
         </div>
         <div className="flex gap-2">
-          <PlanGate 
-            planoMinimo="PRO" 
-            fallback={<UpgradeInline feature="Exportar CSV" />}
-          >
-            <Button variant="outline" onClick={handleExport} disabled={exportMutation.isPending}>
-              <Download className="h-4 w-4 mr-2" /> 
-              {exportMutation.isPending ? 'Exportando...' : 'Exportar CSV'}
-            </Button>
-          </PlanGate>
-          
-          <Link to="/admin/financeiro/nova">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" /> Nova Fatura
-            </Button>
-          </Link>
+          {activeMainTab === 'faturas' && (
+            <>
+              <PlanGate 
+                planoMinimo="PRO" 
+                fallback={<UpgradeInline feature="Exportar CSV" />}
+              >
+                <Button variant="outline" onClick={handleExport} disabled={exportMutation.isPending}>
+                  <Download className="h-4 w-4 mr-2" /> 
+                  {exportMutation.isPending ? 'Exportando...' : 'Exportar CSV'}
+                </Button>
+              </PlanGate>
+              
+              <Link to="/admin/financeiro/nova">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" /> Nova Fatura
+                </Button>
+              </Link>
+
+              <Link to="/admin/financeiro/documentos">
+                <Button variant="outline">
+                  <FileText className="h-4 w-4 mr-2" /> Documentos Fiscais
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <div className="flex gap-1 border-b border-neutral-200">
+        <button
+          onClick={() => setActiveMainTab('faturas')}
+          className={`
+            px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-px
+            ${activeMainTab === 'faturas'
+              ? 'border-primary-500 text-primary-700 bg-white'
+              : 'border-transparent text-neutral-400 hover:text-neutral-600'
+            }
+          `}
+        >
+          Lista de Faturas
+        </button>
+        <button
+          onClick={() => setActiveMainTab('consola')}
+          className={`
+            px-6 py-3 text-sm font-bold transition-all border-b-2 -mb-px
+            ${activeMainTab === 'consola'
+              ? 'border-primary-500 text-primary-700 bg-white'
+              : 'border-transparent text-neutral-400 hover:text-neutral-600'
+            }
+          `}
+        >
+          Consola Fiscal AGT
+        </button>
+      </div>
+
+      {activeMainTab === 'consola' ? (
+        <ConsolaFiscalPage />
+      ) : (
+        <Card className="p-0 overflow-hidden">
         <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
           <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
             <div className="flex gap-1">
@@ -222,6 +271,7 @@ export default function FaturasPage() {
           </div>
         </div>
       </Card>
+      )}
 
       {/* Hidden Print Component */}
       {faturaToPrint && clinica && (

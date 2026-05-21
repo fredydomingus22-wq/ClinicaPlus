@@ -5,11 +5,17 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Mocks devem vir antes do componente que os utiliza
 vi.mock('../../../hooks/useWhatsApp');
+vi.mock('../../../hooks/useBots', () => ({
+  useBotIntegracao: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useSaveBotIntegracao: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+}));
 vi.mock('../../../components/PlanGate', () => ({
   PlanGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn() })),
+  useQuery: vi.fn(),
+  useMutation: vi.fn(),
 }));
 
 import { WhatsappPage } from '../WhatsappPage';

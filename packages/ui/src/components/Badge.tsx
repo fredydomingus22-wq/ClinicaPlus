@@ -18,7 +18,7 @@ const variantStyles: Record<BadgeVariant, { bg: string, text: string, border: st
 };
 
 export function Badge({ variant = 'neutral', children, className = '' }: BadgeProps) {
-  const styles = variantStyles[variant];
+  const styles = variantStyles[variant] || variantStyles.neutral;
   return (
     <span 
       className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold font-mono uppercase tracking-wide border ${className}`}

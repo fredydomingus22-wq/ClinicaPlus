@@ -371,10 +371,9 @@ export const waMetaConversaService = {
     }
 
     // Confirmar → criar agendamento
-    const { medicoId, slotIso, especialidadeId } = ctx as {
+    const { medicoId, slotIso } = ctx as {
       medicoId: string;
       slotIso: string;
-      especialidadeId: string;
     };
 
     // Tentar encontrar paciente pelo número

@@ -8,6 +8,7 @@ export const ESTADO_CONFIG: Record<EstadoAgendamento, { label: string; styles: s
   CONCLUIDO:       { label: 'Concluído',       styles: 'bg-slate-100 text-slate-800  border-slate-300', dot: 'bg-slate-500' },
   CANCELADO:       { label: 'Cancelado',       styles: 'bg-red-50    text-red-800    border-red-300',   dot: 'bg-red-500' },
   NAO_COMPARECEU:  { label: 'Não Compareceu',  styles: 'bg-yellow-50 text-yellow-800 border-yellow-300', dot: 'bg-yellow-500' },
+  ATRASADO:        { label: 'Atrasado',        styles: 'bg-orange-50 text-orange-800 border-orange-300', dot: 'bg-orange-500' },
 };
 
 interface StatusBadgeProps {
