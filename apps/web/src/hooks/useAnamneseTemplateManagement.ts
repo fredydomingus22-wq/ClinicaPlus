@@ -32,7 +32,8 @@ export function useAnamneseTemplateManagement(especialidadeId?: string) {
     queryKey: anamneseTemplateKeys.byEspecialidade(especialidadeId || ''),
     queryFn: async () => {
       const data = await anamneseTemplateApi.getByEspecialidade(especialidadeId as string);
-      return Array.isArray(data) ? (data as TemplateItem[]) : [];
+      if (Array.isArray(data)) return data as TemplateItem[];
+      return data ? [data as TemplateItem] : [];
     },
     enabled: Boolean(especialidadeId),
   });

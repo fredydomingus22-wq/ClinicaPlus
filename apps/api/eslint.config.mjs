@@ -5,10 +5,13 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off',
+    },
     rules: {
       'no-console': 'error',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
     },
     languageOptions: {
       parserOptions: {

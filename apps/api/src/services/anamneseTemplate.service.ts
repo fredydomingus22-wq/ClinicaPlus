@@ -1,9 +1,9 @@
-// src/services/anamneseTemplate.service.ts
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
+import { Prisma } from '@prisma/client';
 import type { AnamneseTemplate, AnamneseTemplateQuestao } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
-// Added interface for questao input to avoid any
+import { ANAMNESE_TEMPLATES, type Especialidade as EspecialidadeTemplate } from '@clinicaplus/types';
+
 interface QuestaoInput {
   id?: string;
   ordem?: number;
@@ -13,33 +13,66 @@ interface QuestaoInput {
 }
 
 export const anamneseTemplateService = {
-  /** Get template for a given specialty within the current clinic */
-  async getByEspecialidade(clinicaId: string, especialidadeId: string): Promise<AnamneseTemplate & { questoes: AnamneseTemplateQuestao[] }> {
-    const template = await prisma.anamneseTemplate.findFirst({
+  async getByEspecialidade(
+    clinicaId: string,
+    especialidadeId: string,
+  ): Promise<AnamneseTemplate & { questoes: AnamneseTemplateQuestao[] }> {
+    const existing = await prisma.anamneseTemplate.findFirst({
       where: { clinicaId, especialidadeId },
       include: { questoes: { orderBy: { ordem: 'asc' } } },
     });
-    if (!template) {
-      throw new AppError('Template não encontrado', 404);
+
+    if (existing) return existing;
+
+    const especialidade = await prisma.especialidade.findFirst({
+      where: { id: especialidadeId, clinicaId },
+    });
+
+    if (!especialidade) {
+      throw new AppError('Especialidade nao encontrada para esta clinica', 404);
     }
-    return template;
+
+    const templateKey = toTemplateKey(especialidade.nome);
+    const questoesBase = ANAMNESE_TEMPLATES[templateKey];
+
+    if (!questoesBase || questoesBase.length === 0) {
+      throw new AppError('Template nao encontrado para esta especialidade', 404);
+    }
+
+    const created = await prisma.anamneseTemplate.create({
+      data: {
+        clinicaId,
+        especialidadeId,
+        titulo: `Template de ${especialidade.nome}`,
+        questoes: {
+          create: questoesBase.map((q, index) => ({
+            ordem: index + 1,
+            pergunta: q.label,
+            tipoResposta: q.tipo,
+            options: q.opcoes ? (q.opcoes as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+          })),
+        },
+      },
+      include: { questoes: { orderBy: { ordem: 'asc' } } },
+    });
+
+    return created;
   },
 
-  /** Create a new template for a specialty */
   async create(
     clinicaId: string,
     especialidadeId: string,
     titulo: string,
     questoes: Omit<AnamneseTemplateQuestao, 'id' | 'templateId' | 'criadoEm' | 'atualizadoEm'>[],
   ): Promise<AnamneseTemplate> {
-    // Ensure specialty belongs to clinic
     const exists = await prisma.anamneseTemplate.findFirst({
       where: { clinicaId, especialidadeId },
     });
     if (exists) {
-      throw new AppError('Template já existe para esta especialidade', 400);
+      throw new AppError('Template ja existe para esta especialidade', 400);
     }
-    return await prisma.anamneseTemplate.create({
+
+    return prisma.anamneseTemplate.create({
       data: {
         clinicaId,
         especialidadeId,
@@ -49,28 +82,25 @@ export const anamneseTemplateService = {
             ordem: q.ordem,
             pergunta: q.pergunta,
             tipoResposta: q.tipoResposta,
-            options: q.options as Prisma.InputJsonValue,
+            options: q.options === null ? Prisma.JsonNull : (q.options as Prisma.InputJsonValue),
           })),
         },
       },
-      include: { questoes: true },
     });
   },
 
-  /** Update template questions */
   async update(
     clinicaId: string,
     templateId: string,
     questoes: QuestaoInput[],
   ): Promise<AnamneseTemplate> {
-    // Verify ownership
     const template = await prisma.anamneseTemplate.findFirst({
       where: { id: templateId, clinicaId },
     });
     if (!template) {
-      throw new AppError('Template não encontrado ou fora da clínica', 404);
+      throw new AppError('Template nao encontrado ou fora da clinica', 404);
     }
-    // Upsert each question
+
     const ops = questoes.map((q) => {
       if (q.id) {
         const updateData: {
@@ -79,6 +109,7 @@ export const anamneseTemplateService = {
           tipoResposta?: string;
           options?: Prisma.InputJsonValue;
         } = {};
+
         if (q.ordem !== undefined) updateData.ordem = q.ordem;
         if (q.pergunta !== undefined) updateData.pergunta = q.pergunta;
         if (q.tipoResposta !== undefined) updateData.tipoResposta = q.tipoResposta;
@@ -89,37 +120,57 @@ export const anamneseTemplateService = {
           data: updateData,
         });
       }
+
       return prisma.anamneseTemplateQuestao.create({
         data: {
           templateId,
           ordem: q.ordem ?? 0,
           pergunta: q.pergunta ?? '',
           tipoResposta: q.tipoResposta ?? 'text',
-          options: (q.options ?? null) as Prisma.InputJsonValue,
+          options: q.options == null ? Prisma.JsonNull : (q.options as Prisma.InputJsonValue),
         },
       });
     });
+
     await Promise.all(ops);
-    // Return refreshed template
+
     const refreshed = await prisma.anamneseTemplate.findUnique({
       where: { id: templateId },
       include: { questoes: { orderBy: { ordem: 'asc' } } },
     });
+
     if (!refreshed) {
-      throw new AppError('Template não encontrado após atualização', 404);
+      throw new AppError('Template nao encontrado apos atualizacao', 404);
     }
+
     return refreshed;
   },
 
-  /** Delete a template */
   async delete(clinicaId: string, templateId: string): Promise<boolean> {
     const template = await prisma.anamneseTemplate.findFirst({
       where: { id: templateId, clinicaId },
     });
     if (!template) {
-      throw new AppError('Template não encontrado', 404);
+      throw new AppError('Template nao encontrado', 404);
     }
+
     await prisma.anamneseTemplate.delete({ where: { id: templateId } });
     return true;
   },
 };
+
+function toTemplateKey(nomeEspecialidade: string): EspecialidadeTemplate {
+  const normalized = nomeEspecialidade
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+
+  if (normalized.includes('ODONTO')) return 'ODONTOLOGIA';
+  if (normalized.includes('CARDIO')) return 'CARDIOLOGIA';
+  if (normalized.includes('PEDIATR')) return 'PEDIATRIA';
+  if (normalized.includes('GINECO')) return 'GINECOLOGIA';
+  if (normalized.includes('GERAL') || normalized.includes('CLINICA')) return 'GERAL';
+
+  return 'GERAL';
+}
