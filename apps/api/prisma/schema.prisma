@@ -1267,7 +1267,6 @@ enum TipoDocumentoFiscal {
   FA
   FT
   FR
-  VD
   FG
   GF
   AC
