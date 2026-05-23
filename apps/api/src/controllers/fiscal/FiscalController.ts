@@ -1,11 +1,16 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 import { agtApiClient } from '../../services/fiscal/AgtApiClient';
 import { CertificationService } from '../../services/fiscal/CertificationService';
 import { logger } from '../../lib/logger';
 import * as crypto from 'crypto';
-import type { AgtStatusRequest } from '@clinicaplus/utils';
+import type { AgtStatusRequest, AgtError } from '@clinicaplus/utils';
+import {
+  buildAgtObterEstadoPayload,
+  getDefaultAgtSoftwareInfoDetail,
+  mapAgtStatusToEnvio,
+} from '@clinicaplus/utils/server';
 
 function getAgtAuthToken(): string {
   if (process.env.AGT_USERNAME && process.env.AGT_PASSWORD) {
@@ -24,9 +29,31 @@ function isUpstreamNetworkError(error: unknown): boolean {
   return ['ECONNABORTED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'EPROTO'].includes(code || '');
 }
 
+function createAgtCertificationService(clinica: { agtPrivateKey?: string | null; agtPublicKey?: string | null }) {
+  return new CertificationService({
+    tenantPrivateKey: clinica.agtPrivateKey || process.env.AGT_PRIVATE_KEY || undefined,
+    tenantPublicKey: clinica.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined,
+  });
+}
+
+function mapAgtErrorToHttp(error: unknown): { status: number; payload: { error: string; code?: string | number } } | null {
+  if (!error || typeof error !== 'object') return null;
+  const candidate = error as Partial<AgtError> & { message?: string; code?: string | number; agtCode?: string };
+  if (!candidate.code) return null;
+  const status = typeof candidate.code === 'number' ? candidate.code : Number(candidate.code);
+  if (!Number.isFinite(status) || status < 400 || status > 599) return null;
+  return {
+    status,
+    payload: {
+      error: candidate.message || 'Erro de comunicaÃ§Ã£o com a AGT',
+      code: candidate.agtCode || candidate.code
+    }
+  };
+}
+
 export const fiscalController = {
   /**
-   * Testa a conexão com a API da AGT usando o token da clínica
+   * Testa a conexÃ£o com a API da AGT usando o token da clÃ­nica
    */
   async testarConexao(req: Request, res: Response): Promise<Response> {
     const { id: clinicaId } = req.clinica;
@@ -45,7 +72,7 @@ export const fiscalController = {
       if (!clinica) {
         return res.status(404).json({ 
           success: false, 
-          message: 'Clínica não encontrada' 
+          message: 'ClÃ­nica nÃ£o encontrada' 
         });
       }
 
@@ -54,29 +81,28 @@ export const fiscalController = {
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ 
           success: false, 
-          message: 'Credenciais da API AGT não configuradas no servidor' 
+          message: 'Credenciais da API AGT nÃ£o configuradas no servidor' 
         });
       }
 
-      // Chama obterEstado com um ID fictício para validar o token/conexão
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      // Chama obterEstado com um ID fictÃ­cio para validar o token/conexÃ£o
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const taxRegistrationNumber = clinica.nif || '999999999';
+      if (!clinica.nif) {
+        return res.status(400).json({
+          success: false,
+          message: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT'
+        });
+      }
+
+      const taxRegistrationNumber = clinica.nif;
       const requestID = 'PING-CHECK';
 
-      // Instanciar serviço com as chaves do tenant
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      // Instanciar serviÃ§o com as chaves do tenant
+      const certService = createAgtCertificationService(clinica);
 
       const statusRequest = {
-        schemaVersion: '1.0',
+        schemaVersion: '1.2',
         submissionUUID: crypto.randomUUID(),
         taxRegistrationNumber,
         submissionTimeStamp: new Date().toISOString(),
@@ -92,12 +118,14 @@ export const fiscalController = {
 
       return res.json({ 
         success: true, 
-        message: 'Conexão com a AGT estabelecida com sucesso',
-        ambiente: process.env.NODE_ENV === 'production' && process.env.AGT_SANDBOX !== 'true' ? 'PRODUÇÃO' : 'SANDBOX'
+        sucesso: true,
+        message: 'ConexÃ£o com a AGT estabelecida com sucesso',
+        mensagem: 'ConexÃ£o com a AGT estabelecida com sucesso',
+        ambiente: process.env.NODE_ENV === 'production' && process.env.AGT_SANDBOX !== 'true' ? 'PRODUÃ‡ÃƒO' : 'SANDBOX'
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao conectar com a AGT';
-      logger.error({ error, clinicaId }, 'Falha ao testar conexão com AGT');
+      logger.error({ error, clinicaId }, 'Falha ao testar conexÃ£o com AGT');
       return res.status(500).json({ 
         success: false, 
         message: message
@@ -106,14 +134,14 @@ export const fiscalController = {
   },
 
   /**
-   * Consulta o estado assíncrono de uma submissão AGT por requestID e sincroniza status local.
+   * Consulta o estado assÃ­ncrono de uma submissÃ£o AGT por requestID e sincroniza status local.
    */
   async consultarEstadoSubmissaoAgt(req: Request, res: Response): Promise<Response> {
     const { id: clinicaId } = req.clinica;
     const { requestID } = req.body as { requestID?: string };
 
     if (!requestID || typeof requestID !== 'string') {
-      return res.status(400).json({ error: 'requestID é obrigatório' });
+      return res.status(400).json({ error: 'requestID Ã© obrigatÃ³rio' });
     }
 
     try {
@@ -128,78 +156,56 @@ export const fiscalController = {
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const agtApiToken = getAgtAuthToken();
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
-        return res.status(400).json({ error: 'Credenciais AGT não configuradas no servidor' });
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
+      const certService = createAgtCertificationService(clinica);
+
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
+
+      const taxRegistrationNumber = clinica.nif;
+      const payload = buildAgtObterEstadoPayload(taxRegistrationNumber, requestID, certService, {
+        submissionUUID: crypto.randomUUID(),
       });
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
-
-      const taxRegistrationNumber = clinica.nif || '';
-      const payload = {
-        schemaVersion: '1.2',
-        submissionUUID: crypto.randomUUID(),
-        taxRegistrationNumber,
-        submissionTimeStamp: new Date().toISOString(),
-        softwareInfo: {
-          softwareInfoDetail,
-          jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
-        },
-        requestID,
-        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, requestID })
-      };
-
       const statusResult = await agtApiClient.obterEstado(payload as AgtStatusRequest, agtApiToken);
+      const statusEnvio = mapAgtStatusToEnvio(statusResult);
 
-      const resultCode = String(statusResult.resultCode);
-
-      // Atualização local por requestID e documentStatusList (modelo assíncrono AGT)
-      if (resultCode === '0') {
+      if (statusEnvio === 'ENTREGUE' || statusEnvio === 'ERRO') {
         await prisma.fatura.updateMany({
           where: { clinicaId, agtRequestID: requestID },
-          data: { statusEnvio: 'ENTREGUE' }
+          data: { statusEnvio },
         });
-      } else if (resultCode === '2' || resultCode === '9') {
-        await prisma.fatura.updateMany({
-          where: { clinicaId, agtRequestID: requestID },
-          data: { statusEnvio: 'ERRO' }
-        });
-      } else if (resultCode === '1' && statusResult.documentStatusList?.length) {
+      } else if (String(statusResult.resultCode) === '1' && statusResult.documentStatusList?.length) {
         for (const doc of statusResult.documentStatusList) {
           const novoStatus = doc.documentStatus === 'V' ? 'ENTREGUE' : 'ERRO';
           await prisma.fatura.updateMany({
             where: { clinicaId, numeroFatura: doc.documentNo, agtRequestID: requestID },
-            data: { statusEnvio: novoStatus }
+            data: { statusEnvio: novoStatus },
           });
         }
-      } else if (resultCode === '8') {
+      } else if (String(statusResult.resultCode) === '8') {
         await prisma.fatura.updateMany({
           where: { clinicaId, agtRequestID: requestID, statusEnvio: { in: ['PENDENTE', 'ENVIADO'] } },
-          data: { statusEnvio: 'ENVIADO' }
+          data: { statusEnvio: 'ENVIADO' },
         });
       }
 
       return res.json(statusResult);
     } catch (error: unknown) {
       if (isTimeoutError(error)) {
-        logger.error({ error, clinicaId, requestID }, 'Timeout ao consultar estado da submissão na AGT');
+        logger.error({ error, clinicaId, requestID }, 'Timeout ao consultar estado da submissÃ£o na AGT');
         return res.status(504).json({ error: 'Timeout ao comunicar com a AGT. Tente novamente em instantes.' });
       }
-      logger.error({ error, clinicaId, requestID }, 'Erro ao consultar estado da submissão na AGT');
-      return res.status(500).json({ error: 'Falha ao consultar estado da submissão' });
+      logger.error({ error, clinicaId, requestID }, 'Erro ao consultar estado da submissÃ£o na AGT');
+      return res.status(500).json({ error: 'Falha ao consultar estado da submissÃ£o' });
     }
   },
 
@@ -223,17 +229,17 @@ export const fiscalController = {
       const falhas = [];
       let hashAnterior = '';
 
-      // Obter chaves da clínica para auditoria
+      // Obter chaves da clÃ­nica para auditoria
       const clinicaData = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { agtPublicKey: true }
       });
       if (!clinicaData) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const certService = new CertificationService({
-        tenantPublicKey: clinicaData.agtPublicKey || undefined
+        tenantPublicKey: clinicaData.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined
       });
 
       for (const f of faturas) {
@@ -252,7 +258,7 @@ export const fiscalController = {
           falhas.push({
             fatura: f.numeroFatura,
             id: f.id,
-            motivo: 'Hash inválido ou quebra na cadeia'
+            motivo: 'Hash invÃ¡lido ou quebra na cadeia'
           });
         }
 
@@ -273,7 +279,7 @@ export const fiscalController = {
   },
 
   /**
-   * Lista séries de facturação registadas na AGT
+   * Lista sÃ©ries de facturaÃ§Ã£o registadas na AGT
    */
   async listarSeriesAgt(req: Request, res: Response): Promise<Response> {
     const { id: clinicaId } = req.clinica;
@@ -290,30 +296,23 @@ export const fiscalController = {
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const agtApiToken = getAgtAuthToken();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
-        return res.status(400).json({ error: 'Credenciais AGT não configuradas no servidor' });
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      const certService = createAgtCertificationService(clinica);
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
 
-      const taxRegistrationNumber = clinica.nif || '';
-      const requestID = crypto.randomUUID();
-
+      const taxRegistrationNumber = clinica.nif;
       const request = {
         schemaVersion: '1.0',
         taxRegistrationNumber,
@@ -324,7 +323,7 @@ export const fiscalController = {
           softwareInfoDetail,
           jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
         },
-        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, requestID })
+        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber })
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -332,13 +331,13 @@ export const fiscalController = {
 
       return res.json(response);
     } catch (error: unknown) {
-      logger.error({ error, clinicaId }, 'Erro ao listar séries na AGT');
+      logger.error({ error, clinicaId }, 'Erro ao listar sÃ©ries na AGT');
       return res.status(500).json({ error: 'Falha ao comunicar com a AGT' });
     }
   },
 
   /**
-   * Solicita uma nova série à AGT
+   * Solicita uma nova serie a AGT
    */
   async solicitarSerieAgt(req: Request, res: Response): Promise<Response> {
     const { id: clinicaId } = req.clinica;
@@ -347,9 +346,9 @@ export const fiscalController = {
     // Validate documentType against allowed AGT values
     const allowedDocumentTypes = ['FA','FT','FR','FG','GF','AC','AR','TV','RC','RG','RE','ND','NC','AF','RP','RA','CS','LD'] as const;
     if (!allowedDocumentTypes.includes(documentType as any)) {
-      return res.status(400).json({ error: 'documentType inválido' });
+      return res.status(400).json({ error: 'documentType invÃ¡lido' });
     }
-    logger.info({ clinicaId, serieCode, authorizedQuantity, documentType }, 'Solicitando nova série à AGT');
+    logger.info({ clinicaId, serieCode, authorizedQuantity, documentType }, 'Solicitando nova sÃ©rie Ã  AGT');
 
     try {
       const clinica = await prisma.clinica.findUnique({
@@ -363,29 +362,26 @@ export const fiscalController = {
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const agtApiToken = getAgtAuthToken();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
-        return res.status(400).json({ error: 'Credenciais AGT não configuradas no servidor' });
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      const certService = createAgtCertificationService(clinica);
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
 
-      const taxRegistrationNumber = clinica.nif || '';
+      const taxRegistrationNumber = clinica.nif;
       const submissionUUID = crypto.randomUUID();
+      const seriesYear = new Date().getFullYear().toString();
+      const seriesContingencyIndicator = 'N';
 
       const request = {
         schemaVersion: '1.2',
@@ -393,39 +389,50 @@ export const fiscalController = {
         taxRegistrationNumber,
         submissionTimeStamp: new Date().toISOString(),
         establishmentNumber,
-        seriesYear: new Date().getFullYear().toString(),
+        seriesYear,
         documentType: (documentType as string) || 'FT',
-        seriesContingencyIndicator: 'N',
+        seriesContingencyIndicator,
         softwareInfo: {
           softwareInfoDetail,
           jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
         },
         jwsSignature: certService.signRequestJWS({
           taxRegistrationNumber,
+          seriesYear,
+          documentType: (documentType as string) || 'FT',
           establishmentNumber,
-          seriesYear: new Date().getFullYear().toString(),
-          documentType: (documentType as string) || 'FT'
+          seriesContingencyIndicator
         })
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
+      logger.debug(
+        {
+          submissionUUID,
+          taxRegistrationNumber,
+          establishmentNumber,
+          documentType: request.documentType,
+          hasSoftwareSignature: !!request.softwareInfo.jwsSoftwareSignature,
+          hasRequestSignature: !!request.jwsSignature,
+        },
+        'Payload AGT para solicitar sÃ©rie preparado'
+      );
       const response = await agtApiClient.solicitarSerie(request as any, agtApiToken);
 
-      logger.info({ clinicaId, submissionUUID, resultCode: response.resultCode }, 'Série solicitada à AGT com sucesso');
+      logger.info({ clinicaId, submissionUUID, resultCode: response.resultCode }, 'SÃ©rie solicitada Ã  AGT com sucesso');
       return res.json(response);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && (error as any).response) {
         const errResp = (error as any).response;
-        logger.error({ errResp }, 'Erro da AGT ao solicitar série');
+        logger.error({ errResp }, 'Erro da AGT ao solicitar sÃ©rie');
         return res.status(errResp.status).json(errResp.data);
       }
       if (isUpstreamNetworkError(error)) {
-        logger.error({ error, clinicaId }, 'Falha de rede/TLS ao solicitar série na AGT');
-        return res.status(504).json({ error: 'Falha de comunicação com a AGT (rede/TLS). Tente novamente em instantes.' });
+        logger.error({ error, clinicaId }, 'Falha de rede/TLS ao solicitar sÃ©rie na AGT');
+        return res.status(504).json({ error: 'Falha de comunicaÃ§Ã£o com a AGT (rede/TLS). Tente novamente em instantes.' });
       }
-      logger.error({ error, clinicaId }, 'Erro ao solicitar série na AGT');
-      return res.status(500).json({ error: 'Falha ao solicitar série' });
+      logger.error({ error, clinicaId }, 'Erro ao solicitar sÃ©rie na AGT');
+      return res.status(500).json({ error: 'Falha ao solicitar sÃ©rie' });
     }
   },
 
@@ -448,28 +455,23 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const agtApiToken = getAgtAuthToken();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
-        return res.status(400).json({ error: 'Credenciais AGT não configuradas no servidor' });
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      const certService = createAgtCertificationService(clinica);
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
 
-      const taxRegistrationNumber = clinica.nif || '';
+      const taxRegistrationNumber = clinica.nif;
       const submissionGUID = crypto.randomUUID();
 
       const request = {
@@ -483,7 +485,11 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
           softwareInfoDetail,
           jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
         },
-        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, submissionGUID })
+        jwsSignature: certService.signRequestJWS({
+          taxRegistrationNumber,
+          queryStartDate: startDate,
+          queryEndDate: endDate
+        })
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -491,21 +497,32 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
 
       return res.json(response);
     } catch (error: unknown) {
+      const mappedError = mapAgtErrorToHttp(error);
+      if (mappedError) {
+        logger.warn({ error, clinicaId, startDate, endDate }, 'Erro retornado pela AGT ao listar facturas');
+        return res.status(mappedError.status).json(mappedError.payload);
+      }
       if (isTimeoutError(error)) {
         logger.error({ error, clinicaId }, 'Timeout ao listar facturas na AGT');
         return res.status(504).json({ error: 'Timeout ao comunicar com a AGT. Tente novamente em instantes.' });
       }
       logger.error({ error, clinicaId }, 'Erro ao listar facturas na AGT');
-      return res.status(500).json({ error: 'Falha ao consultar histórico na AGT' });
+      return res.status(500).json({ error: 'Falha ao consultar histÃ³rico na AGT' });
     }
   },
 
   /**
-   * Consulta detalhes de uma facturas específica na AGT
+   * Consulta detalhes de uma facturas especÃ­fica na AGT
    */
   async consultarFacturaAgt(req: Request, res: Response): Promise<Response> {
     const { id: clinicaId } = req.clinica;
-    const { numero } = req.params;
+    const numero = req.params.numero
+      ?? (req.body as { documentNo?: string; invoiceNo?: string })?.documentNo
+      ?? (req.body as { documentNo?: string; invoiceNo?: string })?.invoiceNo;
+
+    if (!numero) {
+      return res.status(400).json({ error: 'documentNo Ã© obrigatÃ³rio' });
+    }
 
     try {
       const clinica = await prisma.clinica.findUnique({
@@ -519,41 +536,36 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
       const agtApiToken = getAgtAuthToken();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
-        return res.status(400).json({ error: 'Credenciais AGT não configuradas no servidor' });
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      const certService = createAgtCertificationService(clinica);
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
 
-      const taxRegistrationNumber = clinica.nif || '';
+      const taxRegistrationNumber = clinica.nif;
       const submissionUUID = crypto.randomUUID();
 
       const request = {
-        schemaVersion: '1.0',
+        schemaVersion: '1.2',
         submissionUUID,
         taxRegistrationNumber,
-        invoiceNo: numero!,
+        invoiceNo: numero,
         submissionTimeStamp: new Date().toISOString(),
         softwareInfo: {
           softwareInfoDetail,
           jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
         },
-        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, invoiceNo: numero! })
+        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, documentNo: numero })
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -561,8 +573,19 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
 
       return res.json(response);
     } catch (error: unknown) {
+      const mappedError = mapAgtErrorToHttp(error);
+      if (mappedError) {
+        logger.warn({ error, clinicaId, numero }, 'Erro retornado pela AGT ao consultar factura');
+        return res.status(mappedError.status).json(mappedError.payload);
+      }
+      if (isTimeoutError(error) || isUpstreamNetworkError(error)) {
+        logger.error({ error, clinicaId, numero }, 'Falha de comunicaÃ§Ã£o com AGT ao consultar factura');
+        return res.status(504).json({
+          error: 'Falha de comunicaÃ§Ã£o com a AGT (rede/TLS/reset). Tente novamente em instantes.'
+        });
+      }
       logger.error({ error, clinicaId, numero }, 'Erro ao consultar factura na AGT');
-      return res.status(500).json({ error: 'Fatura não encontrada ou erro na AGT' });
+      return res.status(500).json({ error: 'Fatura nÃ£o encontrada ou erro na AGT' });
     }
   },
 
@@ -579,7 +602,7 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
       });
 
       if (!fatura || fatura.clinicaId !== clinicaId || !fatura.numeroFatura) {
-        return res.status(404).json({ error: 'Documento não encontrado ou ainda não emitido' });
+        return res.status(404).json({ error: 'Documento nÃ£o encontrado ou ainda nÃ£o emitido' });
       }
 
       const clinica = await prisma.clinica.findUnique({
@@ -593,35 +616,40 @@ logger.debug({ request }, 'Payload enviado à AGT para solicitar série');
       });
 
       if (!clinica) {
-        return res.status(404).json({ error: 'Clínica não encontrada' });
+        return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined
-      });
+      const certService = createAgtCertificationService(clinica);
+      const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
 
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
+      if (!clinica.nif) {
+        return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
+      }
 
-      const taxRegistrationNumber = clinica.nif || '';
-      const requestID = crypto.randomUUID();
+      const taxRegistrationNumber = clinica.nif;
+      const action = (req.body as { action?: string })?.action || 'C';
+      const deductibleVATPercentage = (req.body as { deductibleVATPercentage?: string | number })?.deductibleVATPercentage;
+      const nonDeductibleAmount = (req.body as { nonDeductibleAmount?: string | number })?.nonDeductibleAmount;
 
       const request = {
-        schemaVersion: '1.0',
+        schemaVersion: '1.2',
         taxRegistrationNumber,
         documentNo: fatura.numeroFatura,
-        action: 'C', // Confirmação
+        action,
         submissionTimeStamp: new Date().toISOString(),
         softwareInfo: {
           softwareInfoDetail,
           jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
         },
-        jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, requestID })
+        ...(deductibleVATPercentage !== undefined ? { deductibleVATPercentage } : {}),
+        ...(nonDeductibleAmount !== undefined ? { nonDeductibleAmount } : {}),
+        jwsSignature: certService.signRequestJWS({
+          taxRegistrationNumber,
+          documentNo: fatura.numeroFatura,
+          action,
+          ...(deductibleVATPercentage !== undefined ? { deductibleVATPercentage } : {}),
+          ...(nonDeductibleAmount !== undefined ? { nonDeductibleAmount } : {}),
+        })
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

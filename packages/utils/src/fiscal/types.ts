@@ -140,7 +140,7 @@ export interface AgtListRequest {
 }
 
 export interface AgtListResponse {
-  statusResult: {
+  statusResult?: {
     documentResultCount: string;
     resultEntryList: Array<{
       documentEntryResult: {
@@ -154,6 +154,17 @@ export interface AgtListResponse {
       };
     }>;
   };
+  documentListResult?: {
+    documentResultCount: string | number;
+    documentResultList: Array<{
+      documentNo: string;
+      documentDate: string;
+    }>;
+  };
+  errorList?: Array<{
+    idError: string;
+    descriptionError: string;
+  }>;
 }
 
 export interface AgtConsultRequest {
@@ -162,8 +173,9 @@ export interface AgtConsultRequest {
   taxRegistrationNumber: string;
   submissionTimeStamp: string;
   invoiceNo: string;
+  documentNo?: string;
   softwareInfo: AgtSoftwareInfo;
-  jwsSignature: string; // Assinatura de taxRegistrationNumber + invoiceNo
+  jwsSignature: string; // Assinatura de taxRegistrationNumber + documentNo
 }
 
 export interface AgtConsultResponse {

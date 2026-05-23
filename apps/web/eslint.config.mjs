@@ -37,6 +37,7 @@ export default tseslint.config(
       'tailwind.config.js',
       'src/__tests__/**',
       'src/test/**',
+      'src/components/**/__tests__/**',
       'src/components/AnamneseTemplateManager.tsx',
       'src/hooks/useAnamneseTemplates.ts',
       'src/pages/AnamneseTemplatesPage.tsx',

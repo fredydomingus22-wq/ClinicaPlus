@@ -13,7 +13,7 @@ import { z } from 'zod';
 export type PagamentoInput = z.infer<typeof PagamentoCreateSchema>;
 
 export const faturasApi = {
-  getList: (params: { estado?: EstadoFatura; page?: number; limit?: number }) =>
+  getList: (params: { estado?: EstadoFatura; pacienteId?: string; page?: number; limit?: number }) =>
     apiClient.get<PaginatedResult<FaturaDTO>>('/faturas', { params })
       .then(r => r.data),
 
@@ -45,7 +45,7 @@ export const faturasApi = {
     apiClient.patch(`/faturas/pagamentos/${pagamentoId}/submeter-seguro`)
       .then(r => r.data),
 
-  registarRespostaSeguro: (pagamentoId: string, data: { estado: 'APROVADO' | 'REJEITADO', valorAprovado?: number, notas?: string }) =>
+  registarRespostaSeguro: (pagamentoId: string, data: { estado: 'APROVADO' | 'GLOSADO', valorAprovado?: number, notas?: string }) =>
     apiClient.patch(`/faturas/pagamentos/${pagamentoId}/registar-resposta-seguro`, data)
       .then(r => r.data),
 };

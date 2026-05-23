@@ -8,6 +8,12 @@ import { agtApiClient } from '../../services/fiscal/AgtApiClient';
 describe('Fiscal Series - solicitarSerie payload compliance', () => {
   let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
 
+  function decodeJwsPayload(jws: string) {
+    const payload = jws.split('.')[1];
+    if (!payload) throw new Error('JWS payload ausente');
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  }
+
   beforeAll(async () => {
     const { privateKey } = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
@@ -56,6 +62,13 @@ describe('Fiscal Series - solicitarSerie payload compliance', () => {
       schemaVersion: '1.2',
     });
     expect(solicitarSerieSpy.mock.calls[0]?.[0]?.jwsSignature).toBeTypeOf('string');
+    expect(decodeJwsPayload(solicitarSerieSpy.mock.calls[0]![0].jwsSignature)).toMatchObject({
+      taxRegistrationNumber: ctx.clinica.nif,
+      establishmentNumber: '10',
+      seriesYear: new Date().getFullYear().toString(),
+      documentType: 'LD',
+      seriesContingencyIndicator: 'N',
+    });
 
     solicitarSerieSpy.mockRestore();
   });

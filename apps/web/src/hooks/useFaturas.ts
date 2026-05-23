@@ -92,7 +92,7 @@ export function useSubmeterSeguro() {
 export function useRegistarRespostaSeguro() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ pagamentoId, ...data }: { pagamentoId: string, estado: 'APROVADO' | 'REJEITADO', valorAprovado?: number, notas?: string }) => 
+    mutationFn: ({ pagamentoId, ...data }: { pagamentoId: string, estado: 'APROVADO' | 'GLOSADO', valorAprovado?: number, notas?: string }) => 
       faturasApi.registarRespostaSeguro(pagamentoId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: faturasKeys.all });

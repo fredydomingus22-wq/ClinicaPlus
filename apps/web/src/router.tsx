@@ -54,6 +54,7 @@ const FaturasPage = React.lazy(() => import('./pages/financeiro/FaturasPage'));
 const DocumentosFiscaisPage = React.lazy(() => import('./pages/financeiro/DocumentosFiscaisPage'));
 const NovaFaturaPage = React.lazy(() => import('./pages/financeiro/NovaFaturaPage'));
 const FaturaDetalhe = React.lazy(() => import('./pages/financeiro/FaturaDetalhe'));
+const SegurosPage = React.lazy(() => import('./pages/financeiro/SegurosPage'));
 
 // Super Admin
 const SuperAdminLayout = React.lazy(() => import('./components/layout/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })));
@@ -399,6 +400,10 @@ export const router = createBrowserRouter([
             element: <DocumentosFiscaisPage />
           },
           {
+            path: '/recepcao/financeiro/seguros',
+            element: <SegurosPage />
+          },
+          {
             path: '/recepcao/financeiro/nova',
             element: <NovaFaturaPage />
           },
@@ -480,6 +485,10 @@ export const router = createBrowserRouter([
           {
             path: '/admin/financeiro/documentos',
             element: <DocumentosFiscaisPage />
+          },
+          {
+            path: '/admin/financeiro/seguros',
+            element: <SegurosPage />
           },
           {
             path: '/admin/financeiro/nova',
@@ -591,6 +600,10 @@ export const router = createBrowserRouter([
           {
             path: '/medico/inventario/dashboard',
             element: <AdminInventarioDashboard />
+          },
+          {
+            path: '/medico/financeiro/seguros',
+            element: <SegurosPage />
           }
         ]
       }

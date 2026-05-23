@@ -3,6 +3,7 @@ import { faturasService } from '../services/faturas.service';
 import { FaturaCreateSchema, PagamentoCreateSchema, NotaDebitoCreateSchema } from '@clinicaplus/types';
 import { z } from 'zod';
 import { requirePermission } from '../middleware/requirePermission';
+import { logger } from '../lib/logger';
 
 export const faturasRouter = Router();
 
@@ -91,9 +92,26 @@ faturasRouter.post('/:id/pagamentos', requirePermission('pagamento', 'create'), 
     const utilizadorId = req.user!.id;
     
     const payload = { ...req.body, faturaId };
-    const data = PagamentoCreateSchema.parse(payload);
+    const parsed = PagamentoCreateSchema.safeParse(payload);
+    if (!parsed.success) {
+      logger.warn(
+        {
+          clinicaId,
+          utilizadorId,
+          faturaId,
+          body: req.body,
+          issues: parsed.error.issues.map((i) => ({
+            path: i.path.join('.'),
+            message: i.message,
+            code: i.code,
+          })),
+        },
+        'Validação falhou ao registar pagamento'
+      );
+      throw parsed.error;
+    }
     
-    const pagamento = await faturasService.registarPagamento(faturaId, data, clinicaId, utilizadorId);
+    const pagamento = await faturasService.registarPagamento(faturaId, parsed.data, clinicaId, utilizadorId);
     res.status(201).json({ success: true, data: pagamento });
   } catch (err) { next(err); }
 });

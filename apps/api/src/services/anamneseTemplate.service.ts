@@ -5,11 +5,18 @@ import type { AnamneseTemplate, AnamneseTemplateQuestao } from '@prisma/client';
 import { ANAMNESE_TEMPLATES, type Especialidade as EspecialidadeTemplate } from '@clinicaplus/types';
 
 interface QuestaoInput {
-  id?: string;
-  ordem?: number;
-  pergunta?: string;
-  tipoResposta?: string;
-  options?: unknown;
+  id?: string | undefined;
+  ordem?: number | undefined;
+  pergunta?: string | undefined;
+  tipoResposta?: string | undefined;
+  options?: unknown | undefined;
+}
+
+interface CreateQuestaoInput {
+  ordem: number;
+  pergunta: string;
+  tipoResposta: string;
+  options?: Prisma.InputJsonValue | null | undefined;
 }
 
 export const anamneseTemplateService = {
@@ -63,7 +70,7 @@ export const anamneseTemplateService = {
     clinicaId: string,
     especialidadeId: string,
     titulo: string,
-    questoes: Omit<AnamneseTemplateQuestao, 'id' | 'templateId' | 'criadoEm' | 'atualizadoEm'>[],
+    questoes: CreateQuestaoInput[],
   ): Promise<AnamneseTemplate> {
     const exists = await prisma.anamneseTemplate.findFirst({
       where: { clinicaId, especialidadeId },
@@ -82,7 +89,7 @@ export const anamneseTemplateService = {
             ordem: q.ordem,
             pergunta: q.pergunta,
             tipoResposta: q.tipoResposta,
-            options: q.options === null ? Prisma.JsonNull : (q.options as Prisma.InputJsonValue),
+            options: q.options == null ? Prisma.JsonNull : (q.options as Prisma.InputJsonValue),
           })),
         },
       },

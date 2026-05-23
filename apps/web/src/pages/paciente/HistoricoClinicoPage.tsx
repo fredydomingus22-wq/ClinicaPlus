@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
+import { OdontogramaHistoricoSection } from '../../components/consultation/odontograma/OdontogramaHistoricoSection';
 import { useHistoricoClinico } from '../../hooks/useTratamentos';
 import { 
   Card, 
@@ -179,7 +180,8 @@ export function HistoricoClinicoPage() {
           items={[
             { id: 'cronologia', label: 'CRONOLOGIA' },
             { id: 'tratamentos', label: 'TRATAMENTOS' },
-            { id: 'exames', label: 'EXAMES' }
+            { id: 'exames', label: 'EXAMES' },
+            { id: 'odontograma', label: 'ODONTOGRAMA' },
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -253,6 +255,10 @@ export function HistoricoClinicoPage() {
                 </Card>
               )}
             </div>
+          )}
+
+          {activeTab === 'odontograma' && (
+            <OdontogramaHistoricoSection pacienteId={pacienteId} />
           )}
 
           {activeTab === 'exames' && (

@@ -14,6 +14,7 @@ const RegisterSchema = z.object({
   nome: z.string().min(3, 'Nome completo é obrigatório'),
   email: z.string().email('E-mail inválido').trim().toLowerCase(),
   telefone: z.string().min(9, 'Telefone inválido').trim(),
+  nif: z.string().min(1, 'NIF é obrigatório').trim().regex(/^(?:\d{9}|\d{9}[A-Za-z]{2}\d{3})$/, 'Formato de NIF inválido. Exemplo: 009122079 ou 009122079LA040'),
   dataNascimento: z.string().min(1, 'Data de nascimento é obrigatória'),
   genero: z.enum(['M', 'F', 'OUTRO'], { required_error: 'Gênero é obrigatório' }),
   password: z.string().min(8, 'A palavra-passe deve ter pelo menos 8 caracteres'),
@@ -39,6 +40,7 @@ export const RegistoPacientePage = () => {
       nome: '', 
       email: '', 
       telefone: '', 
+      nif: '',
       dataNascimento: '',
       genero: 'M',
       password: '' 
@@ -198,6 +200,22 @@ export const RegistoPacientePage = () => {
                 />
               </div>
               {errors.telefone && <p className="text-[13px] text-red-500 font-medium">{errors.telefone.message}</p>}
+            </div>
+
+            {/* Input NIF */}
+            <div className="space-y-1.5 group">
+              <label className="text-sm font-semibold text-slate-700 group-focus-within:text-teal-700 transition-colors">
+                NIF
+              </label>
+              <div className="relative">
+                <Building2 className="absolute left-3.5 top-3 h-5 w-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+                <input
+                  className={`flex h-11 w-full border bg-white px-3 py-2 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all ${errors.nif ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-200'}`}
+                  placeholder="Ex: 009122079LA040"
+                  {...register('nif')}
+                />
+              </div>
+              {errors.nif && <p className="text-[13px] text-red-500 font-medium">{errors.nif.message}</p>}
             </div>
 
             {/* Input Email */}

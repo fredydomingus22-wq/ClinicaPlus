@@ -25,6 +25,42 @@ export interface TestarConexaoResult {
   message: string;
 }
 
+export interface AgtHistoricoItem {
+  submissionUUID: string;
+  submissionTimeStamp: string;
+  documentNo: string;
+  customerTaxID: string;
+  totalWithoutTax: number | null;
+  taxAmount: number | null;
+  grossTotal: number | null;
+  hasPartialData: boolean;
+}
+
+export interface AgtHistoricoResponse {
+  items: AgtHistoricoItem[];
+  documentListResult?: unknown;
+  statusResult?: unknown;
+}
+
+export interface AgtConsultaFacturaResponse {
+  documentNo?: string;
+  documentStatus?: string;
+  validationStatus?: string;
+  document?: {
+    documentNo?: string;
+    documentType?: string;
+    documentDate?: string;
+    customerTaxID?: string;
+    companyName?: string;
+    documentTotals?: {
+      netTotal?: string;
+      taxPayable?: string;
+      grossTotal?: string;
+    };
+  };
+  errorList?: Array<{ idError: string; descriptionError: string }>;
+}
+
 export const fiscalApi = {
   /**
    * Obtém estatísticas fiscais gerais
@@ -95,16 +131,49 @@ export const fiscalApi = {
   /**
    * Lista histórico de faturas registadas na AGT
    */
-  async listarHistoricoAgt(startDate: string, endDate: string) {
+  async listarHistoricoAgt(startDate: string, endDate: string): Promise<AgtHistoricoResponse> {
     const response = await api.post('/fiscal/listar-facturas-agt', { startDate, endDate });
-    return response.data;
+    const payload = response.data ?? {};
+    const documentListResult = payload.documentListResult;
+    const statusResult = payload.statusResult;
+
+    const fromDocumentList = Array.isArray(documentListResult?.documentResultList)
+      ? documentListResult.documentResultList.map((row: { documentNo: string; documentDate: string }) => ({
+          submissionUUID: row.documentNo,
+          submissionTimeStamp: row.documentDate,
+          documentNo: row.documentNo,
+          customerTaxID: '-',
+          totalWithoutTax: null,
+          taxAmount: null,
+          grossTotal: null,
+          hasPartialData: true,
+        }))
+      : [];
+
+    const fromStatusResult = Array.isArray(statusResult?.resultEntryList)
+      ? statusResult.resultEntryList.map((entry: { documentEntryResult: { id?: string; documentNo: string; documentDate: string; netTotal?: string } }) => ({
+          submissionUUID: entry.documentEntryResult.id || entry.documentEntryResult.documentNo,
+          submissionTimeStamp: entry.documentEntryResult.documentDate,
+          documentNo: entry.documentEntryResult.documentNo,
+          customerTaxID: '-',
+          totalWithoutTax: entry.documentEntryResult.netTotal ? Number(entry.documentEntryResult.netTotal) : null,
+          taxAmount: null,
+          grossTotal: entry.documentEntryResult.netTotal ? Number(entry.documentEntryResult.netTotal) : null,
+          hasPartialData: !entry.documentEntryResult.netTotal,
+        }))
+      : [];
+
+    return {
+      ...payload,
+      items: fromDocumentList.length ? fromDocumentList : fromStatusResult
+    };
   },
 
   /**
    * Consulta uma fatura específica na AGT pelo número
    */
-  async consultarFaturaAgt(numero: string) {
-    const response = await api.get(`/fiscal/consultar-factura-agt/${numero}`);
+  async consultarFaturaAgt(numero: string): Promise<AgtConsultaFacturaResponse> {
+    const response = await api.post<AgtConsultaFacturaResponse>('/fiscal/consultar-factura-agt', { documentNo: numero });
     return response.data;
   },
 

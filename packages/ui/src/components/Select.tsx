@@ -42,7 +42,6 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             }}
             aria-invalid={!!error}
             {...props}
-            defaultValue={props.value === undefined ? "" : undefined}
           >
             {placeholder && (
               <option value="" disabled className="bg-white text-neutral-400">

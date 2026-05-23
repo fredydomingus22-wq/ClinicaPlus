@@ -34,7 +34,7 @@ export class AgtApiClient {
     const isSandbox = baseURL.includes('sandbox') || baseURL.includes('hml') || !baseURL.includes('sifp.minfin.gov.ao');
     this.isSandbox = isSandbox;
     const officialBaseURL = isSandbox 
-      ? 'https://sifphml.minfin.gov.ao/sigt/fe/ws/v1' 
+      ? 'https://sifphml.minfin.gov.ao/sigt/fe/v1' 
       : 'https://sifp.minfin.gov.ao/sigt/fe/v1';
 
     const timeoutMs = Number(process.env.AGT_TIMEOUT_MS || 90000);
@@ -157,22 +157,29 @@ export class AgtApiClient {
     const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
     if (mockEnabled) {
       return {
-        statusResult: {
+        documentListResult: {
           documentResultCount: '0',
-          resultEntryList: []
+          documentResultList: []
         }
       };
     }
 
     try {
-      const response = await this.client.post('/listarFacturas', request, {
+      const listarUrl = this.isSandbox
+        ? 'https://sifphml.minfin.gov.ao/sigt/fe/ws/v1/listarFacturas'
+        : '/listarFacturas';
+
+      const response = await this.client.post(listarUrl, request, {
         headers: {
           'Authorization': this.getAuthHeader(apiToken)
         }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (this.logger) this.logger.error({ error, nif: request.taxRegistrationNumber }, `Erro ao listar faturas na AGT`);
+      if (error.response) {
+        throw AgtError.fromStatus(error.response.status, error.response.data?.idError);
+      }
       throw error;
     }
   }
@@ -184,11 +191,12 @@ export class AgtApiClient {
     const env = typeof globalThis !== 'undefined' && (globalThis as any).process ? (globalThis as any).process.env : {};
     const mockEnabled = this.isMock || env.AGT_MOCK === 'true';
     if (mockEnabled) {
+      const documentNo = request.invoiceNo || request.documentNo || '';
       return {
-        documentNo: request.invoiceNo,
+        documentNo,
         documentStatus: 'V',
         document: {
-          documentNo: request.invoiceNo,
+          documentNo,
           documentStatus: 'V',
           documentType: 'FT',
           documentDate: new Date().toISOString(),
@@ -217,7 +225,10 @@ export class AgtApiClient {
       });
       return response.data;
     } catch (error) {
-      if (this.logger) this.logger.error({ error, invoiceNo: request.invoiceNo }, `Erro ao consultar fatura na AGT`);
+      if (this.logger) this.logger.error({ error, documentNo: request.invoiceNo || request.documentNo }, `Erro ao consultar fatura na AGT`);
+      if ((error as any)?.response) {
+        throw AgtError.fromStatus((error as any).response.status, (error as any).response.data?.idError);
+      }
       throw error;
     }
   }

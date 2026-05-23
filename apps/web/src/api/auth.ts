@@ -29,7 +29,7 @@ export const authApi = {
       .then(r => r.data.data),
 
   registerClinica: (data: Record<string, unknown>) =>
-    apiClient.post<{ data: AuthResponse }>('/auth/registar-clinica', data)
+    apiClient.post<{ data: { clinica: unknown; accessToken: string } }>('/clinicas/registar', data)
       .then(r => r.data.data),
 
   refresh: () => 

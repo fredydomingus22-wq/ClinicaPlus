@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authService } from '../services/auth.service';
 import { mfaService } from '../services/mfa.service';
 import { auditLogService } from '../services/auditLog.service';
+import { clinicasService } from '../services/clinicas.service';
 import jwt from 'jsonwebtoken';
 import { LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, SuperAdminLoginSchema, UtilizadorUpdateSchema } from '@clinicaplus/types';
 import { config } from '../lib/config';
@@ -109,6 +110,37 @@ router.post('/registar-paciente', authRateLimiter, async (req, res, next) => {
         utilizador: result.utilizador,
       },
       message: 'Conta criada com sucesso!'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/auth/registar-clinica
+// Backward-compatible alias used by older login/register pages.
+router.post('/registar-clinica', authRateLimiter, async (req, res, next) => {
+  try {
+    const payload = req.body as Record<string, unknown>;
+    const mapped = {
+      nome: String(payload['nome'] ?? payload['clinicaNome'] ?? ''),
+      slug: String(payload['slug'] ?? payload['clinicaSlug'] ?? ''),
+      email: String(payload['email'] ?? ''),
+      adminNome: String(payload['adminNome'] ?? ''),
+      adminEmail: String(payload['adminEmail'] ?? payload['email'] ?? ''),
+      adminPassword: String(payload['adminPassword'] ?? payload['password'] ?? ''),
+      telefone: payload['telefone'] ? String(payload['telefone']) : undefined,
+      endereco: payload['endereco'] ? String(payload['endereco']) : undefined,
+      cidade: payload['cidade'] ? String(payload['cidade']) : undefined,
+      provincia: payload['provincia'] ? String(payload['provincia']) : undefined,
+      logo: payload['logo'] ? String(payload['logo']) : undefined,
+    };
+
+    const result = await clinicasService.registar(mapped as any);
+    res.cookie(COOKIE_NAME, result.refreshToken, COOKIE_OPTS);
+    res.status(201).json({
+      success: true,
+      data: { clinica: result.clinica, accessToken: result.accessToken },
+      message: 'Clínica registada com sucesso!',
     });
   } catch (error) {
     next(error);

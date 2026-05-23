@@ -56,6 +56,7 @@ export default function PacientesPage() {
       nome: '',
       dataNascimento: '',
       genero: 'M',
+      nif: '',
       provincia: PROVINCES[0],
       seguroSaude: false,
       alergias: [],
@@ -191,7 +192,8 @@ export default function PacientesPage() {
             />
             <Input
               label="NIF"
-              placeholder="Ex: 0000000000 ou 0000000000000"
+              placeholder="Ex: 009122079LA040"
+              required
               {...form.register('nif')}
               error={form.formState.errors.nif?.message}
             />

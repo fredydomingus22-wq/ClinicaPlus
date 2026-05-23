@@ -72,45 +72,81 @@ export const AnamneseTab: React.FC<AnamneseTabProps> = ({
   // Form state handling
   // ---------------------------------------------------------------------
   const [respostas, setRespostas] = useState<Record<string, RespostaState>>({});
+  const [activeAnamnese, setActiveAnamnese] = useState<any>(null);
+  const activeAnamneseRef = React.useRef<any>(null);
+  const isSavingRef = React.useRef(false);
+  const pendingSaveRef = React.useRef(false);
+  const respostasRef = React.useRef<Record<string, RespostaState>>({});
 
   useEffect(() => {
+    activeAnamneseRef.current = anamnese;
+    setActiveAnamnese(anamnese);
     if (anamnese?.respostas) {
       setRespostas(anamnese.respostas as Record<string, RespostaState>);
+    } else {
+      setRespostas({});
     }
   }, [anamnese]);
+
+  useEffect(() => {
+    respostasRef.current = respostas;
+  }, [respostas]);
 
   const debouncedRespostas = useDebounce(respostas, 1500);
 
   const createMutation = useCreateAnamnese();
   const updateMutation = useUpdateAnamnese();
 
-  const handleSave = useCallback(
+  const performSave = useCallback(
     async (currentRespostas: Record<string, RespostaState>) => {
       if (isReadOnly) return;
-      if (!anamnese) {
-        await createMutation.mutateAsync({
-          agendamentoId,
-          pacienteId,
-          medicoId,
-          especialidade: selectedEspecialidade,
-          respostas: currentRespostas,
-        });
-      } else {
-        await updateMutation.mutateAsync({
-          id: anamnese.id,
-          payload: { respostas: currentRespostas },
-        });
+      if (isSavingRef.current) {
+        pendingSaveRef.current = true;
+        return;
+      }
+
+      const currentActive = activeAnamneseRef.current;
+      const hasChanged = JSON.stringify(currentRespostas) !== JSON.stringify(currentActive?.respostas || {});
+      if (!hasChanged) return;
+
+      isSavingRef.current = true;
+      try {
+        if (!currentActive) {
+          const created = await createMutation.mutateAsync({
+            agendamentoId,
+            pacienteId,
+            medicoId,
+            especialidade: selectedEspecialidade,
+            respostas: currentRespostas,
+          });
+          activeAnamneseRef.current = created;
+          setActiveAnamnese(created);
+        } else {
+          const updated = await updateMutation.mutateAsync({
+            id: currentActive.id,
+            payload: { respostas: currentRespostas },
+          });
+          activeAnamneseRef.current = updated;
+          setActiveAnamnese(updated);
+        }
+      } catch {
+        // autosave silencioso; o utilizador pode voltar a editar
+      } finally {
+        isSavingRef.current = false;
+        if (pendingSaveRef.current) {
+          pendingSaveRef.current = false;
+          performSave(respostasRef.current);
+        }
       }
     },
-    [anamnese, agendamentoId, pacienteId, medicoId, selectedEspecialidade, isReadOnly, createMutation, updateMutation],
+    [agendamentoId, pacienteId, medicoId, selectedEspecialidade, isReadOnly, createMutation, updateMutation],
   );
 
   useEffect(() => {
     if (Object.keys(debouncedRespostas).length > 0) {
-      const hasChanged = JSON.stringify(debouncedRespostas) !== JSON.stringify(anamnese?.respostas || {});
-      if (hasChanged) handleSave(debouncedRespostas);
+      performSave(debouncedRespostas);
     }
-  }, [debouncedRespostas, handleSave, anamnese]);
+  }, [debouncedRespostas, performSave]);
 
   const handleToggleChange = (questaoId: string, value: any) => {
     if (isReadOnly) return;

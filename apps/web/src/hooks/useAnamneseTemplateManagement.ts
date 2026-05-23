@@ -2,12 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { anamneseTemplateApi } from '../api/anamneseTemplate';
 
 export type TemplateQuestao = {
-  id: string;
+  id?: string;
+  ordem?: number;
   pergunta: string;
-  tipo: string;
-  opcoes?: string[];
-  obrigatorio?: boolean;
-  secao?: string;
+  tipoResposta: 'text' | 'boolean' | 'date' | 'select';
+  options?: Array<{ valor: string; label: string }>;
 };
 
 export type TemplateItem = {

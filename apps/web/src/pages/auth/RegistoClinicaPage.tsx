@@ -28,7 +28,15 @@ export const RegistoClinicaPage = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: RegisterClinicaInput) => authApi.registerClinica(data),
+    mutationFn: (data: RegisterClinicaInput) =>
+      authApi.registerClinica({
+        nome: data.clinicaNome,
+        slug: data.clinicaSlug,
+        email: data.email,
+        adminNome: data.adminNome,
+        adminEmail: data.email,
+        adminPassword: data.password,
+      }),
     onSuccess: () => {
       // In a real app we'd redirect to a success page or login. Let's just go to login for now.
       navigate('/login?registado=success');

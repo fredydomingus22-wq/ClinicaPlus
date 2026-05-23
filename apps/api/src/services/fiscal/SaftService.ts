@@ -75,7 +75,7 @@ export class SaftService {
     header.ele('ProductID').txt('ClinicaPlus SaaS');
     header.ele('ProductVersion').txt('1.0.0');
     // Em modo SaaS, o número de certificado é global do ClinicaPlus
-    const softwareCertificate = process.env.AGT_SOFTWARE_CERTIFICATE || '0';
+    const softwareCertificate = process.env.AGT_SOFTWARE_CERTIFICATE || process.env.AGT_VALIDATION_NUMBER || '0';
     header.ele('SoftwareCertificateNumber').txt(softwareCertificate);
 
     // MasterFiles

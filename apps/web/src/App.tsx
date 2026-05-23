@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { toast as hotToast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from './api/auth';
 import { useAuthStore } from './stores/auth.store';
@@ -61,6 +62,19 @@ export function App() {
         setRestoring(false);
       });
   }, [setSession, setRestoring]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ kind: 'success' | 'error' | 'info'; message: string }>;
+      const payload = custom.detail;
+      if (!payload?.message) return;
+      if (payload.kind === 'success') hotToast.success(payload.message);
+      else if (payload.kind === 'error') hotToast.error(payload.message);
+      else hotToast(payload.message);
+    };
+    window.addEventListener('clinicaplus:toast', handler as EventListener);
+    return () => window.removeEventListener('clinicaplus:toast', handler as EventListener);
+  }, []);
 
   if (isRestoring) {
     return <FullPageSpinner />;

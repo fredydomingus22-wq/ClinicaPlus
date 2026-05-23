@@ -7,6 +7,8 @@
 -- AlterEnum
 BEGIN;
 CREATE TYPE "TipoDocumentoFiscal_new" AS ENUM ('FA', 'FT', 'FR', 'FG', 'GF', 'AC', 'AR', 'TV', 'RC', 'RG', 'RE', 'ND', 'NC', 'AF', 'RP', 'RA', 'CS', 'LD');
+UPDATE "faturas" SET "tipoDocFiscal" = 'FT' WHERE "tipoDocFiscal"::text = 'VD';
+UPDATE "sequencia_doc_fiscal" SET "tipoDoc" = 'FT' WHERE "tipoDoc"::text = 'VD';
 ALTER TABLE "faturas" ALTER COLUMN "tipoDocFiscal" DROP DEFAULT;
 ALTER TABLE "faturas" ALTER COLUMN "tipoDocFiscal" TYPE "TipoDocumentoFiscal_new" USING ("tipoDocFiscal"::text::"TipoDocumentoFiscal_new");
 ALTER TABLE "sequencia_doc_fiscal" ALTER COLUMN "tipoDoc" TYPE "TipoDocumentoFiscal_new" USING ("tipoDoc"::text::"TipoDocumentoFiscal_new");

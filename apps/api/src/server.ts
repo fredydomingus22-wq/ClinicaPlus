@@ -55,6 +55,8 @@ import fiscalRouter from './routes/fiscal';
 import inventoryRouter from './routes/inventory';
 import anamnesesRouter from './routes/anamneses';
 import anamneseTemplatesRouter from './routes/anamneseTemplates';
+import odontogramasRouter from './routes/odontogramas';
+import { segurosRouter } from './routes/seguros';
 
 // Workers (BullMQ)
 import './workers/tratamento.worker';
@@ -224,6 +226,7 @@ app.use('/api/exames', examesRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/faturas', faturasRouter);
 app.use('/api/pagamentos', pagamentosRouter);
+app.use('/api/seguros', segurosRouter);
 app.use('/api/relatorios', relatoriosRouter);
 app.use('/api/audit-logs', authenticate, tenantMiddleware, auditLogsRouter);
 app.use('/api/utilizadores', utilizadoresRouter);
@@ -237,6 +240,7 @@ app.use('/api/fiscal', fiscalRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/anamneses', anamnesesRouter);
 app.use('/api/anamneseTemplates', anamneseTemplatesRouter);
+app.use('/api/odontogramas', odontogramasRouter);
 
 // Global Error Handler
 app.use(errorHandler);

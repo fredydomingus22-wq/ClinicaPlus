@@ -15,7 +15,11 @@ describe('CertificationService (Unit)', () => {
     });
     privateKey = priv;
     publicKey = pub;
-    service = new CertificationService({ privateKey, publicKey });
+    service = new CertificationService({
+      producerPrivateKey: privateKey,
+      tenantPrivateKey: privateKey,
+      tenantPublicKey: publicKey,
+    });
   });
 
   it('deve assinar um documento e gerar um hash válido', () => {
@@ -63,7 +67,7 @@ describe('CertificationService (Unit)', () => {
 
   it('deve gerar assinatura JWS válida', () => {
     const payload = { test: true };
-    const jws = service.signJWS(payload);
+    const jws = service.signRequestJWS(payload);
     
     expect(jws).toContain('.');
     const [header, data, signature] = jws.split('.');

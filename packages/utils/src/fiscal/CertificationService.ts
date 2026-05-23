@@ -184,7 +184,8 @@ export class CertificationService {
     hashAnterior: string;
     signatureBase64: string;
   }): boolean {
-    if (!this.tenantPublicKey) return false;
+    const publicKey = this.tenantPublicKey || process.env.AGT_PUBLIC_KEY;
+    if (!publicKey) return false;
     
     const { dataEmissao, dataDocumento, numero, total, hashAnterior, signatureBase64 } = params;
     
@@ -198,7 +199,7 @@ export class CertificationService {
       const verify = crypto.createVerify('RSA-SHA256');
       verify.update(payload);
       verify.end();
-      return verify.verify(this.tenantPublicKey, signatureBase64, 'base64');
+      return verify.verify(publicKey, signatureBase64, 'base64');
     } catch (error) {
       return false;
     }

@@ -3,4 +3,9 @@
 
 export * from './fiscal/CertificationService';
 export * from './fiscal/AgtApiClient';
-export * from './fiscal/types'; // Importar tipos pode ser feito aqui também se necessário para backend
+export * from './fiscal/types';
+export * from './fiscal/buildAgtRegistarFacturaPayload';
+export * from './fiscal/syncAgtSubmissionStatus';
+export * from './fiscal/buildAgtObterEstadoPayload';
+export * from './fiscal/resolveCustomerCountry';
+export * from './fiscal/pollAgtSubmissionStatus';

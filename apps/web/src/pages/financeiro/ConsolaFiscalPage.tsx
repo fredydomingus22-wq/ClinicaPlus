@@ -16,7 +16,8 @@ import {
   RefreshCw, 
   ExternalLink,
   Plus,
-  Download
+  Download,
+  Copy
 } from 'lucide-react';
 import { 
   useSeriesAgt, 
@@ -27,6 +28,7 @@ import {
   useExportarSaft,
   useConsultarFaturaAgt
 } from '../../hooks/useFiscal';
+import type { AgtHistoricoItem } from '../../api/fiscal';
 import { formatKwanza } from '@clinicaplus/utils';
 import { toast } from 'react-hot-toast';
 
@@ -37,16 +39,6 @@ interface AgtSerie {
   authorizedQuantity: number;
   availableQuantity: number;
   status: string;
-}
-
-interface AgtDocumento {
-  submissionUUID: string;
-  submissionTimeStamp: string;
-  documentNo: string;
-  customerTaxID: string;
-  totalWithoutTax: number;
-  taxAmount: number;
-  grossTotal: number;
 }
 
 export default function ConsolaFiscalPage() {
@@ -102,7 +94,8 @@ export default function ConsolaFiscalPage() {
       window.URL.revokeObjectURL(url);
       
       toast.success('Ficheiro SAF-T (AO) exportado com sucesso!');
-    } catch {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       toast.error('Erro ao exportar ficheiro SAF-T.');
     }
   };
@@ -115,7 +108,8 @@ export default function ConsolaFiscalPage() {
     try {
       await validarDocMutation.mutateAsync(faturaIdParaValidar);
       toast.success('Validação processada. Consulte o log (Network) para detalhes completos.');
-    } catch {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       toast.error('Ocorreu um erro ao validar documento. Verifique se o ID existe.');
     }
   };
@@ -140,9 +134,22 @@ export default function ConsolaFiscalPage() {
     }
     try {
       await consultarFaturaAgtMutation.mutateAsync(numeroFaturaConsulta);
-      toast.success('Documento obtido da AGT! Detalhes na consola (Network).');
+      toast.success('Documento obtido da AGT.');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        error.response?.data?.error ||
+          'Erro na consulta. O documento pode não existir na AGT ou o NIF difere.',
+      );
+    }
+  };
+
+  const copyJson = async (value: unknown, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+      toast.success(successMessage);
     } catch {
-      toast.error('Erro na consulta. O documento pode não existir na AGT ou o NIF difere.');
+      toast.error('Não foi possível copiar para a área de transferência.');
     }
   };
 
@@ -235,14 +242,22 @@ export default function ConsolaFiscalPage() {
               <ErrorMessage error={errorHist} />
             ) : (
               <Card className="p-0 overflow-hidden">
-                <Table<AgtDocumento>
+                <Table<AgtHistoricoItem>
                   columns={[
                     { header: 'Data', accessor: (row) => new Date(row.submissionTimeStamp).toLocaleDateString() },
                     { header: 'Número', accessor: 'documentNo', className: 'font-mono' },
                     { header: 'NIF Cliente', accessor: 'customerTaxID' },
-                    { header: 'Total s/ IVA', accessor: (row) => formatKwanza(row.totalWithoutTax) },
-                    { header: 'IVA', accessor: (row) => formatKwanza(row.taxAmount) },
-                    { header: 'Total Bruto', accessor: (row) => <span className="font-bold">{formatKwanza(row.grossTotal)}</span> },
+                    { header: 'Total s/ IVA', accessor: (row) => (row.totalWithoutTax === null ? '—' : formatKwanza(row.totalWithoutTax)) },
+                    { header: 'IVA', accessor: (row) => (row.taxAmount === null ? '—' : formatKwanza(row.taxAmount)) },
+                    { header: 'Total Bruto', accessor: (row) => (row.grossTotal === null ? '—' : <span className="font-bold">{formatKwanza(row.grossTotal)}</span>) },
+                    {
+                      header: 'Dados',
+                      accessor: (row) => (
+                        <Badge variant={row.hasPartialData ? 'warning' : 'success'}>
+                          {row.hasPartialData ? 'Parcial' : 'Completo'}
+                        </Badge>
+                      )
+                    },
                     { 
                       header: 'Acções', 
                       accessor: () => (
@@ -379,6 +394,75 @@ export default function ConsolaFiscalPage() {
                 >
                    Buscar Detalhes
                 </Button>
+                <Button
+                  fullWidth
+                  variant="ghost"
+                  onClick={() => copyJson({ documentNo: numeroFaturaConsulta.trim() }, 'Payload copiado.')}
+                  disabled={!numeroFaturaConsulta.trim()}
+                >
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Payload
+                </Button>
+                {consultarFaturaAgtMutation.error && (
+                  <Card className="p-4 border-danger-200 bg-danger-50">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-danger-700">Erro AGT</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="error">
+                          {String((consultarFaturaAgtMutation.error as { response?: { data?: { code?: string | number } } }).response?.data?.code || 'N/A')}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyJson((consultarFaturaAgtMutation.error as { response?: { data?: unknown } }).response?.data || {}, 'Erro AGT copiado.')}
+                        >
+                          <Copy className="h-3 w-3 mr-1" /> Copiar
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm text-danger-700">
+                      {(consultarFaturaAgtMutation.error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Falha ao consultar documento na AGT.'}
+                    </p>
+                  </Card>
+                )}
+                {consultarFaturaAgtMutation.data && (
+                  <Card className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-neutral-800">Resultado da AGT</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={consultarFaturaAgtMutation.data.documentStatus === 'V' ? 'success' : 'warning'}>
+                          {consultarFaturaAgtMutation.data.documentStatus || 'Sem status'}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyJson(consultarFaturaAgtMutation.data, 'Resposta AGT copiada.')}
+                        >
+                          <Copy className="h-3 w-3 mr-1" /> Copiar
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div><span className="text-neutral-500">Documento:</span> {consultarFaturaAgtMutation.data.documentNo || consultarFaturaAgtMutation.data.document?.documentNo || '—'}</div>
+                      <div><span className="text-neutral-500">Tipo:</span> {consultarFaturaAgtMutation.data.document?.documentType || '—'}</div>
+                      <div><span className="text-neutral-500">Data:</span> {consultarFaturaAgtMutation.data.document?.documentDate ? new Date(consultarFaturaAgtMutation.data.document.documentDate).toLocaleDateString() : '—'}</div>
+                      <div><span className="text-neutral-500">Validação:</span> {consultarFaturaAgtMutation.data.validationStatus || '—'}</div>
+                      <div><span className="text-neutral-500">NIF Cliente:</span> {consultarFaturaAgtMutation.data.document?.customerTaxID || '—'}</div>
+                      <div><span className="text-neutral-500">Cliente:</span> {consultarFaturaAgtMutation.data.document?.companyName || '—'}</div>
+                      <div><span className="text-neutral-500">Líquido:</span> {consultarFaturaAgtMutation.data.document?.documentTotals?.netTotal ? formatKwanza(Number(consultarFaturaAgtMutation.data.document.documentTotals.netTotal)) : '—'}</div>
+                      <div><span className="text-neutral-500">Imposto:</span> {consultarFaturaAgtMutation.data.document?.documentTotals?.taxPayable ? formatKwanza(Number(consultarFaturaAgtMutation.data.document.documentTotals.taxPayable)) : '—'}</div>
+                      <div><span className="text-neutral-500">Bruto:</span> {consultarFaturaAgtMutation.data.document?.documentTotals?.grossTotal ? formatKwanza(Number(consultarFaturaAgtMutation.data.document.documentTotals.grossTotal)) : '—'}</div>
+                    </div>
+                    {Array.isArray(consultarFaturaAgtMutation.data.errorList) && consultarFaturaAgtMutation.data.errorList.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {consultarFaturaAgtMutation.data.errorList.map((item, idx) => (
+                          <div key={`${item.idError}-${idx}`} className="text-xs text-warning-700 bg-warning-50 border border-warning-200 rounded px-2 py-1">
+                            {item.idError}: {item.descriptionError}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                )}
               </div>
             </Card>
           </div>

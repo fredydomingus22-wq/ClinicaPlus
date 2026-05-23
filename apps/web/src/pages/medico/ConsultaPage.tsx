@@ -20,6 +20,7 @@ import {
   Tabs
 } from '@clinicaplus/ui';
 import { AnamneseTab } from '../../components/consultation/AnamneseTab';
+import { OdontogramaTab } from '../../components/consultation/OdontogramaTab';
 import { 
   Activity, 
   FileText, 
@@ -68,6 +69,13 @@ export default function ConsultaPage() {
   const { data: clinica } = useClinicaMe();
   const { utilizador } = useAuthStore();
   const { addToast } = useUIStore();
+
+  const isOdontologia =
+    (utilizador?.medico?.especialidade?.nome ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .includes('ODONTO');
 
   const { data: exames, refetch: refetchExames } = useExamesPaciente(agendamento?.pacienteId || '');
   const { data: planos, refetch: refetchPlanos } = usePlanosPaciente(agendamento?.pacienteId || '');
@@ -390,7 +398,8 @@ export default function ConsultaPage() {
             <Tabs 
               items={[
                 { id: 'evolucao', label: 'Evolução Clínica' },
-                { id: 'anamnese', label: 'Anamnese' }
+                { id: 'anamnese', label: 'Anamnese' },
+                ...(isOdontologia ? [{ id: 'odontograma', label: 'Odontograma' }] : []),
               ]}
               activeTab={activeTab}
               onChange={setActiveTab}
@@ -405,6 +414,15 @@ export default function ConsultaPage() {
                 pacienteId={paciente.id}
                 medicoId={utilizador?.medico?.id || ''}
                 especialidade={utilizador?.medico?.especialidade?.nome || 'ODONTOLOGIA'}
+                isReadOnly={isReadOnly}
+              />
+            </Card>
+          ) : activeTab === 'odontograma' && isOdontologia ? (
+            <Card className="p-6 border-primary-200 shadow-xl shadow-primary-500/5 min-h-[650px]">
+              <OdontogramaTab
+                agendamentoId={agendamento.id}
+                pacienteId={paciente.id}
+                medicoId={utilizador?.medico?.id || agendamento.medicoId}
                 isReadOnly={isReadOnly}
               />
             </Card>

@@ -13,6 +13,7 @@ import {
   Activity,
   History,
   Archive,
+  FileSignature,
   type LucideIcon
 } from 'lucide-react';
 import { Papel } from '@clinicaplus/types';
@@ -53,13 +54,17 @@ export const NAV_CONFIG: NavItem[] = [
   { to: '/recepcao/perfil', label: 'Meu Perfil', icon: User, roles: [Papel.RECEPCIONISTA] },
   { to: '/paciente/perfil', label: 'O Meu Perfil', icon: User, roles: [Papel.PACIENTE] },
   { to: '/admin/financeiro', label: 'Financeiro', icon: Wallet, priority: true, roles: [Papel.ADMIN] },
+  { to: '/admin/financeiro/seguros', label: 'Seguros de Saúde', icon: ShieldCheck, roles: [Papel.ADMIN] },
   { to: '/admin/relatorios', label: 'Relatorios', icon: BarChart3, roles: [Papel.ADMIN] },
   { to: '/recepcao/financeiro', label: 'Financeiro', icon: Wallet, priority: true, roles: [Papel.RECEPCIONISTA] },
+  { to: '/recepcao/financeiro/seguros', label: 'Seguros de Saúde', icon: ShieldCheck, roles: [Papel.RECEPCIONISTA] },
+  { to: '/medico/financeiro/seguros', label: 'Seguros de Saúde', icon: ShieldCheck, roles: [Papel.MEDICO] },
   { to: '/admin/medicos', label: 'Equipa Medica', icon: Stethoscope, priority: true, roles: [Papel.ADMIN] },
   { to: '/admin/equipa', label: 'Equipa e Recepcao', icon: Users, priority: true, roles: [Papel.ADMIN] },
   { to: '/admin/especialidades', label: 'Especialidades', icon: Stethoscope, roles: [Papel.ADMIN] },
   { to: '/admin/integracoes', label: 'Integracoes', icon: ShieldCheck, roles: [Papel.ADMIN] },
   { to: '/admin/configuracao', label: 'Definicoes', icon: Settings, roles: [Papel.ADMIN] },
+  { to: '/admin/contratos', label: 'Contratos', icon: FileSignature, roles: [Papel.ADMIN] },
   { to: '/admin/inventario/dashboard', label: 'Dashboard Inventario', icon: BarChart3, priority: true, roles: [Papel.ADMIN] },
   { to: '/admin/inventario/catalogo', label: 'Catalogo de Itens', icon: Archive, priority: true, roles: [Papel.ADMIN] },
   { to: '/superadmin', label: 'Super Admin', icon: ShieldCheck, roles: [Papel.SUPER_ADMIN] },

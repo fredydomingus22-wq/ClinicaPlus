@@ -82,7 +82,7 @@ export interface SeguroPagamentoDTO {
   numeroBeneficiario: string;
   numeroAutorizacao?: string;
   valorSolicitado: number;
-  valorAprovado: number;
+  valorAprovado?: number | null;
   estado: EstadoSeguro;
   dataSubmissao?: string;
   dataResposta?: string;
@@ -151,4 +151,17 @@ export interface FaturaDTO {
     id: string;
     nome: string;
   };
+}
+
+export interface DocumentoFiscalDTO {
+  id: string; // Pode ser faturaId ou pagamentoId
+  numeroDocumento: string; // numeroFatura ou numeroRecibo
+  tipoDocFiscal: TipoDocumentoFiscal;
+  dataEmissao: string;
+  total: number;
+  estado: EstadoFatura | 'EMITIDO'; // Para faturas será o estado normal, recibos serão EMITIDO
+  pacienteNome: string;
+  pacienteNumero?: string;
+  referenciaOrigem?: string; // Para recibos, o número da fatura associada. Para NC/ND, a fatura associada
+  documentoOrigemId?: string;
 }

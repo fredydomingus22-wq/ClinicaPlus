@@ -29,7 +29,13 @@ import {
   numberToWords, 
   calcularFatura 
 } from '@clinicaplus/utils';
-import { AgtElectronicInvoiceRequest, AgtDocumentLine } from '@clinicaplus/utils/server';
+import {
+  buildAgtRegistarFacturaPayload,
+  buildAgtObterEstadoPayload,
+  getDefaultAgtSoftwareInfoDetail,
+  pollAgtSubmissionStatus,
+  resolveCustomerCountry,
+} from '@clinicaplus/utils/server';
 import { logger } from '../lib/logger';
 import { agtApiClient } from './fiscal/AgtApiClient';
 import { proximoNumero as obterProximoNumeroDocumento } from './fiscal/SequenciaService';
@@ -238,9 +244,10 @@ export const faturasService = {
       // 6. Hash Chain usando a série correcta
       const hashAnterior = await certService.obterHashAnterior(clinicaId, serieParaUsar, fatura.tipoDocFiscal, tx);
       const agora = fatura.dataEmissao || new Date();
+      const dataDocumento = fatura.criadoEm;
       const assinatura = certService.assinarDocumento({
         dataEmissao: agora,
-        dataDocumento: agora,
+        dataDocumento,
         numero: numeroFatura,
         total: calculo.total,
         hashAnterior,
@@ -257,6 +264,7 @@ export const faturasService = {
           emitenteProvincia: clinica.provincia || null,
           clienteNome: fatura.paciente.nome,
           clienteNif: fatura.paciente.nif || '999999999',
+          clienteCountry: resolveCustomerCountry(fatura.paciente.nif),
           clienteEndereco: fatura.paciente.endereco,
           serieDocFiscal: serieParaUsar,
           regimeFiscal: clinica.regimeFiscal ?? RegimeFiscal.GERAL,
@@ -277,7 +285,7 @@ export const faturasService = {
           valorPago: fatura.tipoDocFiscal === TipoDocumentoFiscal.FR ? calculo.total : fatura.valorPago,
           fiscalHash: assinatura.hash,
           hashControl: assinatura.hashControl,
-          documentoChave: `${agora.toISOString().split('T')[0]};${agora.toISOString().split('T')[0]};${numeroFatura};${(calculo.total).toFixed(2)};${hashAnterior}`,
+          documentoChave: `${agora.toISOString().split('T')[0]};${dataDocumento.toISOString().split('T')[0]};${numeroFatura};${(calculo.total).toFixed(2)};${hashAnterior}`,
           statusEnvio: isContingencyActive ? 'CONTINGENCIA' : 'PENDENTE',
           emContingencia: isContingencyActive
         },
@@ -337,131 +345,96 @@ export const faturasService = {
       include: {
         itens: true,
         paciente: true,
-        clinica: true
+        clinica: true,
+        snapshot: true,
       }
     });
 
     if (!fatura || !fatura.fiscalHash) return;
 
     try {
-      const { certificationService } = await import('./fiscal/CertificationService');
+      const { CertificationService } = await import('./fiscal/CertificationService');
       const crypto = await import('crypto');
-      const softwareInfoDetail = {
-        productId: 'DocAgen',
-        productVersion: '1.0.0',
-        softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-        signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-      };
 
-      // Payload específico para a assinatura do documento (conforme prompt AGT)
-      const documentPayloadForSig = {
-        documentNo: fatura.numeroFatura!,
-        taxRegistrationNumber: fatura.clinica?.nif || '999999999',
-        documentType: fatura.tipoDocFiscal,
-        documentDate: (fatura.dataEmissao || new Date()).toISOString().substring(0, 10),
-        customerTaxID: fatura.paciente?.nif || '999999999',
-        customerCountry: 'AO',
-        companyName: fatura.clinica?.razaoSocial || 'ClinicaPlus',
-        documentTotals: {
-          taxPayable: Number((fatura.totalIva / 100).toFixed(2)),
-          netTotal: Number((fatura.subtotal / 100).toFixed(2)),
-          grossTotal: Number((fatura.total / 100).toFixed(2)),
-        }
-      };
+      const certService = new CertificationService({
+        tenantPrivateKey: fatura.clinica?.agtPrivateKey || process.env.AGT_PRIVATE_KEY,
+        tenantPublicKey: fatura.clinica?.agtPublicKey || process.env.AGT_PUBLIC_KEY,
+      });
 
-      const agtPayload: AgtElectronicInvoiceRequest = {
-        schemaVersion: '1.2',
-        submissionUUID: crypto.randomUUID(),
-        taxRegistrationNumber: fatura.clinica?.nif || '999999999',
-        submissionTimeStamp: new Date().toISOString(),
-        softwareInfo: {
-          softwareInfoDetail,
-          jwsSoftwareSignature: certificationService.signSoftwareJWS(softwareInfoDetail)
+      const clienteNome = fatura.snapshot?.clienteNome ?? fatura.paciente?.nome ?? 'Consumidor Final';
+      const clienteNif = fatura.snapshot?.clienteNif ?? fatura.paciente?.nif ?? '999999999';
+      const clienteCountry =
+        fatura.snapshot?.clienteCountry ?? resolveCustomerCountry(clienteNif);
+      const taxRegistrationNumber = fatura.clinica?.nif || '999999999';
+
+      const agtPayload = buildAgtRegistarFacturaPayload(
+        {
+          numeroFatura: fatura.numeroFatura!,
+          tipoDocFiscal: fatura.tipoDocFiscal,
+          dataEmissao: fatura.dataEmissao || new Date(),
+          systemEntryDate: fatura.criadoEm,
+          subtotal: fatura.subtotal,
+          totalIva: fatura.totalIva,
+          total: fatura.total,
+          retencaoFonte: fatura.retencaoFonte,
+          taxRegistrationNumber,
+          clienteNif,
+          clienteNome,
+          clienteCountry,
+          itens: fatura.itens.map((item) => ({
+            id: item.id,
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            precoUnit: item.precoUnit,
+            desconto: item.desconto,
+            taxaIva: item.taxaIva,
+            codigoIva: item.codigoIva,
+          })),
         },
-        numberOfEntries: 1,
-        documents: [
-          {
-            documentNo: fatura.numeroFatura!,
-            documentStatus: 'N',
-            jwsDocumentSignature: certificationService.signDocumentJWS(documentPayloadForSig),
-            documentDate: (fatura.dataEmissao || new Date()).toISOString().substring(0, 10),
-            documentType: fatura.tipoDocFiscal,
-            systemEntryDate: fatura.criadoEm.toISOString(),
-            customerTaxID: fatura.paciente?.nif || '999999999',
-            customerCountry: 'AO',
-            companyName: fatura.clinica?.razaoSocial || 'ClinicaPlus',
-            lines: fatura.itens.map((item, index) => {
-              const valorLinha = (item.precoUnit * item.quantidade) - item.desconto; // Valor base total
-              const valorFinalStr = (valorLinha / 100).toFixed(2);
-              const precoUnitStr = (item.precoUnit / 100).toFixed(2);
-              
-              // No unitPriceBase consider descontos rateados na unidade se quiser, ou passamos no total da linha no creditAmount/debitAmount.
-              // DS.120 normalmente unitPriceBase é unitPrice com desconto por unidade.
-              const descontoUnitario = item.quantidade > 0 ? (item.desconto / item.quantidade) : 0;
-              const unitPriceBaseStr = ((item.precoUnit - descontoUnitario) / 100).toFixed(2);
+        certService,
+        {
+          submissionUUID: crypto.randomUUID(),
+          softwareInfoDetail: getDefaultAgtSoftwareInfoDetail(),
+          eacCode: process.env.AGT_EAC_CODE || '86201',
+        }
+      );
 
-              const baseTaxInfo = {
-                taxType: 'IVA',
-                taxCountryRegion: 'AO',
-                taxCode: item.codigoIva || (item.taxaIva === 0 ? 'ISE' : 'NOR'),
-                taxPercentage: item.taxaIva.toFixed(2),
-              };
-              const taxesList = item.taxaIva === 0 
-                ? [{ ...baseTaxInfo, taxExemptionCode: item.codigoIva || 'M02' }]
-                : [baseTaxInfo];
-
-              const documentLine: AgtDocumentLine = {
-                lineNumber: (index + 1).toString(),
-                operationType: 'SS',
-                productCode: item.descricao.substring(0, 30),
-                productDescription: item.descricao,
-                quantity: item.quantidade.toString(),
-                unitOfMeasure: 'UN',
-                unitPrice: precoUnitStr,
-                unitPriceBase: unitPriceBaseStr,
-                taxes: taxesList,
-                settlementAmount: '0.00'
-              };
-
-
-              
-              if (fatura.tipoDocFiscal === 'NC') {
-                documentLine.creditAmount = valorFinalStr;
-              } else {
-                documentLine.debitAmount = valorFinalStr;
-              }
-
-              return documentLine;
-            }),
-            documentTotals: {
-              taxPayable: (fatura.totalIva / 100).toFixed(2),
-              netTotal: (fatura.subtotal / 100).toFixed(2),
-              grossTotal: (fatura.total / 100).toFixed(2),
-              currency: {
-                currencyCode: 'AOA',
-                currencyAmount: (fatura.total / 100).toFixed(2),
-                exchangeRate: '1'
-              }
-            }
-          }
-        ]
-      };
-
-      // 6. Registar na AGT
       const response = await agtApiClient.registarFactura(agtPayload, agtApiClient.getBasicAuth());
+
+      let statusEnvio =
+        response.errorList && response.errorList.length > 0 ? 'ERRO' : 'ENVIADO';
+
+      if (statusEnvio === 'ENVIADO' && response.requestID) {
+        try {
+          const poll = await pollAgtSubmissionStatus(
+            () =>
+              agtApiClient.obterEstado(
+                buildAgtObterEstadoPayload(taxRegistrationNumber, response.requestID!, certService),
+                agtApiClient.getBasicAuth()
+              ),
+            {
+              maxAttempts: Number(process.env.AGT_POLL_MAX_ATTEMPTS || 5),
+            }
+          );
+          statusEnvio = poll.status;
+        } catch (pollError) {
+          logger.warn(
+            { faturaId, requestID: response.requestID, pollError },
+            'Registo aceite; validação assíncrona pendente (obterEstado)'
+          );
+        }
+      }
 
       await prisma.fatura.update({
         where: { id: faturaId },
         data: {
           agtRequestID: response.requestID || null,
-          // Modelo assíncrono AGT:
-          // request aceite => fica ENVIADO; confirmação final vem no obterEstado por requestID.
-          statusEnvio: response.errorList && response.errorList.length > 0 ? 'ERRO' : 'ENVIADO',
+          statusEnvio,
           notas: response.message ? `${fatura.notas}\nAGT: ${response.message}` : fatura.notas
         }
       });
 
-      logger.info({ faturaId, requestID: response.requestID }, 'Fatura registada na AGT com sucesso');
+      logger.info({ faturaId, requestID: response.requestID, statusEnvio }, 'Fatura registada na AGT com sucesso');
     } catch (error: unknown) {
       // Se falha de rede, marcar fatura em contingência
       const err = error as Error;
@@ -585,7 +558,6 @@ export const faturasService = {
     const novaND = await prisma.$transaction(async (tx) => {
       const clinica = await tx.clinica.findUnique({ where: { id: clinicaId }, select: { regimeFiscal: true } });
       if (!clinica) throw new AppError('Clínica não encontrada', 404);
-
       const { subtotal, totalIva, total, itensCalculados } = calcularFatura(data.itens, clinica.regimeFiscal || 'GERAL');
 
       return tx.fatura.create({
@@ -671,12 +643,16 @@ export const faturasService = {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const { certificationService } = await import('./fiscal/CertificationService');
+      const { CertificationService } = await import('./fiscal/CertificationService');
       const { proximoNumero } = await import('./fiscal/SequenciaService');
       const agora = new Date();
       const clinica = await tx.clinica.findUnique({ where: { id: clinicaId } });
       if (!clinica) throw new AppError('Clínica não encontrada', 404);
 
+      const certificationService = new CertificationService({
+        tenantPrivateKey: clinica.agtPrivateKey || undefined,
+        tenantPublicKey: clinica.agtPublicKey || undefined,
+      });
       const serieDocFiscal = clinica.serieDocFiscal || 'CPLS';
       const hashAnterior = await certificationService.obterHashAnteriorRecibo(clinicaId, serieDocFiscal, tx);
       const { formatado: numeroRecibo } = await proximoNumero(tx, clinicaId, PrismaTipoDoc.RC, serieDocFiscal);
@@ -864,7 +840,7 @@ export const faturasService = {
   async registarRespostaSeguro(
     pagamentoId: string, 
     clinicaId: string, 
-    data: { estado: 'APROVADO' | 'REJEITADO', valorAprovado?: number, notas?: string }
+    data: { estado: 'APROVADO' | 'GLOSADO', valorAprovado?: number, notas?: string }
   ): Promise<void> {
     const seguro = await prisma.seguroPagamento.findUnique({
       where: { pagamentoId },
@@ -996,6 +972,7 @@ function toFaturaDTO(fatura: unknown): FaturaDTO {
     atualizadoEm: f.atualizadoEm.toISOString(),
     // Campos Fiscais (AGT)
     tipoDocFiscal: f.tipoDocFiscal,
+    serieDocFiscal: f.serieDocFiscal,
     valorExtenso: f.valorExtenso,
     retencaoFonte: f.retencaoFonte,
     valorPago: f.valorPago,

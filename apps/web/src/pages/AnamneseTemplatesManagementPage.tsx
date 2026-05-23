@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { AxiosError } from 'axios';
 import { Papel } from '@clinicaplus/types';
 import { Badge, Button, Card, Input, Modal, Select } from '@clinicaplus/ui';
 import { AlertTriangle, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -36,8 +37,13 @@ export default function AnamneseTemplatesManagementPage() {
     () => especialidades.find((esp) => esp.id === activeEspecialidadeId)?.nome || 'Sem especialidade',
     [activeEspecialidadeId, especialidades],
   );
+  const existingTemplate = templates[0];
 
   function openCreate() {
+    if (existingTemplate) {
+      openEdit(existingTemplate);
+      return;
+    }
     setEditing({ id: '', especialidadeId: activeEspecialidadeId, titulo: '', questoes: [] });
     setFormQuestoes([{ pergunta: '', tipoResposta: 'text', optionsText: '' }]);
     setFormError('');
@@ -60,32 +66,39 @@ export default function AnamneseTemplatesManagementPage() {
 
   async function onCreate() {
     if (!activeEspecialidadeId || !editing || !editing.titulo.trim()) return;
-    const questoesPayload = buildQuestoesPayload(formQuestoes);
-    if (!questoesPayload) return setFormError('Preencha pelo menos uma pergunta válida.');
-
-    await createTemplate.mutateAsync({
-      especialidadeId: activeEspecialidadeId,
-      titulo: editing.titulo.trim(),
-      questoes: questoesPayload as unknown as TemplateItem['questoes'],
-    });
-    setEditing(null);
-    setFormQuestoes([]);
-    setFormError('');
+    const parsed = buildQuestoesPayload(formQuestoes);
+    if (!parsed.ok) return setFormError(parsed.error);
+    try {
+      await createTemplate.mutateAsync({
+        especialidadeId: activeEspecialidadeId,
+        titulo: editing.titulo.trim(),
+        questoes: parsed.payload,
+      });
+      setEditing(null);
+      setFormQuestoes([]);
+      setFormError('');
+    } catch (error) {
+      setFormError(extractApiErrorMessage(error));
+    }
   }
 
   async function onSaveEdit() {
     if (!editing) return;
-    const questoesPayload = buildQuestoesPayload(formQuestoes);
-    if (!questoesPayload) return setFormError('Preencha pelo menos uma pergunta válida.');
+    const parsed = buildQuestoesPayload(formQuestoes);
+    if (!parsed.ok) return setFormError(parsed.error);
 
-    await updateTemplate.mutateAsync({
-      templateId: editing.id,
-      titulo: editing.titulo,
-      questoes: questoesPayload as unknown as TemplateItem['questoes'],
-    });
-    setEditing(null);
-    setFormQuestoes([]);
-    setFormError('');
+    try {
+      await updateTemplate.mutateAsync({
+        templateId: editing.id,
+        titulo: editing.titulo,
+        questoes: parsed.payload,
+      });
+      setEditing(null);
+      setFormQuestoes([]);
+      setFormError('');
+    } catch (error) {
+      setFormError(extractApiErrorMessage(error));
+    }
   }
 
   return (
@@ -99,7 +112,7 @@ export default function AnamneseTemplatesManagementPage() {
         </div>
         {activeEspecialidadeId && isAdmin && (
           <Button onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-2" /> Novo Template
+            <Plus className="h-4 w-4 mr-2" /> {existingTemplate ? 'Editar Template' : 'Novo Template'}
           </Button>
         )}
       </div>
@@ -177,7 +190,7 @@ export default function AnamneseTemplatesManagementPage() {
             setFormError('');
           }}
           title={editing.id ? 'Editar Template de Anamnese' : 'Novo Template de Anamnese'}
-          size="lg"
+          size="xl"
         >
           <div className="space-y-4">
             {formError && (
@@ -206,11 +219,23 @@ export default function AnamneseTemplatesManagementPage() {
               </div>
 
               {formQuestoes.map((q, idx) => (
-                <Card key={idx} className="p-3 border-neutral-200/80">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                    <div className="md:col-span-6">
+                <Card key={idx} className="p-4 border-neutral-200/80">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-neutral-700">Pergunta {idx + 1}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-neutral-500 hover:text-danger-600 hover:bg-danger-50"
+                      onClick={() => setFormQuestoes((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
                       <Input
-                        label={`Pergunta ${idx + 1}`}
+                        label="Texto da pergunta"
                         value={q.pergunta}
                         onChange={(e) =>
                           setFormQuestoes((prev) => prev.map((item, i) => (i === idx ? { ...item, pergunta: e.target.value } : item)))
@@ -218,45 +243,54 @@ export default function AnamneseTemplatesManagementPage() {
                         placeholder="Ex: Tem alergia a medicamentos?"
                       />
                     </div>
-                    <div className="md:col-span-3">
-                      <Select
-                        label="Tipo de resposta"
-                        value={q.tipoResposta}
-                        onChange={(e) =>
-                          setFormQuestoes((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, tipoResposta: e.target.value as PerguntaForm['tipoResposta'] } : item)),
-                          )
-                        }
-                        options={[
-                          { value: 'text', label: 'Texto' },
-                          { value: 'boolean', label: 'Sim/Não' },
-                          { value: 'date', label: 'Data' },
-                          { value: 'select', label: 'Seleção' },
-                        ]}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Opções"
-                        value={q.optionsText}
-                        onChange={(e) =>
-                          setFormQuestoes((prev) => prev.map((item, i) => (i === idx ? { ...item, optionsText: e.target.value } : item)))
-                        }
-                        placeholder="A, B, C"
-                        disabled={q.tipoResposta !== 'select'}
-                      />
-                    </div>
-                    <div className="md:col-span-1 flex items-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 w-9 p-0 text-neutral-500 hover:text-danger-600 hover:bg-danger-50"
-                        onClick={() => setFormQuestoes((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                      <div className="md:col-span-2">
+                        <Select
+                          label="Tipo de resposta"
+                          value={q.tipoResposta}
+                          onChange={(e) =>
+                            setFormQuestoes((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, tipoResposta: e.target.value as PerguntaForm['tipoResposta'] } : item)),
+                            )
+                          }
+                          options={[
+                            { value: 'text', label: 'Texto Livre' },
+                            { value: 'boolean', label: 'Sim/Não' },
+                            { value: 'date', label: 'Data' },
+                            { value: 'select', label: 'Escolha de Opção' },
+                          ]}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Input
+                          label="Opções (apenas para seleção)"
+                          value={q.optionsText}
+                          onChange={(e) =>
+                            setFormQuestoes((prev) => prev.map((item, i) => (i === idx ? { ...item, optionsText: e.target.value } : item)))
+                          }
+                          placeholder="Ex: Leve, Moderada, Grave"
+                          disabled={q.tipoResposta !== 'select'}
+                        />
+                      </div>
                     </div>
                   </div>
+                  {q.tipoResposta === 'select' && (
+                    <div className="mt-2">
+                      <p className="text-[11px] text-neutral-500">Separe as opções com vírgula.</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {q.optionsText
+                          .split(',')
+                          .map((o) => o.trim())
+                          .filter(Boolean)
+                          .map((opt, i) => (
+                            <Badge key={`${idx}-${i}`} variant="neutral">{opt}</Badge>
+                          ))}
+                      </div>
+                      {q.optionsText.split(',').map((o) => o.trim()).filter(Boolean).length < 2 && (
+                        <p className="text-[11px] text-danger-600 mt-2">Adicione pelo menos 2 opções para perguntas de seleção.</p>
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -287,14 +321,19 @@ function buildQuestoesPayload(questoes: PerguntaForm[]) {
       const pergunta = q.pergunta.trim();
       if (!pergunta) return null;
 
-      const options =
+      const optionsRaw =
         q.tipoResposta === 'select'
           ? q.optionsText
               .split(',')
               .map((o) => o.trim())
               .filter(Boolean)
-              .map((label, i) => ({ valor: `op_${i + 1}`, label }))
-          : undefined;
+          : [];
+
+      if (q.tipoResposta === 'select' && optionsRaw.length < 2) {
+        return { __error: `A pergunta "${pergunta}" precisa de pelo menos 2 opções.` };
+      }
+
+      const options = optionsRaw.map((label, i) => ({ valor: `op_${i + 1}`, label }));
 
       return {
         id: q.id,
@@ -304,7 +343,22 @@ function buildQuestoesPayload(questoes: PerguntaForm[]) {
         options: options && options.length > 0 ? options : undefined,
       };
     })
-    .filter(Boolean);
+    .filter(Boolean) as Array<{ __error?: string; id?: string; ordem: number; pergunta: string; tipoResposta: PerguntaForm['tipoResposta']; options?: Array<{ valor: string; label: string }> }>;
 
-  return cleaned.length > 0 ? cleaned : null;
+  const firstError = cleaned.find((item) => item.__error)?.__error;
+  if (firstError) return { ok: false as const, error: firstError };
+
+  const payload = cleaned.filter((item) => !item.__error).map(({ __error, ...rest }) => rest);
+  if (payload.length === 0) return { ok: false as const, error: 'Preencha pelo menos uma pergunta válida.' };
+
+  return { ok: true as const, payload };
+}
+
+function extractApiErrorMessage(error: unknown): string {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data as { message?: string; error?: string } | undefined;
+    return data?.message || data?.error || error.message || 'Falha ao guardar template.';
+  }
+  if (error instanceof Error) return error.message;
+  return 'Falha ao guardar template.';
 }

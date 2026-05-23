@@ -139,9 +139,15 @@ describe('Contingency Failover & Synchronization (Decreto 71/25)', () => {
       },
     });
 
-    // Mock de sucesso para registarFactura
+    // Mock de sucesso para registarFactura + validação assíncrona
     const registarFacturaSpy = vi.spyOn(agtApiClient, 'registarFactura').mockResolvedValue({
       requestID: 'SUCCESS-REQ-ID',
+      documentStatusList: [],
+    });
+    const obterEstadoSpy = vi.spyOn(agtApiClient, 'obterEstado').mockResolvedValue({
+      requestID: 'SUCCESS-REQ-ID',
+      resultCode: '0',
+      taxRegistrationNumber: ctx.clinica.nif || '999999999',
       documentStatusList: [],
     });
 
@@ -185,5 +191,6 @@ describe('Contingency Failover & Synchronization (Decreto 71/25)', () => {
 
     solicitarSerieSpy.mockRestore();
     registarFacturaSpy.mockRestore();
+    obterEstadoSpy.mockRestore();
   });
 });

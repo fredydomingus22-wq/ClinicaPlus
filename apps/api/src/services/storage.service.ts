@@ -9,7 +9,7 @@ export const storageService = {
    */
   async getUploadUrl(
     clinicaId: string, 
-    entityType: 'clinica_logo' | 'user_avatar' | 'paciente_avatar',
+    entityType: 'clinica_logo' | 'user_avatar' | 'paciente_avatar' | 'contract_document',
     entityId: string, 
     fileName: string
   ): Promise<{ uploadUrl: string; path: string; provider: 'supabase' | 'local' }> {
@@ -40,7 +40,7 @@ export const storageService = {
    */
   async confirmUpload(
     clinicaId: string, 
-    entityType: 'clinica_logo' | 'user_avatar' | 'paciente_avatar',
+    entityType: 'clinica_logo' | 'user_avatar' | 'paciente_avatar' | 'contract_document',
     entityId: string, 
     path: string,
     provider: 'supabase' | 'local',
@@ -95,6 +95,9 @@ export const storageService = {
            }
            break;
         }
+        case 'contract_document':
+           // Persistência do documento é feita no serviço de contratos.
+           break;
       }
     } catch {
       throw new AppError(`Erro a gravar recurso na DB (${entityType})`, 500);

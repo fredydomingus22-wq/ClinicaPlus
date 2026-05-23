@@ -49,7 +49,7 @@ export default function FaturaDetalhe() {
 
   const [activeTab, setActiveTab] = useState<'detalhes' | 'preview'>('detalhes');
   const [isRespostaModalOpen, setIsRespostaModalOpen] = useState(false);
-  const [respostaData, setRespostaData] = useState<{ estado: 'APROVADO' | 'REJEITADO', valorAprovado: number, notas: string }>({
+  const [respostaData, setRespostaData] = useState<{ estado: 'APROVADO' | 'GLOSADO', valorAprovado: number, notas: string }>({
     estado: 'APROVADO',
     valorAprovado: 0,
     notas: ''
@@ -370,7 +370,7 @@ export default function FaturaDetalhe() {
                   </h3>
                   <Badge variant={
                     insurancePayment.seguro?.estado === EstadoSeguro.APROVADO ? 'success' :
-                    insurancePayment.seguro?.estado === EstadoSeguro.REJEITADO ? 'error' :
+                    insurancePayment.seguro?.estado === EstadoSeguro.GLOSADO ? 'error' :
                     insurancePayment.seguro?.estado === EstadoSeguro.SUBMETIDO ? 'warning' : 'outline'
                   }>
                     {insurancePayment.seguro?.estado || 'PENDENTE'}
@@ -427,11 +427,11 @@ export default function FaturaDetalhe() {
                     </div>
                   )}
 
-                  {insurancePayment.seguro?.estado === EstadoSeguro.REJEITADO && (
+                  {insurancePayment.seguro?.estado === EstadoSeguro.GLOSADO && (
                     <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3">
                       <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
                       <div>
-                        <p className="text-sm text-red-800 font-bold">Seguro Rejeitado</p>
+                        <p className="text-sm text-red-800 font-bold">Seguro Glosado</p>
                         <p className="text-xs text-red-700">Motivo: {insurancePayment.seguro?.notasSeguradora || 'Não especificado'}</p>
                       </div>
                     </div>
@@ -450,10 +450,10 @@ export default function FaturaDetalhe() {
             label="Resultado"
             options={[
               { value: 'APROVADO', label: 'Aprovado' },
-              { value: 'REJEITADO', label: 'Rejeitado' },
+              { value: 'GLOSADO', label: 'Glosado' },
             ]}
             value={respostaData.estado}
-            onChange={(e) => setRespostaData({ ...respostaData, estado: e.target.value as 'APROVADO' | 'REJEITADO' })}
+            onChange={(e) => setRespostaData({ ...respostaData, estado: e.target.value as 'APROVADO' | 'GLOSADO' })}
           />
           {respostaData.estado === 'APROVADO' && (
             <Input 

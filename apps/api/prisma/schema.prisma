@@ -73,7 +73,11 @@ model Clinica {
   lotesEstoque        EstoqueLote[]
   movimentacoesEstoque MovimentacaoEstoque[]
   anamneses           Anamnese[]
+  odontogramas        Odontograma[]
   anamneseTemplates   AnamneseTemplate[]
+  contracts           Contract[]
+  contractEvents      ContractEvent[]
+  contractDocuments   ContractDocument[]
 
 
   @@index([slug])
@@ -175,6 +179,8 @@ model Paciente {
   perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessÃ£o Intel)
   planosTratamento  PlanoTratamento[]
   anamneses      Anamnese[]
+  odontogramas   Odontograma[]
+  contracts      Contract[]
 
 
   @@unique([clinicaId, numeroPaciente])
@@ -209,6 +215,7 @@ model Medico {
   receitas        Receita[]
   planosTratamento PlanoTratamento[]
   anamneses       Anamnese[]
+  odontogramas    Odontograma[]
 
   @@index([clinicaId])
   @@index([clinicaId, especialidadeId])
@@ -262,6 +269,7 @@ model Agendamento {
   prontuario     Prontuario?
   receita        Receita?
   anamnese       Anamnese?
+  odontograma    Odontograma?
   confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // ConfirmaÃ§Ã£o via Intel
 
 
@@ -1032,9 +1040,12 @@ enum MetodoPagamento {
 enum EstadoSeguro {
   PENDENTE
   SUBMETIDO
+  EM_ANALISE
   APROVADO
-  REJEITADO
-  REEMBOLSADO
+  PARCIAL
+  GLOSADO
+  PAGO
+  CANCELADO
 }
 
 enum WaEstadoInstancia {
@@ -1127,6 +1138,7 @@ model TipoTratamento {
   
   clinica     Clinica  @relation(fields: [clinicaId], references: [id])
   planos      PlanoTratamento[]
+  contractServiceItems ContractServiceItem[]
 
   @@unique([clinicaId, nome])
   @@index([clinicaId])
@@ -1240,6 +1252,7 @@ model FaturaSnapshot {
   emitenteProvincia  String?
   clienteNome        String
   clienteNif         String   @default("999999990")
+  clienteCountry     String   @default("AO")
   clienteEndereco    String?
   serieDocFiscal     String   @default("CPLS")
   regimeFiscal       RegimeFiscal
@@ -1321,6 +1334,7 @@ model Produto {
   categoria        CategoriaProduto @relation(fields: [categoriaId], references: [id])
   lotes            EstoqueLote[]
   movimentacoes    MovimentacaoEstoque[]
+  contractServiceItems ContractServiceItem[]
 
   @@unique([clinicaId, codigo])
   @@index([clinicaId])
@@ -1405,6 +1419,26 @@ model Anamnese {
   @@map("anamneses")
 }
 
+model Odontograma {
+  id            String   @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String   @unique
+  /// Array de { numeroDente, face, status, observacao? }
+  marcacoes     Json     @default("[]")
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  clinica     Clinica     @relation(fields: [clinicaId], references: [id])
+  paciente    Paciente    @relation(fields: [pacienteId], references: [id])
+  medico      Medico      @relation(fields: [medicoId], references: [id])
+  agendamento Agendamento @relation(fields: [agendamentoId], references: [id])
+
+  @@index([clinicaId, pacienteId])
+  @@map("odontogramas")
+}
+
 // -------------------------------------------------
 // Anamnese Template models (per Especialidade)
 // -------------------------------------------------
@@ -1437,4 +1471,249 @@ model AnamneseTemplateQuestao {
 
   @@index([templateId])
   @@map("anamnese_template_questoes")
+}
+
+// -------------------------------------------------
+// Contracts Module
+// -------------------------------------------------
+enum ContractStatus {
+  DRAFT
+  REVIEW
+  PENDING_SIGNATURE
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+  EXPIRED
+}
+
+enum ContractPaymentType {
+  ONE_TIME
+  INSTALLMENTS
+  RECURRING
+}
+
+enum ContractEventType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  PAYMENT_RECORDED
+  SIGNATURE_RECORDED
+  AMENDMENT_CREATED
+}
+
+enum ContractItemType {
+  SERVICO
+  PRODUTO
+  TRATAMENTO
+}
+
+enum ContractInstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ContractSignerType {
+  CLINIC
+  PATIENT
+  GUARDIAN
+}
+
+enum ContractSignatureStatus {
+  PENDING
+  SIGNED
+  REJECTED
+}
+
+enum ContractAmendmentStatus {
+  DRAFT
+  APPLIED
+  CANCELLED
+}
+
+model Contract {
+  id               String           @id @default(cuid())
+  clinicaId        String
+  pacienteId       String
+  numero           String
+  titulo           String
+  status           ContractStatus   @default(DRAFT)
+  dataInicio       DateTime
+  dataFim          DateTime
+  moeda            String           @default("AOA")
+  valorTotal       Int              @default(0)
+  valorEntrada     Int              @default(0)
+  clausulaRescisao String?
+  observacoes      String?
+  version          Int              @default(1)
+  categoria        String           @default("GENERAL")
+  criadoEm         DateTime         @default(now())
+  atualizadoEm     DateTime         @updatedAt
+
+  clinica          Clinica          @relation(fields: [clinicaId], references: [id])
+  paciente         Paciente         @relation(fields: [pacienteId], references: [id])
+  servicos         ContractServiceItem[]
+  planoPagamento   ContractPaymentPlan?
+  parcelas         ContractInstallment[]
+  clausulas        ContractClause[]
+  assinaturas      ContractSignature[]
+  aditivos         ContractAmendment[]
+  eventos          ContractEvent[]
+  documentos       ContractDocument[]
+
+  @@unique([clinicaId, numero])
+  @@index([clinicaId, status])
+  @@index([clinicaId, pacienteId])
+  @@map("contracts")
+}
+
+model ContractServiceItem {
+  id               String           @id @default(cuid())
+  contractId       String
+  itemType         ContractItemType @default(SERVICO)
+  produtoId        String?
+  tipoTratamentoId String?
+  descricao        String
+  quantidade       Int              @default(1)
+  precoUnitario    Int              @default(0)
+  desconto         Int              @default(0)
+  subtotal         Int              @default(0)
+  criadoEm         DateTime         @default(now())
+  atualizadoEm     DateTime         @updatedAt
+
+  contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  produto          Produto?         @relation(fields: [produtoId], references: [id], onDelete: SetNull)
+  tipoTratamento   TipoTratamento?  @relation(fields: [tipoTratamentoId], references: [id], onDelete: SetNull)
+
+  @@index([contractId])
+  @@index([produtoId])
+  @@index([tipoTratamentoId])
+  @@map("contract_service_items")
+}
+
+model ContractPaymentPlan {
+  id             String              @id @default(cuid())
+  contractId     String              @unique
+  tipo           ContractPaymentType
+  parcelas       Int                 @default(1)
+  periodicidade  String?
+  diaVencimento  Int?
+  jurosMora      Int                 @default(0)
+  multa          Int                 @default(0)
+  criadoEm       DateTime            @default(now())
+  atualizadoEm   DateTime            @updatedAt
+
+  contract       Contract            @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([tipo])
+  @@map("contract_payment_plans")
+}
+
+model ContractEvent {
+  id          String            @id @default(cuid())
+  contractId  String
+  clinicaId   String
+  actorId     String?
+  type        ContractEventType
+  payload     Json?
+  criadoEm    DateTime          @default(now())
+
+  contract    Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clinica     Clinica           @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, criadoEm])
+  @@index([clinicaId, criadoEm])
+  @@map("contract_events")
+}
+
+model ContractDocument {
+  id            String   @id @default(cuid())
+  contractId    String
+  clinicaId     String
+  nome          String
+  mimeType      String?
+  tamanhoBytes  Int?
+  url           String
+  criadoEm      DateTime @default(now())
+
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clinica       Clinica  @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, criadoEm])
+  @@index([clinicaId, criadoEm])
+  @@map("contract_documents")
+}
+
+model ContractInstallment {
+  id               String                    @id @default(cuid())
+  contractId       String
+  numero           Int
+  vencimento       DateTime
+  valor            Int
+  status           ContractInstallmentStatus @default(PENDING)
+  pagoEm           DateTime?
+  metodoPagamento  String?
+  referencia       String?
+  criadoEm         DateTime                  @default(now())
+  atualizadoEm     DateTime                  @default(now()) @updatedAt
+
+  contract         Contract                  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, numero])
+  @@index([contractId, status])
+  @@map("contract_installments")
+}
+
+model ContractClause {
+  id          String   @id @default(cuid())
+  contractId  String
+  tipo        String
+  titulo      String
+  conteudo    String
+  ordem       Int      @default(0)
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @default(now()) @updatedAt
+
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, ordem])
+  @@map("contract_clauses")
+}
+
+model ContractSignature {
+  id           String                  @id @default(cuid())
+  contractId   String
+  signerType   ContractSignerType
+  signerName   String
+  signerDoc    String?
+  status       ContractSignatureStatus @default(PENDING)
+  signedAt     DateTime?
+  provider     String?
+  evidenceJson Json?
+  criadoEm     DateTime               @default(now())
+  atualizadoEm DateTime               @default(now()) @updatedAt
+
+  contract     Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, status])
+  @@map("contract_signatures")
+}
+
+model ContractAmendment {
+  id            String                   @id @default(cuid())
+  contractId    String
+  numero        Int
+  motivo        String
+  deltaJson     Json
+  status        ContractAmendmentStatus  @default(DRAFT)
+  effectiveDate DateTime
+  criadoEm      DateTime                 @default(now())
+  atualizadoEm  DateTime                 @default(now()) @updatedAt
+
+  contract      Contract                 @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, numero])
+  @@index([contractId, status])
+  @@map("contract_amendments")
 }

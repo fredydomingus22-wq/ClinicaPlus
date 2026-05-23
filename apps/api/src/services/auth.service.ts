@@ -363,6 +363,7 @@ export const authService = {
               nome: data.nome,
               dataNascimento: new Date(data.dataNascimento),
               genero: data.genero,
+              nif: data.nif,
               tipoSangue: data.tipoSangue ?? null,
               alergias: data.alergias ?? [],
               telefone: data.telefone ?? null,

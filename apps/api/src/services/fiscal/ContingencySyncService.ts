@@ -1,8 +1,9 @@
-import { prisma } from '../../lib/prisma';
+﻿import { prisma } from '../../lib/prisma';
 import { agtApiClient } from './AgtApiClient';
 import { faturasService } from '../faturas.service';
 import { CertificationService } from './CertificationService';
 import { logger } from '../../lib/logger';
+import { getDefaultAgtSoftwareInfoDetail } from '@clinicaplus/utils/server';
 import crypto from 'crypto';
 
 function getAgtAuthToken(): string {
@@ -13,25 +14,97 @@ function getAgtAuthToken(): string {
 }
 
 export class ContingencySyncService {
-  
   /**
-   * Job que roda periodicamente para limpar a fila de contingência
+   * Periodic job that drains the contingency queue for one clinic.
    */
   public async syncPendingDocuments(clinicaId: string): Promise<void> {
-    // 1. Buscar todas as séries de contingência não registadas
-    const seriesContingentes = await prisma.sequenciaDocFiscal.findMany({
-      where: { clinicaId, isContingency: true, isRegistered: false }
-    });
-
     const clinica = await prisma.clinica.findUnique({ where: { id: clinicaId } });
     if (!clinica) return;
 
-    const certService = new CertificationService({
-      tenantPrivateKey: clinica.agtPrivateKey || undefined,
-      tenantPublicKey: clinica.agtPublicKey || undefined
+    if (!clinica.nif) {
+      logger.error({ clinicaId }, 'Clinica sem NIF configurado. Sincronizacao de contingencia bloqueada.');
+      return;
+    }
+
+    const faturasPendentes = await prisma.fatura.findMany({
+      where: { clinicaId, statusEnvio: 'CONTINGENCIA', emContingencia: true },
+      orderBy: { criadoEm: 'asc' }
     });
 
-    // 2. Registar cada série na AGT marcando como contingência ('C')
+    const seriesPendentes = new Map<string, {
+      serie: string;
+      tipoDoc: typeof faturasPendentes[number]['tipoDocFiscal'];
+      anoFiscal: number;
+      startTS: Date;
+      endTS: Date;
+    }>();
+
+    // When a dedicated contingency series exists (suffix C), register that AGT series
+    // instead of also registering the normal series that triggered failover.
+    const faturasComSerieContingencia = faturasPendentes.filter((fatura) => fatura.serieDocFiscal.endsWith('C'));
+    const faturasParaRegistoSerie = faturasComSerieContingencia.length > 0 ? faturasComSerieContingencia : faturasPendentes;
+
+    for (const fatura of faturasParaRegistoSerie) {
+      const key = `${fatura.serieDocFiscal}:${fatura.tipoDocFiscal}`;
+      const actual = seriesPendentes.get(key);
+      const startTS = actual && actual.startTS < fatura.criadoEm ? actual.startTS : fatura.criadoEm;
+      const endTS = actual && actual.endTS > fatura.criadoEm ? actual.endTS : fatura.criadoEm;
+
+      seriesPendentes.set(key, {
+        serie: fatura.serieDocFiscal,
+        tipoDoc: fatura.tipoDocFiscal,
+        anoFiscal: fatura.criadoEm.getFullYear(),
+        startTS,
+        endTS
+      });
+    }
+
+    const seriesContingentes = [];
+    for (const seriePendente of seriesPendentes.values()) {
+      const existente = await prisma.sequenciaDocFiscal.findFirst({
+        where: {
+          clinicaId,
+          serie: seriePendente.serie,
+          tipoDoc: seriePendente.tipoDoc,
+          anoFiscal: seriePendente.anoFiscal
+        }
+      });
+
+      if (existente?.isRegistered) continue;
+
+      if (existente) {
+        const normalizada = await prisma.sequenciaDocFiscal.update({
+          where: { id: existente.id },
+          data: {
+            isContingency: true,
+            isRegistered: false,
+            startTS: existente.startTS ?? seriePendente.startTS,
+            endTS: null
+          }
+        });
+        seriesContingentes.push(normalizada);
+      } else {
+        const criada = await prisma.sequenciaDocFiscal.create({
+          data: {
+            clinicaId,
+            serie: seriePendente.serie,
+            tipoDoc: seriePendente.tipoDoc,
+            anoFiscal: seriePendente.anoFiscal,
+            isContingency: true,
+            isRegistered: false,
+            startTS: seriePendente.startTS,
+            endTS: null
+          }
+        });
+        seriesContingentes.push(criada);
+      }
+    }
+
+    const certService = new CertificationService({
+      tenantPrivateKey: clinica.agtPrivateKey || process.env.AGT_PRIVATE_KEY || undefined,
+      tenantPublicKey: clinica.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined
+    });
+
     for (const serie of seriesContingentes) {
       try {
         const lastDoc = await prisma.fatura.findFirst({
@@ -40,94 +113,77 @@ export class ContingencySyncService {
         });
 
         const endTS = lastDoc ? lastDoc.criadoEm : new Date();
+        const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
+        const seriesContingencyIndicator = 'C';
 
-        // payload para registrar série na AGT
         const request = {
           schemaVersion: '1.2',
           submissionUUID: crypto.randomUUID(),
-          taxRegistrationNumber: clinica.nif!,
+          taxRegistrationNumber: clinica.nif,
           submissionTimeStamp: new Date().toISOString(),
           establishmentNumber: 'SEDE',
           seriesYear: serie.anoFiscal.toString(),
           documentType: serie.tipoDoc,
-          seriesContingencyIndicator: 'C', // ATIVA O INDICADOR DE CONTINGÊNCIA
-          seriesStartTS: serie.startTS?.toISOString(), // Início do offline
-          seriesEndTS: endTS.toISOString(),             // Fim do offline
+          seriesContingencyIndicator,
+          seriesStartTS: (serie.startTS ?? endTS).toISOString(),
+          seriesEndTS: endTS.toISOString(),
           softwareInfo: {
-            softwareInfoDetail: {
-              productId: 'DocAgen',
-              productVersion: '1.0.0',
-              softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-              signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-            },
-            jwsSoftwareSignature: certService.signSoftwareJWS({
-              productId: 'DocAgen',
-              productVersion: '1.0.0',
-              softwareValidationNumber: process.env.AGT_SOFTWARE_CERTIFICATE || '0',
-              signatureVersion: Number(process.env.AGT_SIGNATURE_VERSION || 1)
-            })
+            softwareInfoDetail,
+            jwsSoftwareSignature: certService.signSoftwareJWS(softwareInfoDetail)
           },
           jwsSignature: certService.signRequestJWS({
-            taxRegistrationNumber: clinica.nif!,
+            taxRegistrationNumber: clinica.nif,
             establishmentNumber: 'SEDE',
             seriesYear: serie.anoFiscal.toString(),
-            documentType: serie.tipoDoc
+            documentType: serie.tipoDoc,
+            seriesContingencyIndicator
           })
         };
 
-        // Solicitar/comunicar série de contingência na AGT
         await agtApiClient.solicitarSerie(request as any, getAgtAuthToken());
-        
-        // Atualizar base de dados
+
         await prisma.sequenciaDocFiscal.update({
           where: { id: serie.id },
-          data: { isRegistered: true, endTS }
+          data: { isRegistered: true, isContingency: false, endTS }
         });
 
-        logger.info({ serie: serie.serie }, 'Série de contingência registada na AGT com sucesso');
+        logger.info({ serie: serie.serie }, 'Serie de contingencia registada na AGT com sucesso');
       } catch (error) {
-        logger.error({ error, serie: serie.serie }, 'Erro ao registar série de contingência na AGT');
-        return; // Bloqueia o envio dos documentos até a série ser registada
+        logger.error({ error, serie: serie.serie }, 'Erro ao registar serie de contingencia na AGT');
+        return;
       }
     }
-
-    // 3. Submeter as faturas acumuladas da série de contingência
-    const faturasPendentes = await prisma.fatura.findMany({
-      where: { clinicaId, statusEnvio: 'CONTINGENCIA', emContingencia: true },
-      orderBy: { criadoEm: 'asc' }
-    });
 
     for (const fatura of faturasPendentes) {
       try {
         await faturasService.submeterParaAgt(fatura.id, clinicaId);
-        
-        // Se a submissão foi um sucesso, verificar se a fatura foi marcada como entregue
+
         const faturaAtual = await prisma.fatura.findUnique({
           where: { id: fatura.id },
           select: { statusEnvio: true }
         });
-        
-        if (faturaAtual?.statusEnvio === 'ENTREGUE') {
-          logger.info({ faturaId: fatura.id }, 'Fatura em contingência submetida com sucesso');
+
+        if (faturaAtual?.statusEnvio === 'ENTREGUE' || faturaAtual?.statusEnvio === 'ENVIADO') {
+          logger.info({ faturaId: fatura.id, statusEnvio: faturaAtual.statusEnvio }, 'Fatura em contingencia submetida com sucesso');
         } else {
-          logger.warn({ faturaId: fatura.id, statusEnvio: faturaAtual?.statusEnvio }, 'Fatura em contingência não foi totalmente sincronizada ainda');
+          logger.warn({ faturaId: fatura.id, statusEnvio: faturaAtual?.statusEnvio }, 'Fatura em contingencia ainda nao foi totalmente sincronizada');
         }
       } catch (err) {
-        logger.error({ err, faturaId: fatura.id }, 'Erro ao sincronizar fatura tardia da contingência');
+        logger.error({ err, faturaId: fatura.id }, 'Erro ao sincronizar fatura tardia da contingencia');
       }
     }
 
-    // 4. Se não houver mais faturas pendentes de sincronização para esta clínica, finalizar o período de contingência nas sequências!
     const restamPendentes = await prisma.fatura.count({
       where: { clinicaId, statusEnvio: 'CONTINGENCIA', emContingencia: true }
     });
 
     if (restamPendentes === 0) {
-      logger.info({ clinicaId }, 'Todas as faturas em contingência foram sincronizadas. Finalizando o período de contingência.');
+      logger.info({ clinicaId }, 'Todas as faturas em contingencia foram sincronizadas. Finalizando periodo de contingencia.');
       await prisma.sequenciaDocFiscal.updateMany({
-        where: { clinicaId, isContingency: true, endTS: null },
+        where: { clinicaId, isContingency: true },
         data: {
           isContingency: false,
+          isRegistered: true,
           endTS: new Date()
         }
       });
@@ -135,7 +191,7 @@ export class ContingencySyncService {
   }
 
   /**
-   * Sincroniza todas as clínicas pendentes
+   * Sync all clinics with pending contingency documents.
    */
   public async syncAllPending(): Promise<void> {
     try {
@@ -149,7 +205,7 @@ export class ContingencySyncService {
         await this.syncPendingDocuments(item.clinicaId);
       }
     } catch (error) {
-      logger.error({ error }, 'Erro ao rodar syncAllPending de contingência');
+      logger.error({ error }, 'Erro ao rodar syncAllPending de contingencia');
     }
   }
 }

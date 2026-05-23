@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { 
   AnamneseCreateInput, 
   AnamneseUpdateInput,
@@ -23,17 +23,46 @@ export class AnamneseService {
       });
 
       if (existing) {
-        throw new AppError('Já existe uma anamnese para este agendamento', 400);
+        return prisma.anamnese.update({
+          where: { id: existing.id },
+          data: {
+            respostas: data.respostas,
+            atualizadoEm: new Date(),
+          }
+        }) as unknown as AnamneseDTO;
       }
     }
 
-    return prisma.anamnese.create({
-      data: {
-        ...data,
-        agendamentoId: data.agendamentoId ?? null,
-        clinicaId,
+    try {
+      return await prisma.anamnese.create({
+        data: {
+          ...data,
+          agendamentoId: data.agendamentoId ?? null,
+          clinicaId,
+        }
+      }) as unknown as AnamneseDTO;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        if (data.agendamentoId) {
+          const existing = await prisma.anamnese.findFirst({
+            where: { 
+              clinicaId,
+              agendamentoId: data.agendamentoId 
+            }
+          });
+          if (existing) {
+            return prisma.anamnese.update({
+              where: { id: existing.id },
+              data: {
+                respostas: data.respostas,
+                atualizadoEm: new Date(),
+              }
+            }) as unknown as AnamneseDTO;
+          }
+        }
       }
-    }) as unknown as AnamneseDTO;
+      throw err;
+    }
   }
 
   /**

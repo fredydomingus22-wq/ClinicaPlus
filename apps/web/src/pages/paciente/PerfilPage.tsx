@@ -79,11 +79,12 @@ export default function PerfilPage() {
   const paciente = utilizador?.paciente;
 
   const form = useForm<PacienteUpdateInput>({
-    resolver: zodResolver(PacienteUpdateSchema),
+    resolver: zodResolver(PacienteUpdateSchema) as any,
     defaultValues: {
       nome: utilizador?.nome || '',
       telefone: paciente?.telefone || '',
       email: utilizador?.email || '',
+      nif: paciente?.nif || '',
       dataNascimento: paciente?.dataNascimento || '',
       genero: (paciente?.genero as PacienteUpdateInput['genero']) || 'OUTRO',
       provincia: paciente?.provincia || '',
@@ -97,6 +98,7 @@ export default function PerfilPage() {
         nome: utilizador?.nome || '',
         telefone: paciente?.telefone || '',
         email: utilizador?.email || '',
+        nif: paciente.nif || '',
         dataNascimento: paciente.dataNascimento ? new Date(paciente.dataNascimento).toISOString().split('T')[0] : '',
         genero: (paciente.genero as PacienteUpdateInput['genero']) || 'OUTRO',
         provincia: paciente.provincia || '',
@@ -132,6 +134,7 @@ export default function PerfilPage() {
               nome: formattedData.nome ?? state.utilizador.paciente.nome,
               telefone: formattedData.telefone ?? state.utilizador.paciente.telefone,
               email: formattedData.email ?? state.utilizador.paciente.email,
+              nif: formattedData.nif ?? state.utilizador.paciente.nif,
               dataNascimento: formattedData.dataNascimento ?? state.utilizador.paciente.dataNascimento,
               genero: formattedData.genero ?? state.utilizador.paciente.genero,
               provincia: formattedData.provincia ?? state.utilizador.paciente.provincia,
@@ -283,6 +286,12 @@ export default function PerfilPage() {
                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Nascimento</p>
                         <div className="flex items-center gap-2 text-neutral-800 font-medium">
                           <Calendar className="w-4 h-4 text-neutral-400" /> {paciente?.dataNascimento ? formatDate(new Date(paciente.dataNascimento)) : '---'}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">NIF</p>
+                        <div className="flex items-center gap-2 text-neutral-800 font-medium">
+                          <FileText className="w-4 h-4 text-neutral-400" /> {paciente?.nif || '---'}
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -488,6 +497,13 @@ export default function PerfilPage() {
               label="Telefone" 
               {...form.register('telefone')} 
               error={form.formState.errors.telefone?.message}
+            />
+            <Input 
+              label="NIF" 
+              placeholder="Ex: 009122079LA040"
+              {...form.register('nif')} 
+              error={form.formState.errors.nif?.message}
+              required
             />
             <Input 
               label="Data de Nascimento" 

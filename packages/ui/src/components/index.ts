@@ -22,3 +22,4 @@ export * from './EmptyState';
 export * from './AnamneseAnswer';
 export * from './print/ReceitaPrint';
 export * from './SelectionToggle';
+export * from './Toast';

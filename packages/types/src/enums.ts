@@ -76,9 +76,12 @@ export const MetodoPagamentoSchema = z.nativeEnum(MetodoPagamento);
 export enum EstadoSeguro {
   PENDENTE = 'PENDENTE',
   SUBMETIDO = 'SUBMETIDO',
+  EM_ANALISE = 'EM_ANALISE',
   APROVADO = 'APROVADO',
-  REJEITADO = 'REJEITADO',
-  REEMBOLSADO = 'REEMBOLSADO'
+  PARCIAL = 'PARCIAL',
+  GLOSADO = 'GLOSADO',
+  PAGO = 'PAGO',
+  CANCELADO = 'CANCELADO'
 }
 export const EstadoSeguroSchema = z.nativeEnum(EstadoSeguro);
 
@@ -211,3 +214,30 @@ export enum TipoMovimentacao {
   TRANSFERENCIA = 'TRANSFERENCIA'
 }
 export const TipoMovimentacaoSchema = z.nativeEnum(TipoMovimentacao);
+
+// --- ODONTOGRAMA ---
+
+export enum DenteStatus {
+  SAUDAVEL = 'SAUDAVEL',
+  CARIE = 'CARIE',
+  FRATURA = 'FRATURA',
+  TRATAMENTO_CANAL = 'TRATAMENTO_CANAL',
+  CANAL_TRATADO = 'CANAL_TRATADO',
+  TRATADO = 'TRATADO',
+  AUSENTE = 'AUSENTE',
+  PROTESE = 'PROTESE',
+  DESTRUICAO = 'DESTRUICAO',
+}
+export const DenteStatusSchema = z.nativeEnum(DenteStatus);
+
+export enum DenteFace {
+  V = 'V',
+  L = 'L',
+  M = 'M',
+  D = 'D',
+  O = 'O',
+  G = 'G',
+  /** Raiz / canal (camada anatómica) */
+  R = 'R',
+}
+export const DenteFaceSchema = z.nativeEnum(DenteFace);

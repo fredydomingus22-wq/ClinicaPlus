@@ -80,6 +80,7 @@ router.post('/listar-facturas-agt', fiscalController.listarFacturasAgt);
  * @desc Consulta detalhes de uma factura específica na AGT
  */
 router.get('/consultar-factura-agt/:numero', fiscalController.consultarFacturaAgt);
+router.post('/consultar-factura-agt', fiscalController.consultarFacturaAgt);
 
 /**
  * @route POST /api/fiscal/validar-documento-agt/:faturaId

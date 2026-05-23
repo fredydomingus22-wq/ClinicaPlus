@@ -10,6 +10,19 @@ export class CertificationService extends BaseCertificationService {
     super(keys);
   }
 
+  public verificarAssinatura(
+    params: Parameters<BaseCertificationService['verificarAssinatura']>[0]
+  ): boolean {
+    if (super.verificarAssinatura(params)) return true;
+    if (!process.env.AGT_PUBLIC_KEY) return false;
+
+    const fallback = new BaseCertificationService({
+      tenantPublicKey: process.env.AGT_PUBLIC_KEY,
+    });
+
+    return fallback.verificarAssinatura(params);
+  }
+
   /**
    * Obtém o hash do documento anterior na mesma série para construir a cadeia.
    * Requer transação activa para garantir precisão atómica.

@@ -72,6 +72,7 @@ export default function PacientesPage() {
       nome: '',
       dataNascimento: '',
       genero: 'M',
+      nif: '',
       provincia: PROVINCES[0],
       seguroSaude: false,
       alergias: [],
@@ -81,7 +82,7 @@ export default function PacientesPage() {
 
   // Edit Form
   const editForm = useForm<z.infer<typeof PacienteUpdateSchema>>({
-    resolver: zodResolver(PacienteUpdateSchema),
+    resolver: zodResolver(PacienteUpdateSchema) as any,
   });
 
   // Populate edit form when opening modal
@@ -91,6 +92,7 @@ export default function PacientesPage() {
         nome: pacienteToEdit.nome,
         email: pacienteToEdit.email || '',
         telefone: pacienteToEdit.telefone || '',
+        nif: pacienteToEdit.nif || '',
         dataNascimento: pacienteToEdit.dataNascimento.split('T')[0],
         genero: pacienteToEdit.genero as 'M' | 'F' | 'OUTRO',
         tipoSangue: pacienteToEdit.tipoSangue || '',
@@ -302,6 +304,13 @@ export default function PacientesPage() {
               error={createForm.formState.errors.genero?.message}
             />
             <Input 
+              label="NIF" 
+              placeholder="Ex: 009122079LA040"
+              required
+              {...createForm.register('nif')}
+              error={createForm.formState.errors.nif?.message}
+            />
+            <Input 
               label="Telefone" 
               placeholder="Ex: 923 000 000"
               {...createForm.register('telefone')}
@@ -400,6 +409,13 @@ export default function PacientesPage() {
               ]}
               {...editForm.register('genero')}
               error={editForm.formState.errors.genero?.message}
+            />
+            <Input 
+              label="NIF" 
+              placeholder="Ex: 009122079LA040"
+              required
+              {...editForm.register('nif')}
+              error={editForm.formState.errors.nif?.message}
             />
             <Select 
               label="Província"
