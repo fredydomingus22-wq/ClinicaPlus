@@ -84,9 +84,14 @@ export default function CatalogoPage() {
       )
     },
     {
-      header: 'Preço Venda',
+      header: 'Preço Venda / IVA',
       accessor: (row: ProdutoDTO) => (
-        <span className="font-bold text-neutral-900">{formatKwanza(row.precoVenda)}</span>
+        <div className="flex flex-col">
+          <span className="font-bold text-neutral-900">{formatKwanza(row.precoVenda)}</span>
+          <span className="text-[10px] text-neutral-500 uppercase">
+            {row.codigoIva === 'ISE' ? 'Isento' : `IVA ${row.taxaIva}%`}
+          </span>
+        </div>
       )
     },
     {

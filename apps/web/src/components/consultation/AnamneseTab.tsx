@@ -73,6 +73,7 @@ export const AnamneseTab: React.FC<AnamneseTabProps> = ({
   // ---------------------------------------------------------------------
   const [respostas, setRespostas] = useState<Record<string, RespostaState>>({});
   const [activeAnamnese, setActiveAnamnese] = useState<any>(null);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const activeAnamneseRef = React.useRef<any>(null);
   const isSavingRef = React.useRef(false);
   const pendingSaveRef = React.useRef(false);
@@ -81,12 +82,18 @@ export const AnamneseTab: React.FC<AnamneseTabProps> = ({
   useEffect(() => {
     activeAnamneseRef.current = anamnese;
     setActiveAnamnese(anamnese);
-    if (anamnese?.respostas) {
-      setRespostas(anamnese.respostas as Record<string, RespostaState>);
-    } else {
-      setRespostas({});
+    
+    // Apenas inicializa as respostas locais na primeira vez que os dados são carregados,
+    // para não sobrescrever edições em curso durante os auto-saves.
+    if (!initialLoaded && anamnese !== undefined) {
+      if (anamnese?.respostas) {
+        setRespostas(anamnese.respostas as Record<string, RespostaState>);
+      } else {
+        setRespostas({});
+      }
+      setInitialLoaded(true);
     }
-  }, [anamnese]);
+  }, [anamnese, initialLoaded]);
 
   useEffect(() => {
     respostasRef.current = respostas;

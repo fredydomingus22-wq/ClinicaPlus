@@ -17,6 +17,7 @@ import { prisma } from '../lib/prisma';
 import { evolutionApi } from '../lib/evolutionApi';
 import { metaCloudApi } from '../lib/metaCloudApi';
 import { auditLogService } from '../services/auditLog.service';
+import { decryptSecret, encryptSecret } from '../lib/secretCrypto';
 import crypto from 'crypto';
 import { z } from 'zod';
 
@@ -219,8 +220,8 @@ const criarInstanciaMetaSchema = z.object({
 router.post('/instancias/meta',
   authenticate,
   tenantMiddleware,
-  // requirePlan(Plano.PRO),
-  // requirePermission('whatsapp', 'manage'),
+  requirePlan(Plano.PRO),
+  requirePermission('whatsapp', 'manage'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const clinicaId = req.clinica.id as string;
@@ -236,17 +237,12 @@ router.post('/instancias/meta',
 
       const { metaPhoneNumberId, metaWabaId, metaAccessToken } = parsed.data;
 
-      // Verificar plano (mesma regra da instância Baileys)
       const clinica = await prisma.clinica.findUniqueOrThrow({ where: { id: clinicaId } });
-      // if (clinica.plano !== Plano.PRO && clinica.plano !== Plano.ENTERPRISE) {
-      //   return res.status(403).json({ message: 'Módulo WhatsApp apenas disponível para planos PRO ou superiores.' });
-      // }
 
-      // Verificar instância duplicada temporariamente desativada
-      // const existente = await prisma.waInstancia.findFirst({ where: { clinicaId } });
-      // if (existente && clinica.plano !== Plano.ENTERPRISE) {
-      //   return res.status(409).json({ message: 'Esta clínica já possui uma instância configurada.' });
-      // }
+      const existente = await prisma.waInstancia.findFirst({ where: { clinicaId } });
+      if (existente && clinica.plano !== Plano.ENTERPRISE) {
+        return res.status(409).json({ message: 'Esta clínica já possui uma instância configurada.' });
+      }
 
       // Nome único para a instância (sem Evolution, mas precisa ser único na BD)
       const instanceName = `meta-${clinica.slug}-${crypto.randomBytes(3).toString('hex')}`;
@@ -259,7 +255,7 @@ router.post('/instancias/meta',
           tipoIntegracao:    'META_CLOUD',
           metaPhoneNumberId,
           metaWabaId,
-          metaAccessToken,   // ⚠️ Encriptar em produção (ADR a criar)
+          metaAccessToken:   encryptSecret(metaAccessToken),
           estado:            'CONECTADO',   // Meta está sempre "conectada" via token
           atualizadoEm:      new Date(),
         },
@@ -393,11 +389,12 @@ router.post('/internal/enviar',
         if (!instancia.metaPhoneNumberId || !instancia.metaAccessToken) {
           throw new Error('Instância Meta incompleta');
         }
+        const resolvedMetaAccessToken = decryptSecret(instancia.metaAccessToken);
         
         if (typeof mensagem === 'string') {
           await metaCloudApi.enviarTexto(
             instancia.metaPhoneNumberId,
-            instancia.metaAccessToken,
+            resolvedMetaAccessToken,
             telefone.replace('+', ''),
             mensagem
           );
@@ -406,14 +403,14 @@ router.post('/internal/enviar',
           if (mensagem.type === 'list') {
             await metaCloudApi.enviarInteractivoLista(
               instancia.metaPhoneNumberId,
-              instancia.metaAccessToken,
+              resolvedMetaAccessToken,
               telefone.replace('+', ''),
               mensagem.payload
             );
           } else if (mensagem.type === 'button') {
             await metaCloudApi.enviarInteractivoBotoes(
               instancia.metaPhoneNumberId,
-              instancia.metaAccessToken,
+              resolvedMetaAccessToken,
               telefone.replace('+', ''),
               mensagem.payload
             );

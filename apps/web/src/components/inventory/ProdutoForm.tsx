@@ -140,7 +140,7 @@ export const ProdutoForm: React.FC<ProdutoFormProps> = ({ initialData, onSuccess
         />
 
         {/* Preços e Impostos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-primary-50/30 rounded-xl border border-primary-50">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-primary-50/30 rounded-xl border border-primary-50">
           <Input 
             label="Preço de Custo (AKZ)" 
             type="number"
@@ -159,6 +159,26 @@ export const ProdutoForm: React.FC<ProdutoFormProps> = ({ initialData, onSuccess
             {...register('taxaIva', { valueAsNumber: true })}
             error={errors.taxaIva?.message as string}
           />
+          <Select 
+            label="Código IVA" 
+            options={[
+              { value: 'IVA', label: 'Sujeito a IVA' },
+              { value: 'ISE', label: 'Isento' },
+              { value: 'OUT', label: 'Outro' }
+            ]}
+            {...register('codigoIva')}
+            error={errors.codigoIva?.message as string}
+          />
+          {watch('codigoIva') === 'ISE' && (
+            <div className="md:col-span-2 lg:col-span-3">
+              <Input 
+                label="Motivo de Isenção" 
+                placeholder="Ex: M01 - Artigo 14 do CIVA"
+                {...register('motivoIsencao')}
+                error={errors.motivoIsencao?.message as string}
+              />
+            </div>
+          )}
         </div>
 
         {/* Gestão de Estoque (Apenas para Produtos) */}

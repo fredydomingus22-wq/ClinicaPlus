@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { metaCloudApi, MetaListSection } from '../lib/metaCloudApi';
+import { decryptSecret } from '../lib/secretCrypto';
 import { WaInstancia, WaConversa, WaEstadoConversa, WaDirecao, Prisma } from '@prisma/client';
 import { format, addDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -95,7 +96,7 @@ export const waMetaConversaService = {
     }
 
     const phoneId = instancia.metaPhoneNumberId;
-    const token = instancia.metaAccessToken;
+    const token = decryptSecret(instancia.metaAccessToken);
     const numero = conversa.numeroWhatsapp;
     const cid = conversa.id;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,7 +154,7 @@ export const waMetaConversaService = {
     nomeContacto?: string,
   ): Promise<void> {
     const phoneId = instancia.metaPhoneNumberId!;
-    const token = instancia.metaAccessToken!;
+    const token = decryptSecret(instancia.metaAccessToken!);
     const numero = conversa.numeroWhatsapp;
 
     // Buscar especialidades activas da clínica
@@ -203,7 +204,7 @@ export const waMetaConversaService = {
     listReplyId: string,
   ): Promise<void> {
     const phoneId = instancia.metaPhoneNumberId!;
-    const token = instancia.metaAccessToken!;
+    const token = decryptSecret(instancia.metaAccessToken!);
     const numero = conversa.numeroWhatsapp;
 
     const especialidadeId = listReplyId.replace('esp:', '');
@@ -260,7 +261,7 @@ export const waMetaConversaService = {
     listReplyId: string,
   ): Promise<void> {
     const phoneId = instancia.metaPhoneNumberId!;
-    const token = instancia.metaAccessToken!;
+    const token = decryptSecret(instancia.metaAccessToken!);
     const numero = conversa.numeroWhatsapp;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ctx = (conversa.contexto as any) ?? {};
@@ -321,7 +322,7 @@ export const waMetaConversaService = {
     ctx: Record<string, unknown>,
   ): Promise<void> {
     const phoneId = instancia.metaPhoneNumberId!;
-    const token = instancia.metaAccessToken!;
+    const token = decryptSecret(instancia.metaAccessToken!);
     const numero = conversa.numeroWhatsapp;
 
     const isoSlot = listReplyId.replace('slot:', '');
@@ -358,7 +359,7 @@ export const waMetaConversaService = {
     ctx: Record<string, unknown>,
   ): Promise<void> {
     const phoneId = instancia.metaPhoneNumberId!;
-    const token = instancia.metaAccessToken!;
+    const token = decryptSecret(instancia.metaAccessToken!);
     const numero = conversa.numeroWhatsapp;
 
     if (buttonReplyId === 'cancelar') {
@@ -508,7 +509,7 @@ export const waMetaConversaService = {
 
     await metaCloudApi.enviarInteractivoBotoes(
       instancia.metaPhoneNumberId,
-      instancia.metaAccessToken,
+      decryptSecret(instancia.metaAccessToken),
       numero,
       {
         bodyText:

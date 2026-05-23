@@ -49,7 +49,8 @@ describe('[ADAPTAR: nome do endpoint] — 400 Bad Request', () => {
     })
   })
 
-  it('deve enviar Content-Type: application/json no request', async () => {
+  // TODO: Adaptar este template ao apiClient real do backend. Enquanto não for adaptado, o teste é mantido como skip para refletir que ainda não testa código real do projecto.
+  it.skip('deve enviar Content-Type: application/json no request', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ id: 1 }), {
         status: 200,

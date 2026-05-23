@@ -50,18 +50,26 @@ export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const [activeDente, setActiveDente] = useState<number | null>(null);
   const [activeFace, setActiveFace] = useState<DenteFace | null>(null);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const isSavingRef = useRef(false);
   const pendingSaveRef = useRef(false);
 
   useEffect(() => {
-    if (loaded) {
-      setMarcacoes(loaded.marcacoes ?? []);
-      setActiveRecordId(loaded.id);
-    } else if (!isLoading) {
-      setMarcacoes([]);
-      setActiveRecordId(null);
+    if (!initialLoaded) {
+      if (loaded) {
+        setMarcacoes(loaded.marcacoes ?? []);
+        setActiveRecordId(loaded.id);
+        setInitialLoaded(true);
+      } else if (!isLoading) {
+        setMarcacoes([]);
+        setActiveRecordId(null);
+        setInitialLoaded(true);
+      }
+    } else if (loaded && !activeRecordId) {
+       // Se foi criado um novo registo, atualizar o ID
+       setActiveRecordId(loaded.id);
     }
-  }, [loaded, isLoading]);
+  }, [loaded, isLoading, initialLoaded, activeRecordId]);
 
   const debouncedMarcacoes = useDebounce(marcacoes, 1500);
 

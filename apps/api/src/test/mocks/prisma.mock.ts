@@ -6,6 +6,7 @@ export const mockPrisma = {
   waAutomacao:  { findFirstOrThrow: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), upsert: vi.fn(), delete: vi.fn() },
   waConversa:   { upsert: vi.fn(), update: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), delete: vi.fn() },
   waMensagem:   { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+  botIntegracao: { findFirst: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   paciente:     { findUnique: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), findFirstOrThrow: vi.fn(), findUniqueOrThrow: vi.fn(), findMany: vi.fn() },
   medico:       { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), findFirstOrThrow: vi.fn() },
   agendamento:  { create: vi.fn(), findMany: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), findFirstOrThrow: vi.fn(), delete: vi.fn() },

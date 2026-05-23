@@ -67,22 +67,27 @@ describe('/api/exames', () => {
   });
 
   describe('GET /api/exames', () => {
-    it('deve listar exames do paciente com filtros', async () => {
+    it('deve listar exames do paciente via /exames/paciente/:id', async () => {
       const res = await request
-        .get(`/api/exames?pacienteId=${ctx.paciente.id}&status=REALIZADO`)
+        .get(`/api/exames/paciente/${ctx.paciente.id}`)
         .set('Authorization', `Bearer ${ctx.medicoToken}`)
         .expect(200);
 
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data[0].status).toBe('REALIZADO');
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0].estado).toBeDefined();
     });
 
-    it('deve rejeitar sem pacienteId', async () => {
-      await request
-        .get('/api/exames')
+    it('deve listar todos os exames da clínica com filtros', async () => {
+      const res = await request
+        .get('/api/exames?estado=PENDENTE')
         .set('Authorization', `Bearer ${ctx.medicoToken}`)
-        .expect(400);
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      for (const exame of res.body) {
+        expect(exame.estado).toBe('PENDENTE');
+      }
     });
   });
 });

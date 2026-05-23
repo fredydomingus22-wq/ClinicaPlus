@@ -27,9 +27,13 @@ export interface RelatorioReceitaData {
 }
 
 export const relatoriosApi = {
-  getReceita: (params: { inicio?: string; fim?: string; agrupamento?: string; medicoId?: string; tipo?: string }) =>
-    apiClient.get<{ success: boolean; data: RelatorioReceitaData }>('/relatorios/receita', { params })
-      .then(r => r.data.data),
+  getReceita: (params: { inicio?: string; fim?: string; agrupamento?: string; medicoId?: string; tipo?: string }) => {
+    // Backend reads "agruparPor", not "agrupamento"
+    const { agrupamento, ...rest } = params;
+    return apiClient.get<{ success: boolean; data: RelatorioReceitaData }>('/relatorios/receita', {
+      params: { ...rest, agruparPor: agrupamento }
+    }).then(r => r.data.data);
+  },
 
   exportReceita: (params: { inicio?: string; fim?: string; medicoId?: string; tipo?: string }) =>
     apiClient.get('/relatorios/receita/export', { params, responseType: 'blob' })

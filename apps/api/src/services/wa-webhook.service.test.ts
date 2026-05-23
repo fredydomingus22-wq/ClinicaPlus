@@ -1,16 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import axios from 'axios';
 import { mockPrisma } from '../test/mocks/prisma.mock';
 import { mockEvolutionApi } from '../test/mocks/evolutionApi.mock';
 import { WaInstancia, WaEstadoInstancia, WaEstadoConversa, WaDirecao } from '@prisma/client';
 
 // Mock dependências
+vi.mock('axios', () => ({ default: { post: vi.fn().mockResolvedValue({ data: {} }) } }));
 vi.mock('../lib/evolutionApi', () => ({ evolutionApi: mockEvolutionApi }));
 vi.mock('../lib/prisma', () => ({ prisma: mockPrisma }));
-vi.mock('./wa-conversa.service', () => ({ 
-  waConversaService: { 
-    processarMensagem: vi.fn() 
-  } 
-}));
+vi.mock('../lib/redis', () => ({ redis: { get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue('OK'), del: vi.fn().mockResolvedValue(1) } }));
 vi.mock('./wa-instancia.service', () => ({
   waInstanciaService: {
     processarQrCode: vi.fn(),
@@ -20,7 +18,6 @@ vi.mock('./wa-instancia.service', () => ({
 }));
 
 import { waWebhookService } from './wa-webhook.service';
-import { waConversaService } from './wa-conversa.service';
 import { waInstanciaService } from './wa-instancia.service';
 
 describe('waWebhookService', () => {
@@ -90,7 +87,7 @@ describe('waWebhookService', () => {
       await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(mockPrisma.waConversa.upsert).not.toHaveBeenCalled();
-      expect(waConversaService.processarMensagem).not.toHaveBeenCalled();
+      expect(axios.post).not.toHaveBeenCalled();
     });
 
     it('deve ignorar mensagens de grupos (@g.us)', async () => {
@@ -106,7 +103,7 @@ describe('waWebhookService', () => {
       await waWebhookService.handle(payload.instance, payload.event, payload.data);
 
       expect(mockPrisma.waConversa.upsert).not.toHaveBeenCalled();
-      expect(waConversaService.processarMensagem).not.toHaveBeenCalled();
+      expect(axios.post).not.toHaveBeenCalled();
     });
 
     it('deve criar/atualizar conversa e chamar o serviço de conversa para mensagens de entrada', async () => {
@@ -115,6 +112,7 @@ describe('waWebhookService', () => {
       const mockConversa = {
         id: conversationId,
         instanciaId: instanceId,
+        clinicaId,
         numeroWhatsapp: cleanNumber,
         estado: WaEstadoConversa.AGUARDA_INPUT,
         etapaFluxo: null,
@@ -137,6 +135,7 @@ describe('waWebhookService', () => {
       };
 
       mockPrisma.waConversa.upsert.mockResolvedValue(mockConversa);
+      mockPrisma.botIntegracao.findFirst.mockResolvedValue(null);
 
       const payload = {
         event: 'messages.upsert',
@@ -160,10 +159,43 @@ describe('waWebhookService', () => {
         }
       });
 
-      expect(waConversaService.processarMensagem).toHaveBeenCalledWith(
-        expect.objectContaining({ id: conversationId }),
-        'Marcar consulta'
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/webhook/unified'),
+        expect.objectContaining({
+          clinicaId,
+          instanciaId: instanceId,
+          channel: 'BAILEYS',
+          telefone: cleanNumber,
+          value: 'Marcar consulta',
+          messageId: 'msg-abc'
+        })
       );
+    });
+
+    it('não deve encaminhar para a Intel se houver bot externo activo', async () => {
+      const conversationId = 'conv-456';
+
+      mockPrisma.waConversa.upsert.mockResolvedValue({
+        id: conversationId,
+        instanciaId: instanceId,
+        clinicaId,
+        numeroWhatsapp: cleanNumber,
+        estado: WaEstadoConversa.AGUARDA_INPUT,
+      });
+      mockPrisma.botIntegracao.findFirst.mockResolvedValue({ id: 'bot-1', ativo: true });
+
+      const payload = {
+        event: 'messages.upsert',
+        instance: instanceName,
+        data: {
+          key: { fromMe: false, remoteJid, id: 'msg-bot' },
+          message: { conversation: 'teste bot externo' }
+        }
+      };
+
+      await waWebhookService.handle(payload.instance, payload.event, payload.data);
+
+      expect(axios.post).not.toHaveBeenCalled();
     });
   });
 });

@@ -277,6 +277,17 @@ router.post('/clinicas/:id/subscricao/reactivar', async (req, res, next) => {
   }
 });
 
+router.patch('/clinicas/:id/suspender', async (req, res, next) => {
+  try {
+    const schema = z.object({ motivo: z.string().min(1, 'Motivo é obrigatório') });
+    const { motivo } = schema.parse(req.body);
+    const clinica = await superAdminService.suspenderClinica(req.params.id, motivo, req.user!.id);
+    res.json({ success: true, data: clinica });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/clinicas/:id/subscricao/suspender', async (req, res, next) => {
   try {
     await subscricaoService.suspender(req.params.id);

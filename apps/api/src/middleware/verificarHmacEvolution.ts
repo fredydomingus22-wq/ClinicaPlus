@@ -7,10 +7,13 @@ import { config } from '../lib/config';
  * Middleware para verificar a assinatura HMAC da Evolution API.
  */
 export const verificarHmacEvolution = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-  const secret = config.EVOLUTION_WEBHOOK_SECRET;
+  const secret = process.env.EVOLUTION_WEBHOOK_SECRET ?? config.EVOLUTION_WEBHOOK_SECRET;
   
-  // Se não houver secret configurado ou estivermos em testes, permite passar
-  if (!secret || config.NODE_ENV === 'test') {
+  if (process.env.DISABLE_WEBHOOK_SIGNATURE_CHECK === 'true') {
+    return next();
+  }
+
+  if (!secret) {
     if (!secret && config.NODE_ENV === 'production') {
       return next(new AppError('Configuração de segurança em falta (EVOLUTION_WEBHOOK_SECRET)', 500));
     }

@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { metaCloudApi } from '../lib/metaCloudApi';
+import { decryptSecret } from '../lib/secretCrypto';
 import { WaEstadoConversa, WaDirecao, WaInstancia } from '@prisma/client';
 import axios from 'axios';
 import { ClinicaMessageDTO } from '@clinicaplus/types';
@@ -149,7 +150,7 @@ export const waMetaWebhookService = {
     // Enviar read receipt (boas práticas Meta)
     if (instancia.metaPhoneNumberId && instancia.metaAccessToken) {
       await metaCloudApi
-        .marcarComoLido(instancia.metaPhoneNumberId, instancia.metaAccessToken, msg.id)
+        .marcarComoLido(instancia.metaPhoneNumberId, decryptSecret(instancia.metaAccessToken), msg.id)
         .catch(() => {});
     }
 

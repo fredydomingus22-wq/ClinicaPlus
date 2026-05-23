@@ -57,6 +57,7 @@ import anamnesesRouter from './routes/anamneses';
 import anamneseTemplatesRouter from './routes/anamneseTemplates';
 import odontogramasRouter from './routes/odontogramas';
 import { segurosRouter } from './routes/seguros';
+import contractsRouter from './routes/contracts';
 
 // Workers (BullMQ)
 import './workers/tratamento.worker';
@@ -241,6 +242,7 @@ app.use('/api/inventory', inventoryRouter);
 app.use('/api/anamneses', anamnesesRouter);
 app.use('/api/anamneseTemplates', anamneseTemplatesRouter);
 app.use('/api/odontogramas', odontogramasRouter);
+app.use('/api/contracts', contractsRouter);
 
 // Global Error Handler
 app.use(errorHandler);

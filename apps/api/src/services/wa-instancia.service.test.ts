@@ -117,7 +117,7 @@ describe('waInstanciaService', () => {
         provincia: null,
         subscricaoValidaAte: null
       } as Clinica);
-      mockPrisma.waInstancia.findUnique.mockResolvedValue({ 
+      mockPrisma.waInstancia.findFirst.mockResolvedValueOnce({ 
         id: 'ins-1',
         clinicaId: 'clinica-1',
         evolutionName: 'cp-clinica-1-prod',

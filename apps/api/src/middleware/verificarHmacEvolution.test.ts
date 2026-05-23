@@ -11,6 +11,7 @@ describe('verificarHmacEvolution middleware', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.DISABLE_WEBHOOK_SIGNATURE_CHECK = 'false';
     process.env.EVOLUTION_WEBHOOK_SECRET = secret;
     mockReq = {
       headers: {},
@@ -25,11 +26,10 @@ describe('verificarHmacEvolution middleware', () => {
   it('deve rejeitar payload sem assinatura HMAC', async () => {
     await verificarHmacEvolution(mockReq as Request, mockRes as Response, nextFunction);
 
-    expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ 
-      error: expect.stringContaining('Assinatura ausente') 
+    expect(nextFunction).toHaveBeenCalledWith(expect.objectContaining({
+      statusCode: 401,
+      code: 'WEBHOOK_NO_SIGNATURE'
     }));
-    expect(nextFunction).not.toHaveBeenCalled();
   });
 
   it('deve rejeitar payload com assinatura HMAC inválida', async () => {
@@ -37,11 +37,9 @@ describe('verificarHmacEvolution middleware', () => {
 
     await verificarHmacEvolution(mockReq as Request, mockRes as Response, nextFunction);
 
-    expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ 
-      error: expect.stringContaining('Assinatura inválida') 
+    expect(nextFunction).toHaveBeenCalledWith(expect.objectContaining({
+      statusCode: 401
     }));
-    expect(nextFunction).not.toHaveBeenCalled();
   });
 
   it('deve aceitar payload com assinatura HMAC válida', async () => {
@@ -55,7 +53,7 @@ describe('verificarHmacEvolution middleware', () => {
     expect(mockRes.status).not.toHaveBeenCalled();
   });
 
-  it('deve permitir acesso se EVOLUTION_WEBHOOK_SECRET não estiver definido (fallback)', async () => {
+  it('deve permitir acesso se EVOLUTION_WEBHOOK_SECRET não estiver definido fora de produção', async () => {
     delete process.env.EVOLUTION_WEBHOOK_SECRET;
     
     await verificarHmacEvolution(mockReq as Request, mockRes as Response, nextFunction);
