@@ -339,30 +339,21 @@ export interface AgtListSeriesRequest {
 }
 
 export interface AgtListSeriesResponse {
-  resultCode: string; // 0, 1, 2, 7, 8, 9
-  errorList?: Array<{
+  requestID: string;
+  resultCode: string;
+  taxRegistrationNumber: string;
+  documentStatusList?: Array<{
+    documentNo: string;
+    documentStatus: string;
+    document: unknown;
+    errorList?: Array<{
+      idError: string;
+      descriptionError: string;
+    }>;
+  }>;
+  requestErrorList?: Array<{
     idError: string;
     descriptionError: string;
-  }>;
-  seriesResultCount: string | number;
-  seriesInfo: Array<{
-    id?: string;
-    seriesCode: string;
-    seriesYear: string | number;
-    seriesStatus: string; // A, U, F
-    documentType: string;
-    seriesCreationDate: string;
-    firstDocumentCreated?: string;
-    lastDocumentCreated?: string;
-    firstDocumentNumber?: string;
-    invoicingMethod: string; // FEPC, FESF, SF
-    seriesContingencyIndicator: string; // N, C
-    seriesStartTS?: string; // ISO 8601, obrigatório se C
-    seriesEndTS?: string; // ISO 8601, obrigatório se C
-    nif?: string;
-    nome?: string;
-    dataAdesao?: string;
-    tipoAdesao?: string;
   }>;
 }
 

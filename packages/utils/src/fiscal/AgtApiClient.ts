@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import https from 'https';
+import crypto from 'crypto';
 import { buildAgtBasicAuthHeaderValue } from './agtAuth';
 import { type AgtEnv, getAgtEndpointPath, getAgtOrigin } from './agtEndpoints';
 import { buildAgtErrorFromHttpResponse, extractAgtErrorEntries } from './agtErrors';
@@ -256,20 +257,14 @@ export class AgtApiClient {
     const mockEnabled = this.isMock || process.env.AGT_MOCK === 'true';
     if (mockEnabled) {
       return {
+        requestID: crypto.randomUUID(),
         resultCode: '0',
-        seriesResultCount: '1',
-        seriesInfo: [
+        taxRegistrationNumber: request.taxRegistrationNumber,
+        documentStatusList: [
           {
-            id: 'MOCK-ID-1',
-            seriesCode: request.seriesCode || 'CPLS-SR1',
-            seriesYear: request.seriesYear || '2026',
-            seriesStatus: 'A',
-            documentType: request.documentType || 'FT',
-            seriesCreationDate: new Date().toISOString(),
-            invoicingMethod: 'FESF',
-            seriesContingencyIndicator: 'N',
-            nif: request.taxRegistrationNumber,
-            nome: 'ClinicaPlus Mock User'
+            documentNo: `${request.seriesCode || 'CPLS-SR1'}-${request.documentType || 'FT'}-0001`,
+            documentStatus: 'A',
+            document: null
           }
         ]
       };

@@ -165,7 +165,7 @@ export const fiscalApi = {
 
     const fromStatusResult = Array.isArray(statusResult?.resultEntryList)
       ? statusResult.resultEntryList
-          .map((entry: { documentEntryResult?: { id?: string; documentNo: string; documentDate: string; netTotal?: string } }) => {
+          .map((entry: { documentEntryResult?: { id?: string; documentNo: string; documentDate: string; netTotal?: string } }): AgtHistoricoItem | null => {
             const docEntry = entry.documentEntryResult;
             if (!docEntry) {
               return null;
@@ -181,7 +181,7 @@ export const fiscalApi = {
               hasPartialData: !docEntry.netTotal,
             };
           })
-          .filter(Boolean) as AgtHistoricoItem[]
+          .filter((item): item is AgtHistoricoItem => item !== null)
       : [];
 
     return {

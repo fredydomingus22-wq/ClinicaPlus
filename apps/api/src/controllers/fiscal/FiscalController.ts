@@ -322,15 +322,21 @@ export const fiscalController = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await agtApiClient.listarSeries(request as any, agtApiToken || '');
 
+      // Log para debug da resposta da AGT
+      logger.info({ response, documentStatusList: response.documentStatusList, resultCode: response.resultCode }, 'Resposta da AGT ao listar séries');
+
       // Mapear resposta da AGT para formato esperado pelo frontend
-      const items = (response.seriesInfo || []).map((info: any) => ({
-        id: info.id || `${info.seriesCode}-${info.seriesYear}`,
-        serieCode: info.seriesCode,
-        documentType: info.documentType,
+      // A AGT retorna documentStatusList com status de documentos, não seriesInfo
+      const items = (response.documentStatusList || []).map((doc: any) => ({
+        id: doc.documentNo || doc.requestID,
+        serieCode: doc.documentNo?.split('-')[0] || 'N/A',
+        documentType: doc.documentNo?.split('-')[1] || 'FT',
         authorizedQuantity: 0, // AGT não fornece este campo em listarSeries
         availableQuantity: 0, // AGT não fornece este campo em listarSeries
-        status: info.seriesStatus === 'A' ? 'ACTIVE' : 'EXPIRED'
+        status: doc.documentStatus === 'A' ? 'ACTIVE' : 'EXPIRED'
       }));
+
+      logger.info({ itemsCount: items.length, items }, 'Items mapeados para o frontend');
 
       return res.json({ ...response, items });
     } catch (error: unknown) {
