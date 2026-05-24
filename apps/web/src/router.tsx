@@ -49,6 +49,8 @@ const AdminConsolaFiscal = React.lazy(() => import('./pages/financeiro/ConsolaFi
 const AdminAuditLog = React.lazy(() => import('./pages/admin/AuditLogPage'));
 const AdminWhatsApp = React.lazy(() => import('./pages/configuracoes/WhatsappPage').then(m => ({ default: m.WhatsappPage })));
 const SubscricaoPage = React.lazy(() => import('./pages/configuracoes/SubscricaoPage').then(m => ({ default: m.SubscricaoPage })));
+const ContratosPage = React.lazy(() => import('./pages/admin/ContratosPage'));
+const ContratoDetalhe = React.lazy(() => import('./pages/admin/ContratoDetalhePage'));
 
 const FaturasPage = React.lazy(() => import('./pages/financeiro/FaturasPage'));
 const DocumentosFiscaisPage = React.lazy(() => import('./pages/financeiro/DocumentosFiscaisPage'));
@@ -537,6 +539,14 @@ export const router = createBrowserRouter([
           {
             path: '/admin/inventario/dashboard',
             element: <AdminInventarioDashboard />
+          },
+          {
+            path: '/admin/contratos',
+            element: <ContratosPage />
+          },
+          {
+            path: '/admin/contratos/:id',
+            element: <ContratoDetalhe />
           }
         ]
       }
