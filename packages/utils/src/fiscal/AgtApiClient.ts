@@ -1,13 +1,14 @@
 import axios, { AxiosInstance } from 'axios';
 import https from 'https';
+import { XMLBuilder } from 'fast-xml-parser';
 import { buildAgtBasicAuthHeaderValue } from './agtAuth';
 import { type AgtEnv, getAgtEndpointPath, getAgtOrigin } from './agtEndpoints';
 import { buildAgtErrorFromHttpResponse, extractAgtErrorEntries } from './agtErrors';
-import { 
-  Logger, 
-  AgtElectronicInvoiceRequest, 
-  AgtApiResponse, 
-  AgtStatusRequest, 
+import {
+  Logger,
+  AgtElectronicInvoiceRequest,
+  AgtApiResponse,
+  AgtStatusRequest,
   AgtStatusResponse,
   AgtListRequest,
   AgtListResponse,
@@ -65,6 +66,27 @@ export class AgtApiClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
+  }
+
+  private convertJsonToSoapXml(payload: any, endpoint: string): string {
+    const builder = new XMLBuilder({
+      ignoreAttributes: false,
+      format: true,
+      indentBy: '  '
+    });
+
+    // Converte o payload JSON para XML
+    const xmlPayload = builder.build(payload);
+
+    // Envelopa no formato SOAP
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <${endpoint} xmlns="http://agt.minfin.gov.ao/sigt/fe/ws/v1">
+      ${xmlPayload}
+    </${endpoint}>
+  </soapenv:Body>
+</soapenv:Envelope>`;
   }
 
   private mapAxiosError(error: any): never {
@@ -165,8 +187,10 @@ export class AgtApiClient {
 
     try {
       const url = getAgtEndpointPath(this.env, 'listarFacturas');
+      const isSoap = this.env === 'sandbox' && this.isSoapEndpoint('listarFacturas');
+      const payload = isSoap ? this.convertJsonToSoapXml(request, 'listarFacturas') : request;
 
-      const response = await this.client.post(url, request, {
+      const response = await this.client.post(url, payload, {
         headers: {
           ...this.getHeadersForEndpoint('listarFacturas'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
@@ -245,7 +269,10 @@ export class AgtApiClient {
 
     try {
       const url = getAgtEndpointPath(this.env, 'solicitarSerie');
-      const response = await this.client.post(url, request, {
+      const isSoap = this.env === 'sandbox' && this.isSoapEndpoint('solicitarSerie');
+      const payload = isSoap ? this.convertJsonToSoapXml(request, 'solicitarSerie') : request;
+
+      const response = await this.client.post(url, payload, {
         headers: {
           ...this.getHeadersForEndpoint('solicitarSerie'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
