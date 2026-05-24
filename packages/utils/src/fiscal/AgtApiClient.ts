@@ -43,15 +43,28 @@ export class AgtApiClient {
 
     this.client = axios.create({
       baseURL: getAgtOrigin(this.env),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
       timeout: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 90000,
       httpsAgent
     });
     this.logger = options.logger;
     this.isMock = options.isMock ?? false;
+  }
+
+  private isSoapEndpoint(endpoint: string): boolean {
+    return endpoint === 'solicitarSerie' || endpoint === 'listarFacturas';
+  }
+
+  private getHeadersForEndpoint(endpoint: string) {
+    if (this.env === 'sandbox' && this.isSoapEndpoint(endpoint)) {
+      return {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'Accept': 'text/xml'
+      };
+    }
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
   }
 
   private mapAxiosError(error: any): never {
@@ -96,6 +109,7 @@ export class AgtApiClient {
 
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('registarFactura'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -124,6 +138,7 @@ export class AgtApiClient {
 
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('obterEstado'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -153,6 +168,7 @@ export class AgtApiClient {
 
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('listarFacturas'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -199,6 +215,7 @@ export class AgtApiClient {
       const url = getAgtEndpointPath(this.env, 'consultarFactura');
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('consultarFactura'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -230,6 +247,7 @@ export class AgtApiClient {
       const url = getAgtEndpointPath(this.env, 'solicitarSerie');
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('solicitarSerie'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -270,6 +288,7 @@ export class AgtApiClient {
       const url = getAgtEndpointPath(this.env, 'listarSeries');
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('listarSeries'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
@@ -296,6 +315,7 @@ export class AgtApiClient {
       const url = getAgtEndpointPath(this.env, 'validarDocumento');
       const response = await this.client.post(url, request, {
         headers: {
+          ...this.getHeadersForEndpoint('validarDocumento'),
           'Authorization': buildAgtBasicAuthHeaderValue(apiToken)
         }
       });
