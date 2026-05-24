@@ -243,7 +243,6 @@ export const ConfiguracaoFiscalSchema = z.object({
   regimeFiscal: RegimeFiscalSchema,
   serieDocFiscal: z.string().min(2).max(10).default("CPLS"),
   agtSoftwareCert: z.string().max(100).optional(),
-  agtApiToken: z.string().max(500).optional(),
 });
 export type ConfiguracaoFiscalDto = z.infer<typeof ConfiguracaoFiscalSchema>;
 
@@ -555,7 +554,7 @@ A página mais crítica para o utilizador — **sem ela, nenhuma emissão funcio
 
 **Card 3 — Integração API e-Factura:**
 
-- Token API (`agtApiToken`) — campo password com toggle visibility
+- Credenciais AGT (Basic Auth) são **globais** e configuradas no servidor (`AGT_USERNAME`/`AGT_PASSWORD`).
 - URL da API (display only, auto-detectado pelo NODE_ENV)
 - Botão "Testar Conexão" com feedback visual
 

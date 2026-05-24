@@ -32,7 +32,7 @@ No ficheiro `apps/api/prisma/schema.prisma`:
    - `FaturaSnapshot` — foto imutável dos dados do emitente e cliente à emissão
 
 3. **No model `Clinica`**, adicionar campos (se não existem):
-   - `agtApiToken String?`
+   - (removido) `agtApiToken` — credenciais AGT são globais via env (`AGT_USERNAME`/`AGT_PASSWORD`)
    - `serieDocFiscal String @default("CPLS")`
    - `sequencias SequenciaDocFiscal[]` — relação inversa
 

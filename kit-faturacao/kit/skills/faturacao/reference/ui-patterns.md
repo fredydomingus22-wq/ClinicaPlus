@@ -192,7 +192,7 @@ function ConfiguracaoFiscalPage() {
           <label className="block text-sm font-medium text-neutral-700 mb-1">Token de Acesso API AGT</label>
           <input
             type="password"
-            {...form.register('agtApiToken')}
+            {/* Credenciais AGT (Basic Auth) são globais e não são configuradas por clínica no UI. */}
             placeholder="••••••••"
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
           />

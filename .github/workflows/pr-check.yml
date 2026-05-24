@@ -10,8 +10,31 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
-      JWT_SECRET: dummy-secret-for-typechecking
-      JWT_REFRESH_SECRET: dummy-refresh-secret-for-typechecking
+      # Mantemos env vars mínimas para o bootstrap do config.ts em ambiente de testes
+      DATABASE_URL: postgresql://test:test@localhost:5432/clinicaplus_test
+      DIRECT_URL: postgresql://test:test@localhost:5432/clinicaplus_test
+      FRONTEND_URL: http://localhost:5173
+
+      # Segredos dummy (>=64 chars) — suficientes para testes unitários
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_REFRESH_SECRET: fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210
+
+      # Dependências externas (dummy) — testes mockam estas integrações
+      REDIS_URL: redis://localhost:6379
+      RESEND_API_KEY: re_test_placeholder
+      METRICS_TOKEN: test-metrics-token-min-8-chars
+      ALERT_EMAIL: test@example.com
+
+      EVOLUTION_API_URL: http://localhost:8080
+      EVOLUTION_API_KEY: test
+      EVOLUTION_WEBHOOK_SECRET: test
+
+      N8N_BASE_URL: http://localhost:5678
+      N8N_API_KEY: test
+      API_PUBLIC_URL: http://localhost:3001
+
+      SUPABASE_URL: http://localhost:54321
+      SUPABASE_SERVICE_ROLE_KEY: test
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM:  ${{ secrets.TURBO_TEAM }}
 
