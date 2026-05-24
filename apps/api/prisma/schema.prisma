@@ -33,7 +33,6 @@ model Clinica {
   regimeFiscal        RegimeFiscal          @default(GERAL)
   agtSoftwareCert     String?               // NÃºmero de certificaÃ§Ã£o do software
   enderecoPostal      String?               // Logradouro, NÃºmero, etc. por SAF-T
-  agtApiToken         String?               // Credenciais API (Basic Auth: username:password ou Base64)
   agtPrivateKey       String?   @db.Text    // Chave privada emitida pela AGT para o contribuinte
   agtPublicKey        String?   @db.Text    // Chave pÃºblica emitida pela AGT para o contribuinte
   serieDocFiscal      String                @default("CPLS") // SÃ©rie documental (ex: CPLS, 2026, etc)

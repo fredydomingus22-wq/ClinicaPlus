@@ -92,3 +92,89 @@ WHERE "migration_name" = '20260522000500_contract_items_fk_type'
   AND "finished_at" IS NULL
   AND "rolled_back_at" IS NULL;
 ```
+
+## Migrações pendentes (não aplicadas em produção)
+
+As seguintes migrações existem localmente mas podem não ter sido aplicadas em produção:
+
+1. `20260521234000_add_contingencia_cols_sequencia_doc_fiscal` — adiciona colunas de contingência (idempotente)
+2. `20260522140000_add_odontograma` — cria tabela odontogramas
+3. `20260523120000_fatura_snapshot_cliente_country` — adiciona coluna clienteCountry (idempotente)
+4. `20260524123000_remove_agt_api_token` — remove coluna agtApiToken (idempotente)
+
+### Procedimento de emergência (se `prisma migrate deploy` falhar)
+
+Se o deploy da API falhar com erro de migração não aplicada, execute este SQL no Supabase SQL Editor:
+
+```sql
+-- Migration 20260521234000: adicionar colunas de contingência
+ALTER TABLE "sequencia_doc_fiscal"
+  ADD COLUMN IF NOT EXISTS "isContingency" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "startTS" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "endTS" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "isRegistered" BOOLEAN NOT NULL DEFAULT false;
+
+-- Migration 20260522140000: criar tabela odontogramas
+CREATE TABLE IF NOT EXISTS "odontogramas" (
+    "id" TEXT NOT NULL,
+    "clinicaId" TEXT NOT NULL,
+    "pacienteId" TEXT NOT NULL,
+    "medicoId" TEXT NOT NULL,
+    "agendamentoId" TEXT NOT NULL,
+    "marcacoes" JSONB NOT NULL DEFAULT '[]',
+    "criadoEm" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "atualizadoEm" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "odontogramas_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "odontogramas_agendamentoId_key" ON "odontogramas"("agendamentoId");
+CREATE INDEX IF NOT EXISTS "odontogramas_clinicaId_pacienteId_idx" ON "odontogramas"("clinicaId", "pacienteId");
+
+ALTER TABLE "odontogramas"
+  ADD CONSTRAINT IF NOT EXISTS "odontogramas_clinicaId_fkey"
+  FOREIGN KEY ("clinicaId") REFERENCES "clinicas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "odontogramas"
+  ADD CONSTRAINT IF NOT EXISTS "odontogramas_pacienteId_fkey"
+  FOREIGN KEY ("pacienteId") REFERENCES "pacientes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "odontogramas"
+  ADD CONSTRAINT IF NOT EXISTS "odontogramas_medicoId_fkey"
+  FOREIGN KEY ("medicoId") REFERENCES "medicos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "odontogramas"
+  ADD CONSTRAINT IF NOT EXISTS "odontogramas_agendamentoId_fkey"
+  FOREIGN KEY ("agendamentoId") REFERENCES "agendamentos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Migration 20260523120000: adicionar coluna clienteCountry
+ALTER TABLE "fatura_snapshots"
+  ADD COLUMN IF NOT EXISTS "clienteCountry" TEXT NOT NULL DEFAULT 'AO';
+
+-- Migration 20260524123000: remover coluna agtApiToken
+ALTER TABLE "clinicas"
+  DROP COLUMN IF EXISTS "agtApiToken";
+```
+
+Após aplicar manualmente, marque as migrações como aplicadas na tabela `_prisma_migrations`:
+
+```sql
+INSERT INTO "_prisma_migrations" ("migration_name", "started_at", "finished_at", "applied_steps_count")
+VALUES
+  ('20260521234000_add_contingencia_cols_sequencia_doc_fiscal', NOW(), NOW(), 1),
+  ('20260522140000_add_odontograma', NOW(), NOW(), 1),
+  ('20260523120000_fatura_snapshot_cliente_country', NOW(), NOW(), 1),
+  ('20260524123000_remove_agt_api_token', NOW(), NOW(), 1)
+ON CONFLICT ("migration_name") DO NOTHING;
+```
+
+### Alternativa: usar Prisma CLI em produção
+
+Se tiver acesso ao Prisma CLI no ambiente de produção, execute:
+
+```bash
+cd apps/api
+pnpm exec prisma migrate deploy
+```
+
+Isto aplicará todas as migrações pendentes automaticamente de forma segura.
