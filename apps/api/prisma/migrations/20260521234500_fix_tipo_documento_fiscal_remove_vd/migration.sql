@@ -10,49 +10,9 @@ UPDATE "faturas"
 SET "tipoDocFiscal" = 'FT'
 WHERE "tipoDocFiscal"::text = 'VD';
 
--- Merge VD sequencias into existing FT rows (same clinica/serie/ano)
-UPDATE "sequencia_doc_fiscal" ft
-SET
-  "ultimoNumero" = GREATEST(ft."ultimoNumero", vd."ultimoNumero"),
-  "isContingency" = (ft."isContingency" OR vd."isContingency"),
-  "startTS" = COALESCE(ft."startTS", vd."startTS"),
-  "endTS" = COALESCE(ft."endTS", vd."endTS"),
-  "isRegistered" = (ft."isRegistered" OR vd."isRegistered")
-FROM "sequencia_doc_fiscal" vd
-WHERE vd."tipoDoc"::text = 'VD'
-  AND ft."tipoDoc"::text = 'FT'
-  AND ft."clinicaId" = vd."clinicaId"
-  AND ft."serie" = vd."serie"
-  AND ft."anoFiscal" = vd."anoFiscal";
-
--- Drop VD rows that would collide with FT on unique (clinicaId, tipoDoc, serie, anoFiscal)
-DELETE FROM "sequencia_doc_fiscal" vd
-WHERE vd."tipoDoc"::text = 'VD'
-  AND EXISTS (
-    SELECT 1
-    FROM "sequencia_doc_fiscal" ft
-    WHERE ft."tipoDoc"::text = 'FT'
-      AND ft."clinicaId" = vd."clinicaId"
-      AND ft."serie" = vd."serie"
-      AND ft."anoFiscal" = vd."anoFiscal"
-  );
-
--- Remaining isolated VD rows can become FT without unique conflict
-UPDATE "sequencia_doc_fiscal" s
+-- Convert any remaining VD rows in sequencias to FT (simple, no complex merge)
+UPDATE "sequencia_doc_fiscal"
 SET "tipoDoc" = 'FT'
-WHERE s."tipoDoc"::text = 'VD'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM "sequencia_doc_fiscal" ft
-    WHERE ft."tipoDoc"::text = 'FT'
-      AND ft."clinicaId" = s."clinicaId"
-      AND ft."serie" = s."serie"
-      AND ft."anoFiscal" = s."anoFiscal"
-      AND ft."id" <> s."id"
-  );
-
--- Drop any leftover VD sequencias (safety net)
-DELETE FROM "sequencia_doc_fiscal"
 WHERE "tipoDoc"::text = 'VD';
 
 -- Recreate enum only when VD label still exists
