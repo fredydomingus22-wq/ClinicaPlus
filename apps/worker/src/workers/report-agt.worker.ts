@@ -3,26 +3,31 @@ import { redis } from '../lib/redis';
 import { logger as baseLogger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import {
-  agtApiClient,
+  AgtApiClient,
+  type AgtEnv,
   CertificationService,
   buildAgtRegistarFacturaPayload,
   buildAgtObterEstadoPayload,
   getDefaultAgtSoftwareInfoDetail,
   pollAgtSubmissionStatus,
+  getAgtBasicAuthFromEnv,
+  resolveAgtEnvFromProcessEnv,
+  resolveAgtTenantKeys,
   resolveCustomerCountry,
 } from '@clinicaplus/utils/server';
 import { AppError } from '@clinicaplus/utils';
 import { JobNames, ReportAgtJob } from '@clinicaplus/events';
 import * as crypto from 'crypto';
+import { decryptSecret } from '../lib/secretCrypto';
 
 const logger = baseLogger.child({ worker: 'report-agt' });
 
-function getAgtAuthToken(): string {
-  if (process.env.AGT_USERNAME && process.env.AGT_PASSWORD) {
-    return `${process.env.AGT_USERNAME}:${process.env.AGT_PASSWORD}`;
-  }
-  return '';
-}
+const env: AgtEnv = resolveAgtEnvFromProcessEnv();
+const agtApiClient = new AgtApiClient({
+  env,
+  logger,
+  isMock: process.env.AGT_MOCK === 'true' || process.env.NODE_ENV === 'test',
+});
 
 /**
  * Worker para reporte de faturas à AGT (e-Factura)
@@ -49,15 +54,13 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
         return;
       }
 
-      const apiToken = getAgtAuthToken();
+      const apiToken = getAgtBasicAuthFromEnv();
       if (!apiToken && process.env.AGT_MOCK !== 'true') {
         throw new AppError('Token da API AGT não configurado', 400);
       }
 
-      const certService = new CertificationService({
-        tenantPrivateKey: fatura.clinica.agtPrivateKey || undefined,
-        tenantPublicKey: fatura.clinica.agtPublicKey || undefined,
-      });
+      const tenantKeys = resolveAgtTenantKeys(fatura.clinica, decryptSecret);
+      const certService = new CertificationService(tenantKeys);
 
       if (!fatura.clinica.nif) {
         throw new AppError('NIF da clínica não configurado para reporte AGT', 400);
@@ -74,6 +77,7 @@ export const reportAgtWorker = new Worker<ReportAgtJob>(
           total: fatura.total,
           retencaoFonte: fatura.retencaoFonte,
           taxRegistrationNumber: fatura.clinica.nif,
+          emitenteNome: fatura.snapshot.emitenteNome,
           clienteNif: fatura.snapshot.clienteNif,
           clienteNome: fatura.snapshot.clienteNome,
           clienteCountry:

@@ -1,17 +1,15 @@
-﻿import { prisma } from '../../lib/prisma';
+import { prisma } from '../../lib/prisma';
 import { agtApiClient } from './AgtApiClient';
 import { faturasService } from '../faturas.service';
 import { CertificationService } from './CertificationService';
 import { logger } from '../../lib/logger';
-import { getDefaultAgtSoftwareInfoDetail } from '@clinicaplus/utils/server';
+import {
+  getDefaultAgtSoftwareInfoDetail,
+  requireAgtBasicAuthFromEnvOrEmptyWhenMock,
+  resolveAgtTenantKeys,
+} from '@clinicaplus/utils/server';
 import crypto from 'crypto';
-
-function getAgtAuthToken(): string {
-  if (process.env.AGT_USERNAME && process.env.AGT_PASSWORD) {
-    return `${process.env.AGT_USERNAME}:${process.env.AGT_PASSWORD}`;
-  }
-  return '';
-}
+import { decryptSecret } from '../../lib/secretCrypto';
 
 export class ContingencySyncService {
   /**
@@ -100,10 +98,8 @@ export class ContingencySyncService {
       }
     }
 
-    const certService = new CertificationService({
-      tenantPrivateKey: clinica.agtPrivateKey || process.env.AGT_PRIVATE_KEY || undefined,
-      tenantPublicKey: clinica.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined
-    });
+    const tenantKeys = resolveAgtTenantKeys(clinica, decryptSecret);
+    const certService = new CertificationService(tenantKeys);
 
     for (const serie of seriesContingentes) {
       try {
@@ -140,7 +136,7 @@ export class ContingencySyncService {
           })
         };
 
-        await agtApiClient.solicitarSerie(request as any, getAgtAuthToken());
+        await agtApiClient.solicitarSerie(request as any, requireAgtBasicAuthFromEnvOrEmptyWhenMock());
 
         await prisma.sequenciaDocFiscal.update({
           where: { id: serie.id },

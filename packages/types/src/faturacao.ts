@@ -63,7 +63,6 @@ export const ConfiguracaoFiscalSchema = z.object({
   regimeFiscal: RegimeFiscalSchema,
   serieDocFiscal: z.string().min(2).max(10).default("CPLS"),
   agtSoftwareCert: z.string().max(100).optional(),
-  agtApiToken: z.string().max(500).optional(),
 }).refine(data => {
   if (data.tipoEntidade === 'EMPRESA') return data.nif.length === 10;
   if (data.tipoEntidade === 'SINGULAR') return data.nif.length === 13;

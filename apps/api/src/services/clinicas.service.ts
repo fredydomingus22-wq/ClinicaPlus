@@ -8,6 +8,7 @@ import type { Clinica, ConfiguracaoClinica, ContactoClinica, Papel } from '@pris
 import { addDays, endOfDay } from 'date-fns';
 import { subscricaoService } from './subscricao.service';
 import { Plano, EstadoSubscricao, RazaoMudancaPlano } from '@clinicaplus/types';
+import { encryptSecret } from '../lib/secretCrypto';
 
 /**
  * Maps a Prisma Clinica record to a ClinicaDTO.
@@ -42,9 +43,8 @@ function toClinicaDTO(
     agtSoftwareCert: '0/AGT/2026',
     enderecoPostal: c.enderecoPostal,
     serieDocFiscal: c.serieDocFiscal,
-    agtApiToken: c.agtApiToken,
-    agtPrivateKey: c.agtPrivateKey,
-    agtPublicKey: c.agtPublicKey,
+    agtPrivateKeyConfigured: !!c.agtPrivateKey,
+    agtPublicKeyConfigured: !!c.agtPublicKey,
   };
 
   if (config) {
@@ -222,6 +222,27 @@ export const clinicasService = {
   async update(clinicaId: string, data: ClinicaUpdateInput): Promise<ClinicaDTO> {
     // Prevent changing slug or plano via this endpoint
     const { configuracao, ...safeData } = data;
+
+    // Normalizar strings vazias e encriptar segredos (nunca guardar em claro)
+    const normalizeEmpty = (v: unknown): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v !== 'string') return undefined;
+      const trimmed = v.trim();
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const maybeEncrypt = (v: string | null | undefined): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      // Evitar dupla-encriptação
+      if (v.startsWith('v1:')) return v;
+      return encryptSecret(v);
+    };
+
+    // Campos fiscais sensíveis (AGT)
+    (safeData as any).agtPrivateKey = maybeEncrypt(normalizeEmpty((safeData as any).agtPrivateKey) ?? undefined);
+    (safeData as any).agtPublicKey = maybeEncrypt(normalizeEmpty((safeData as any).agtPublicKey) ?? undefined);
 
     // Sync logo and logotipoUrl if any is provided
     if (safeData.logo && !safeData.logotipoUrl) {

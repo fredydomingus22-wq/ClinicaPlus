@@ -1,5 +1,6 @@
 ﻿import type { CertificationService } from './CertificationService';
 import type { AgtDocument, AgtDocumentLine, AgtElectronicInvoiceRequest } from './types';
+import { roundUpCents } from './money';
 
 export interface AgtFaturaItemInput {
   id?: string;
@@ -21,10 +22,22 @@ export interface AgtFaturaRegistoInput {
   total: number;
   retencaoFonte?: number;
   taxRegistrationNumber: string;
+  /** Denominação do contribuinte emissor (clínica). Vai para `document.companyName`. */
+  emitenteNome: string;
   clienteNif: string;
   clienteNome: string;
   clienteCountry?: string;
   itens: AgtFaturaItemInput[];
+}
+
+/**
+ * `document.companyName` (e também `jwsDocumentSignature.companyName`) é o
+ * **nome/denominação do contribuinte emissor** (clínica) — NÃO é o nome do cliente.
+ *
+ * Fonte: documentação AGT (skill agt-faturacao-electronica) + definição do object document.
+ */
+function getAgtCompanyName(input: AgtFaturaRegistoInput): string {
+  return input.emitenteNome;
 }
 
 export function getDefaultAgtSoftwareInfoDetail() {
@@ -58,10 +71,6 @@ export interface BuildAgtRegistarFacturaOptions {
   eacCode?: string;
 }
 
-function centsToDecimal(cents: number): string {
-  return (cents / 100).toFixed(2);
-}
-
 function centsToNumber(cents: number): number {
   return Number((cents / 100).toFixed(2));
 }
@@ -79,7 +88,8 @@ function lineBaseCents(item: AgtFaturaItemInput): number {
 
 function lineIvaCents(item: AgtFaturaItemInput): number {
   const base = lineBaseCents(item);
-  return Math.round(base * (item.taxaIva / 100));
+  // AGT: arredondar "por excesso" ao cêntimo
+  return roundUpCents((base * item.taxaIva) / 100);
 }
 
 function buildDocumentLine(
@@ -89,7 +99,7 @@ function buildDocumentLine(
 ): AgtDocumentLine {
   const baseCents = lineBaseCents(item);
   const ivaCents = lineIvaCents(item);
-  const netAmount = centsToDecimal(baseCents);
+  const netAmount = centsToNumber(baseCents);
   const qty = item.quantidade > 0 ? item.quantidade : 1;
   const unitPriceBaseCents = Math.round(baseCents / qty);
 
@@ -98,9 +108,9 @@ function buildDocumentLine(
     taxType: 'IVA',
     taxCountryRegion: 'AO',
     taxCode,
-    taxPercentage: item.taxaIva.toFixed(2),
-    taxBase: centsToDecimal(baseCents),
-    taxContribution: centsToDecimal(ivaCents),
+    taxPercentage: Number(item.taxaIva.toFixed(2)),
+    taxBase: centsToNumber(baseCents),
+    taxContribution: centsToNumber(ivaCents),
   };
 
   if (item.taxaIva === 0) {
@@ -110,31 +120,41 @@ function buildDocumentLine(
   }
 
   const line: AgtDocumentLine = {
-    lineNumber: String(index + 1),
+    lineNumber: index + 1,
     operationType: 'SS',
     productCode: (item.id || item.descricao).substring(0, 30).toUpperCase(),
     productDescription: item.descricao,
-    quantity: String(item.quantidade),
+    quantity: qty,
     unitOfMeasure: 'UN',
-    unitPrice: centsToDecimal(item.precoUnit),
-    unitPriceBase: centsToDecimal(unitPriceBaseCents),
+    unitPrice: centsToNumber(item.precoUnit),
+    unitPriceBase: centsToNumber(unitPriceBaseCents),
     taxes: [taxEntry],
-    settlementAmount: '0.00',
+    settlementAmount: 0,
   };
 
   const debitTypes = new Set(['NC', 'RE']);
   if (debitTypes.has(tipoDocFiscal)) {
     line.debitAmount = netAmount;
-    line.creditAmount = '0.00';
+    line.creditAmount = 0;
   } else {
     line.creditAmount = netAmount;
-    line.debitAmount = '0.00';
+    line.debitAmount = 0;
   }
 
   return line;
 }
 
 export function buildDocumentSigningPayload(input: AgtFaturaRegistoInput) {
+  /**
+   * Fonte de verdade: documentação AGT (skill agt-faturacao-electronica).
+   *
+   * Regra de ouro: assinar EXACTAMENTE os mesmos valores/formatos que enviamos
+   * no `document` (evita divergências "number vs string" entre assinatura e payload).
+   *
+   * Nota sobre `companyName`:
+   * - Campo refere-se à denominação do contribuinte emissor (clínica).
+   * - Mantemos consistência assinatura ↔ payload.
+   */
   return {
     documentNo: input.numeroFatura,
     taxRegistrationNumber: input.taxRegistrationNumber,
@@ -142,7 +162,7 @@ export function buildDocumentSigningPayload(input: AgtFaturaRegistoInput) {
     documentDate: input.dataEmissao.toISOString().slice(0, 10),
     customerTaxID: input.clienteNif,
     customerCountry: input.clienteCountry || 'AO',
-    companyName: input.clienteNome,
+    companyName: getAgtCompanyName(input),
     documentTotals: {
       taxPayable: centsToNumber(input.totalIva),
       netTotal: centsToNumber(input.subtotal),
@@ -161,9 +181,9 @@ export function buildAgtRegistarFacturaPayload(
   const signingPayload = buildDocumentSigningPayload(input);
 
   const documentTotals = {
-    taxPayable: centsToDecimal(input.totalIva),
-    netTotal: centsToDecimal(input.subtotal),
-    grossTotal: centsToDecimal(input.total),
+    taxPayable: centsToNumber(input.totalIva),
+    netTotal: centsToNumber(input.subtotal),
+    grossTotal: centsToNumber(input.total),
   };
 
   const document: AgtDocument = {
@@ -176,7 +196,7 @@ export function buildAgtRegistarFacturaPayload(
     systemEntryDate,
     customerTaxID: input.clienteNif,
     customerCountry: input.clienteCountry || 'AO',
-    companyName: input.clienteNome,
+    companyName: getAgtCompanyName(input),
     lines: input.itens.map((item, idx) => buildDocumentLine(item, idx, input.tipoDocFiscal)),
     documentTotals,
   };
@@ -186,7 +206,7 @@ export function buildAgtRegistarFacturaPayload(
       {
         withholdingTaxType: 'IRT',
         withholdingTaxDescription: 'Retencao na fonte',
-        withholdingTaxAmount: centsToDecimal(input.retencaoFonte),
+        withholdingTaxAmount: centsToNumber(input.retencaoFonte),
       },
     ];
   }

@@ -118,7 +118,15 @@ export class CertificationService {
    */
   public signSoftwareJWS(data: { productId: string, productVersion: string, softwareValidationNumber: string, signatureVersion?: number }): string {
     const key = this.ensureProducerKey();
-    return this.signWithKey(data, key);
+    // Fonte de verdade (skill AGT): jwsSoftwareSignature assina APENAS:
+    // { productId, productVersion, softwareValidationNumber }
+    // (mesmo quando `softwareInfoDetail` inclui `signatureVersion` no registarFactura).
+    const payload = {
+      productId: data.productId,
+      productVersion: data.productVersion,
+      softwareValidationNumber: data.softwareValidationNumber,
+    };
+    return this.signWithKey(payload, key);
   }
 
   /**
@@ -205,6 +213,3 @@ export class CertificationService {
     }
   }
 }
-
-// Singleton global (Produtor apenas)
-export const certificationService = new CertificationService();

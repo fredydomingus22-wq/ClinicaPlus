@@ -56,7 +56,6 @@ export const ClinicaUpdateSchema = z.object({
   enderecoPostal: z.string().optional(),
   regimeFiscal: z.enum(['GERAL', 'SIMPLIFICADO', 'EXUSA']).optional(),
   serieDocFiscal: z.string().optional(),
-  agtApiToken: z.string().optional(),
   agtPrivateKey: z.string().optional(),
   agtPublicKey: z.string().optional(),
   configuracao: ConfiguracaoClinicaUpdateSchema.optional(),

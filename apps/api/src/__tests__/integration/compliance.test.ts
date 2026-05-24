@@ -2,13 +2,14 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../server';
 import { factories } from '../helpers/factories';
-import { certificationService } from '../../services/fiscal/CertificationService';
+import { CertificationService } from '../../services/fiscal/CertificationService';
 import * as crypto from 'crypto';
 
 describe('Fiscal Compliance & Integration', () => {
   let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
   let privateKey: string;
   let publicKey: string;
+  let certService: CertificationService;
 
   beforeAll(async () => {
     // 1. Gerar par de chaves RSA-2048 para o teste
@@ -25,6 +26,10 @@ describe('Fiscal Compliance & Integration', () => {
     process.env.AGT_PUBLIC_KEY = publicKey;
 
     ctx = await factories.setupClinicaCompleta();
+
+    certService = new CertificationService({
+      tenantPublicKey: publicKey,
+    });
   });
 
   afterAll(async () => {
@@ -77,7 +82,7 @@ describe('Fiscal Compliance & Integration', () => {
       signatureBase64: fatura.fiscalHash
     };
 
-    const isValido = certificationService.verificarAssinatura(payload);
+    const isValido = certService.verificarAssinatura(payload);
     expect(isValido).toBe(true);
   });
 

@@ -19,6 +19,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
     total: 57000,
     retencaoFonte: 0,
     taxRegistrationNumber: '5001636863',
+    emitenteNome: 'Clinica Exemplo Lda',
     clienteNif: 'PT987654321',
     clienteNome: 'Cliente Exemplo Lda',
     clienteCountry: 'PT',
@@ -53,7 +54,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
       documentDate: '2025-11-04',
       customerTaxID: 'PT987654321',
       customerCountry: 'PT',
-      companyName: 'Cliente Exemplo Lda',
+      companyName: 'Clinica Exemplo Lda',
       documentTotals: {
         taxPayable: 70,
         netTotal: 500,
@@ -72,9 +73,9 @@ describe('buildAgtRegistarFacturaPayload', () => {
       },
     });
     const ftLine = ftPayload.documents[0]!.lines[0]!;
-    expect(ftLine.creditAmount).toBe('500.00');
-    expect(ftLine.debitAmount).toBe('0.00');
-    expect(ftLine.taxes[0]?.taxContribution).toBe('70.00');
+    expect(ftLine.creditAmount).toBe(500);
+    expect(ftLine.debitAmount).toBe(0);
+    expect(ftLine.taxes[0]?.taxContribution).toBe(70);
 
     const ncPayload = buildAgtRegistarFacturaPayload(
       { ...baseInput, tipoDocFiscal: 'NC' },
@@ -89,8 +90,8 @@ describe('buildAgtRegistarFacturaPayload', () => {
       }
     );
     const ncLine = ncPayload.documents[0]!.lines[0]!;
-    expect(ncLine.debitAmount).toBe('500.00');
-    expect(ncLine.creditAmount).toBe('0.00');
+    expect(ncLine.debitAmount).toBe(500);
+    expect(ncLine.creditAmount).toBe(0);
   });
 
   it('inclui withholdingTaxList quando há retenção', () => {
@@ -110,7 +111,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
       {
         withholdingTaxType: 'IRT',
         withholdingTaxDescription: 'Retencao na fonte',
-        withholdingTaxAmount: '16.50',
+        withholdingTaxAmount: 16.5,
       },
     ]);
   });
@@ -133,5 +134,31 @@ describe('buildAgtRegistarFacturaPayload', () => {
     expect(payload.documents[0]?.documentDate).toBe('2025-11-04');
     expect(payload.documents[0]?.lines[0]?.unitOfMeasure).toBe('UN');
     expect(payload.documents[0]?.systemEntryDate).toContain('T');
+  });
+
+  it('normaliza quantity: nunca envia "0" (fallback -> 1)', () => {
+    const payload = buildAgtRegistarFacturaPayload(
+      {
+        ...baseInput,
+        itens: [
+          {
+            ...baseInput.itens[0]!,
+            quantidade: 0,
+          },
+        ],
+      },
+      certService,
+      {
+        submissionUUID: 'uuid-qty-0',
+        softwareInfoDetail: {
+          productId: 'DocAgen',
+          productVersion: '1.0.0',
+          softwareValidationNumber: 'C_134',
+        },
+      }
+    );
+
+    const line = payload.documents[0]!.lines[0]!;
+    expect(line.quantity).toBe(1);
   });
 });

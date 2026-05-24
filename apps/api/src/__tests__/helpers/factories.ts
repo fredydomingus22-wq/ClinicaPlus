@@ -94,7 +94,11 @@ export const factories = {
       enderecoPostal: 'Rua Direta do Sambizanga, Luanda, Angola',
       cidade: 'Luanda',
       provincia: 'Luanda',
-      serieDocFiscal: 'TEST'
+      serieDocFiscal: 'TEST',
+      // Para testes de compliance fiscal (hash chain / assinaturas), usamos as chaves
+      // do ambiente quando presentes (não encriptadas nos fixtures).
+      agtPrivateKey: process.env.AGT_PRIVATE_KEY ?? null,
+      agtPublicKey: process.env.AGT_PUBLIC_KEY ?? null,
     });
     const admin = await factories.createAdmin(clinica.id);
     const { user: medicoUser, medico } = await factories.createMedico(clinica.id);

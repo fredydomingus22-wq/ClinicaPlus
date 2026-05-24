@@ -21,16 +21,20 @@ export interface AgtSoftwareInfo {
 }
 
 export interface AgtDocumentLine {
-  lineNumber: string;
+  /** DS.120: integer (>=1) */
+  lineNumber: number;
   operationType: string;
   productCode: string;
   productDescription: string;
-  quantity: string;
+  /** DS.120: number (>=0) */
+  quantity: number;
   unitOfMeasure: string;
-  unitPrice: string; // Preço sem descontos e sem impostos
-  unitPriceBase: string; // Preço com descontos e sem impostos
-  debitAmount?: string;
-  creditAmount?: string;
+  /** DS.120: number (>=0) — Preço unitário já deduzido de descontos, sem impostos */
+  unitPrice: number;
+  /** DS.120: number (>=0) — Preço unitário base (sem descontos e sem impostos) */
+  unitPriceBase: number;
+  debitAmount?: number;
+  creditAmount?: number;
   referenceInfo?: {
     reference: string;
     reason: string;
@@ -40,13 +44,13 @@ export interface AgtDocumentLine {
     taxType: string;
     taxCountryRegion: string;
     taxCode: string;
-    taxPercentage: string;
-    taxBase?: string;
-    taxAmount?: string; // Valor fixo IS (se aplicável)
-    taxContribution?: string; // Valor calculado do imposto
+    taxPercentage: number;
+    taxBase?: number;
+    taxAmount?: number; // Valor fixo IS (se aplicável)
+    taxContribution?: number; // Valor calculado do imposto
     taxExemptionCode?: string;
   }>;
-  settlementAmount?: string;
+  settlementAmount?: number;
 }
 
 export interface AgtDocument {
@@ -64,19 +68,19 @@ export interface AgtDocument {
   companyName: string;
   lines: AgtDocumentLine[];
   documentTotals: {
-    taxPayable: string;
-    netTotal: string;
-    grossTotal: string;
+    taxPayable: number;
+    netTotal: number;
+    grossTotal: number;
     currency?: {
       currencyCode: string;
-      currencyAmount: string;
-      exchangeRate: string;
+      currencyAmount: number;
+      exchangeRate: number;
     };
   };
   withholdingTaxList?: Array<{
     withholdingTaxType: string;
     withholdingTaxDescription: string;
-    withholdingTaxAmount: string;
+    withholdingTaxAmount: number;
   }>;
 }
 

@@ -82,7 +82,3 @@ export class CertificationService extends BaseCertificationService {
     return lastRC?.fiscalHash || '';
   }
 }
-
-export const certificationService = new CertificationService();
-
-export default certificationService;

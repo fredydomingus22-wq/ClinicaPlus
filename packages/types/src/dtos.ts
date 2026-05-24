@@ -41,9 +41,13 @@ export interface ClinicaDTO {
   agtSoftwareCert?: string | null;
   enderecoPostal?: string | null;
   serieDocFiscal?: string | null;
-  agtApiToken?: string | null;
-  agtPrivateKey?: string | null;
-  agtPublicKey?: string | null;
+  /**
+   * NOTA DE SEGURANÇA:
+   * Nunca expor segredos (tokens/keys) no payload da API.
+   * Estes flags permitem ao UI mostrar "configurado" sem revelar o conteúdo.
+   */
+  agtPrivateKeyConfigured?: boolean;
+  agtPublicKeyConfigured?: boolean;
   configuracao?: {
     id: string;
     lembrete24h: boolean;

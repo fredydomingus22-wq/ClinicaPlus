@@ -35,11 +35,13 @@ import {
   getDefaultAgtSoftwareInfoDetail,
   pollAgtSubmissionStatus,
   resolveCustomerCountry,
+  resolveAgtTenantKeys,
 } from '@clinicaplus/utils/server';
 import { logger } from '../lib/logger';
 import { agtApiClient } from './fiscal/AgtApiClient';
 import { proximoNumero as obterProximoNumeroDocumento } from './fiscal/SequenciaService';
 import { reportAgtQueue } from '../lib/queues';
+import { decryptSecret } from '../lib/secretCrypto';
 
 type PagamentoCreateInput = z.infer<typeof PagamentoCreateSchema>;
 
@@ -193,10 +195,7 @@ export const faturasService = {
       }
 
       // 4. Instanciar serviço de certificação com as chaves da clínica
-      const certService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || process.env.AGT_PRIVATE_KEY,
-        tenantPublicKey: clinica.agtPublicKey || process.env.AGT_PUBLIC_KEY,
-      });
+      const certService = new CertificationService(resolveAgtTenantKeys(clinica, decryptSecret));
 
       // 3. Recalcular — Prisma devolve motivoIsencao: string | null; ItemCalculo espera string? (sem null).
       // Com exactOptionalPropertyTypes:true não podemos passar undefined explicitamente,
@@ -356,16 +355,20 @@ export const faturasService = {
       const { CertificationService } = await import('./fiscal/CertificationService');
       const crypto = await import('crypto');
 
-      const certService = new CertificationService({
-        tenantPrivateKey: fatura.clinica?.agtPrivateKey || process.env.AGT_PRIVATE_KEY,
-        tenantPublicKey: fatura.clinica?.agtPublicKey || process.env.AGT_PUBLIC_KEY,
-      });
+      const certService = new CertificationService(resolveAgtTenantKeys(fatura.clinica || {}, decryptSecret));
 
       const clienteNome = fatura.snapshot?.clienteNome ?? fatura.paciente?.nome ?? 'Consumidor Final';
       const clienteNif = fatura.snapshot?.clienteNif ?? fatura.paciente?.nif ?? '999999999';
       const clienteCountry =
         fatura.snapshot?.clienteCountry ?? resolveCustomerCountry(clienteNif);
       const taxRegistrationNumber = fatura.clinica?.nif || '999999999';
+      if (!fatura.snapshot?.emitenteNome) {
+        throw new AppError(
+          'Snapshot fiscal incompleto: emitenteNome em falta. Re-emita o documento para gerar snapshot correctamente.',
+          400
+        );
+      }
+      const emitenteNome = fatura.snapshot.emitenteNome;
 
       const agtPayload = buildAgtRegistarFacturaPayload(
         {
@@ -378,6 +381,7 @@ export const faturasService = {
           total: fatura.total,
           retencaoFonte: fatura.retencaoFonte,
           taxRegistrationNumber,
+          emitenteNome,
           clienteNif,
           clienteNome,
           clienteCountry,
@@ -649,10 +653,7 @@ export const faturasService = {
       const clinica = await tx.clinica.findUnique({ where: { id: clinicaId } });
       if (!clinica) throw new AppError('Clínica não encontrada', 404);
 
-      const certificationService = new CertificationService({
-        tenantPrivateKey: clinica.agtPrivateKey || undefined,
-        tenantPublicKey: clinica.agtPublicKey || undefined,
-      });
+      const certificationService = new CertificationService(resolveAgtTenantKeys(clinica, decryptSecret));
       const serieDocFiscal = clinica.serieDocFiscal || 'CPLS';
       const hashAnterior = await certificationService.obterHashAnteriorRecibo(clinicaId, serieDocFiscal, tx);
       const { formatado: numeroRecibo } = await proximoNumero(tx, clinicaId, PrismaTipoDoc.RC, serieDocFiscal);

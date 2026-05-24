@@ -35,7 +35,6 @@ const getClinicaBase = (): Clinica => ({
   regimeFiscal: 'GERAL' as any,
   agtSoftwareCert: null,
   enderecoPostal: null,
-  agtApiToken: null,
   serieDocFiscal: 'CPLS'
 } as unknown as Clinica);
 

@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
 
 import { agtApiClient } from '../../services/fiscal/AgtApiClient';
@@ -9,15 +9,13 @@ import type { AgtStatusRequest, AgtError } from '@clinicaplus/utils';
 import {
   buildAgtObterEstadoPayload,
   getDefaultAgtSoftwareInfoDetail,
+  getAgtBasicAuthFromEnv,
+  formatAgtEnvLabel,
   mapAgtStatusToEnvio,
+  resolveAgtEnvFromProcessEnv,
+  resolveAgtTenantKeys,
 } from '@clinicaplus/utils/server';
-
-function getAgtAuthToken(): string {
-  if (process.env.AGT_USERNAME && process.env.AGT_PASSWORD) {
-    return `${process.env.AGT_USERNAME}:${process.env.AGT_PASSWORD}`;
-  }
-  return '';
-}
+import { decryptSecret } from '../../lib/secretCrypto';
 
 function isTimeoutError(error: unknown): boolean {
   return !!(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'ECONNABORTED');
@@ -30,10 +28,8 @@ function isUpstreamNetworkError(error: unknown): boolean {
 }
 
 function createAgtCertificationService(clinica: { agtPrivateKey?: string | null; agtPublicKey?: string | null }) {
-  return new CertificationService({
-    tenantPrivateKey: clinica.agtPrivateKey || process.env.AGT_PRIVATE_KEY || undefined,
-    tenantPublicKey: clinica.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined,
-  });
+  const tenantKeys = resolveAgtTenantKeys(clinica, decryptSecret);
+  return new CertificationService(tenantKeys);
 }
 
 function mapAgtErrorToHttp(error: unknown): { status: number; payload: { error: string; code?: string | number } } | null {
@@ -62,7 +58,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -76,8 +71,8 @@ export const fiscalController = {
         });
       }
 
-      const agtApiToken = getAgtAuthToken();
-      logger.debug({ hasToken: !!agtApiToken, source: process.env.AGT_API_TOKEN ? 'env' : 'db' }, 'AGT token used for connection test');
+      const agtApiToken = getAgtBasicAuthFromEnv();
+      logger.debug({ hasToken: !!agtApiToken, source: 'env' }, 'AGT token used for connection test');
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ 
           success: false, 
@@ -114,14 +109,14 @@ export const fiscalController = {
         jwsSignature: certService.signRequestJWS({ taxRegistrationNumber, requestID })
       };
 
-      await agtApiClient.obterEstado(statusRequest as AgtStatusRequest, agtApiToken);
+      await agtApiClient.obterEstado(statusRequest as AgtStatusRequest, agtApiToken || '');
 
       return res.json({ 
         success: true, 
         sucesso: true,
         message: 'ConexÃ£o com a AGT estabelecida com sucesso',
         mensagem: 'ConexÃ£o com a AGT estabelecida com sucesso',
-        ambiente: process.env.NODE_ENV === 'production' && process.env.AGT_SANDBOX !== 'true' ? 'PRODUÃ‡ÃƒO' : 'SANDBOX'
+        ambiente: formatAgtEnvLabel(resolveAgtEnvFromProcessEnv())
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao conectar com a AGT';
@@ -148,7 +143,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: {
-          agtApiToken: true,
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -159,7 +153,7 @@ export const fiscalController = {
         return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const agtApiToken = getAgtAuthToken();
+      const agtApiToken = getAgtBasicAuthFromEnv();
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
       }
@@ -175,7 +169,7 @@ export const fiscalController = {
         submissionUUID: crypto.randomUUID(),
       });
 
-      const statusResult = await agtApiClient.obterEstado(payload as AgtStatusRequest, agtApiToken);
+      const statusResult = await agtApiClient.obterEstado(payload as AgtStatusRequest, agtApiToken || '');
       const statusEnvio = mapAgtStatusToEnvio(statusResult);
 
       if (statusEnvio === 'ENTREGUE' || statusEnvio === 'ERRO') {
@@ -239,7 +233,7 @@ export const fiscalController = {
       }
 
       const certService = new CertificationService({
-        tenantPublicKey: clinicaData.agtPublicKey || process.env.AGT_PUBLIC_KEY || undefined
+        tenantPublicKey: clinicaData.agtPublicKey ? decryptSecret(clinicaData.agtPublicKey) : undefined
       });
 
       for (const f of faturas) {
@@ -288,7 +282,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -299,7 +292,7 @@ export const fiscalController = {
         return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const agtApiToken = getAgtAuthToken();
+      const agtApiToken = getAgtBasicAuthFromEnv();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
@@ -327,7 +320,7 @@ export const fiscalController = {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await agtApiClient.listarSeries(request as any, agtApiToken);
+      const response = await agtApiClient.listarSeries(request as any, agtApiToken || '');
 
       return res.json(response);
     } catch (error: unknown) {
@@ -354,7 +347,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -365,7 +357,7 @@ export const fiscalController = {
         return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const agtApiToken = getAgtAuthToken();
+      const agtApiToken = getAgtBasicAuthFromEnv();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
@@ -417,7 +409,7 @@ export const fiscalController = {
         },
         'Payload AGT para solicitar sÃ©rie preparado'
       );
-      const response = await agtApiClient.solicitarSerie(request as any, agtApiToken);
+      const response = await agtApiClient.solicitarSerie(request as any, agtApiToken || '');
 
       logger.info({ clinicaId, submissionUUID, resultCode: response.resultCode }, 'SÃ©rie solicitada Ã  AGT com sucesso');
       return res.json(response);
@@ -447,7 +439,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -458,7 +449,7 @@ export const fiscalController = {
         return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const agtApiToken = getAgtAuthToken();
+      const agtApiToken = getAgtBasicAuthFromEnv();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
@@ -493,7 +484,7 @@ export const fiscalController = {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await agtApiClient.listarFacturas(request as any, agtApiToken);
+      const response = await agtApiClient.listarFacturas(request as any, agtApiToken || '');
 
       return res.json(response);
     } catch (error: unknown) {
@@ -528,7 +519,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -539,7 +529,7 @@ export const fiscalController = {
         return res.status(404).json({ error: 'ClÃ­nica nÃ£o encontrada' });
       }
 
-      const agtApiToken = getAgtAuthToken();
+      const agtApiToken = getAgtBasicAuthFromEnv();
 
       if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
         return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
@@ -569,7 +559,7 @@ export const fiscalController = {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await agtApiClient.consultarFactura(request as any, agtApiToken);
+      const response = await agtApiClient.consultarFactura(request as any, agtApiToken || '');
 
       return res.json(response);
     } catch (error: unknown) {
@@ -608,7 +598,6 @@ export const fiscalController = {
       const clinica = await prisma.clinica.findUnique({
         where: { id: clinicaId },
         select: { 
-          agtApiToken: true, 
           nif: true,
           agtPrivateKey: true,
           agtPublicKey: true
@@ -621,6 +610,11 @@ export const fiscalController = {
 
       const certService = createAgtCertificationService(clinica);
       const softwareInfoDetail = getDefaultAgtSoftwareInfoDetail();
+
+      const agtApiToken = getAgtBasicAuthFromEnv();
+      if (!agtApiToken && process.env.AGT_MOCK !== 'true') {
+        return res.status(400).json({ error: 'Credenciais AGT nÃ£o configuradas no servidor' });
+      }
 
       if (!clinica.nif) {
         return res.status(400).json({ error: 'NIF da clÃ­nica nÃ£o configurado para integraÃ§Ã£o AGT' });
@@ -653,7 +647,7 @@ export const fiscalController = {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await agtApiClient.validarDocumento(request as any, getAgtAuthToken());
+      const response = await agtApiClient.validarDocumento(request as any, agtApiToken || '');
       return res.json(response);
     } catch (error: unknown) {
       logger.error({ error, clinicaId, faturaId }, 'Erro ao validar documento na AGT');

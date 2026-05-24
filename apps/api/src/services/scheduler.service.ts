@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { reminderQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
+import { redis } from '../lib/redis';
 
 /**
  * Robust retry utility for database operations
@@ -26,6 +27,46 @@ async function retryOperation<T>(
   throw lastError;
 }
 
+const SCHEDULER_TZ = 'Africa/Luanda';
+
+async function runWithRedisLock(opts: {
+  key: string;
+  ttlMs: number;
+  label: string;
+  fn: () => Promise<void>;
+}): Promise<void> {
+  const lockValue = `${process.pid}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+  const acquired = await redis.set(opts.key, lockValue, 'PX', opts.ttlMs, 'NX');
+
+  if (acquired !== 'OK') {
+    logger.debug({ key: opts.key, label: opts.label }, 'Scheduler: lock não adquirido, a saltar ciclo');
+    return;
+  }
+
+  try {
+    await opts.fn();
+  } finally {
+    // Libertar lock de forma segura (apenas se o valor for o mesmo)
+    try {
+      await redis.eval(
+        `
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+          return redis.call("DEL", KEYS[1])
+        else
+          return 0
+        end
+        `,
+        1,
+        opts.key,
+        lockValue
+      );
+    } catch (err) {
+      // Melhor esforço: o TTL vai expirar o lock mesmo se o release falhar
+      logger.warn({ err, key: opts.key, label: opts.label }, 'Scheduler: falha ao libertar lock Redis');
+    }
+  }
+}
+
 /**
  * Scheduler Service
  * Manages background jobs and appointment reminder logic.
@@ -40,29 +81,51 @@ export const schedulerService = {
     if (this.task) return;
 
     // Run every 5 minutes
-    this.task = cron.schedule('*/5 * * * *', async () => {
-      try {
-        await this.processPendingReminders();
-      } catch (err) {
-        logger.error({ err }, 'Scheduler: Error in processPendingReminders cycle');
-      }
-      try {
-        const { contingencySyncService } = await import('./fiscal/ContingencySyncService');
-        await contingencySyncService.syncAllPending();
-      } catch (err) {
-        logger.error({ err }, 'Scheduler: Error in contingencySyncService.syncAllPending cycle');
-      }
-    });
+    this.task = cron.schedule(
+      '*/5 * * * *',
+      async () => {
+        await runWithRedisLock({
+          key: 'lock:clinicaplus:api-scheduler:5m',
+          ttlMs: 4 * 60 * 1000,
+          label: 'api-5m',
+          fn: async () => {
+            try {
+              await this.processPendingReminders();
+            } catch (err) {
+              logger.error({ err }, 'Scheduler: Error in processPendingReminders cycle');
+            }
+            try {
+              const { contingencySyncService } = await import('./fiscal/ContingencySyncService');
+              await contingencySyncService.syncAllPending();
+            } catch (err) {
+              logger.error({ err }, 'Scheduler: Error in contingencySyncService.syncAllPending cycle');
+            }
+          },
+        });
+      },
+      { timezone: SCHEDULER_TZ }
+    );
 
     // Monthly audit cleanup (archiving > 2 years) - Run on the 1st of every month at 03:00
-    cron.schedule('0 3 1 * *', async () => {
-      try {
-        const { runAuditCleanup } = await import('./jobs/audit-cleanup.job');
-        await runAuditCleanup();
-      } catch (err) {
-        logger.error({ err }, 'Scheduler: Error in runAuditCleanup cycle');
-      }
-    });
+    cron.schedule(
+      '0 3 1 * *',
+      async () => {
+        await runWithRedisLock({
+          key: 'lock:clinicaplus:api-scheduler:audit-cleanup',
+          ttlMs: 60 * 60 * 1000,
+          label: 'api-audit-cleanup',
+          fn: async () => {
+            try {
+              const { runAuditCleanup } = await import('./jobs/audit-cleanup.job');
+              await runAuditCleanup();
+            } catch (err) {
+              logger.error({ err }, 'Scheduler: Error in runAuditCleanup cycle');
+            }
+          },
+        });
+      },
+      { timezone: SCHEDULER_TZ }
+    );
 
     logger.info('Scheduler started (Reminders 5m, WA Expiry 1h, Audit Cleanup 1mo)');
   },
