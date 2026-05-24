@@ -68,16 +68,25 @@ export class AgtApiClient {
     };
   }
 
-  private convertJsonToXml(payload: any): string {
+  private convertJsonToSoapXml(payload: any, endpoint: string): string {
     const builder = new XMLBuilder({
       ignoreAttributes: false,
       format: true,
       indentBy: '  '
     });
 
-    // Converte o payload JSON para XML puro (sem envelope SOAP)
-    // Os endpoints /sigt/fe/ws/v1/ da AGT usam XML puro, não SOAP
-    return `<?xml version="1.0" encoding="UTF-8"?>\n${builder.build(payload)}`;
+    // Converte o payload JSON para XML
+    const xmlPayload = builder.build(payload);
+
+    // Envelopa no formato SOAP com namespace correto
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Body>
+    <${endpoint} xmlns="http://agt.minfin.gov.ao/sigt/fe/ws/v1">
+      ${xmlPayload}
+    </${endpoint}>
+  </soapenv:Body>
+</soapenv:Envelope>`;
   }
 
   private mapAxiosError(error: any): never {
@@ -179,7 +188,7 @@ export class AgtApiClient {
     try {
       const url = getAgtEndpointPath(this.env, 'listarFacturas');
       const isSoap = this.env === 'sandbox' && this.isSoapEndpoint('listarFacturas');
-      const payload = isSoap ? this.convertJsonToXml(request) : request;
+      const payload = isSoap ? this.convertJsonToSoapXml(request, 'listarFacturas') : request;
 
       const response = await this.client.post(url, payload, {
         headers: {
@@ -261,7 +270,7 @@ export class AgtApiClient {
     try {
       const url = getAgtEndpointPath(this.env, 'solicitarSerie');
       const isSoap = this.env === 'sandbox' && this.isSoapEndpoint('solicitarSerie');
-      const payload = isSoap ? this.convertJsonToXml(request) : request;
+      const payload = isSoap ? this.convertJsonToSoapXml(request, 'solicitarSerie') : request;
 
       const response = await this.client.post(url, payload, {
         headers: {
