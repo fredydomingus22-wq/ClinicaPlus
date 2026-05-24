@@ -78,11 +78,11 @@ export class AgtApiClient {
     // Converte o payload JSON para XML
     const xmlPayload = builder.build(payload);
 
-    // Envelopa no formato SOAP com namespace correto
+    // Envelopa no formato SOAP - namespace apenas no envelope, não no elemento
     return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
   <soapenv:Body>
-    <${endpoint} xmlns="http://agt.minfin.gov.ao/sigt/fe/ws/v1">
+    <${endpoint}>
       ${xmlPayload}
     </${endpoint}>
   </soapenv:Body>
