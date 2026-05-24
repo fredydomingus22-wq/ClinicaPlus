@@ -18,13 +18,10 @@ export function getAgtOrigin(env: AgtEnv): string {
 /**
  * Resolve o path completo do endpoint conforme a documentação AGT (DS.120).
  *
- * Nota: em Homologação, `solicitarSerie` e `listarFacturas` usam `/sigt/fe/ws/v1/`.
- * Fonte: documentação AGT oficial.
+ * Usa sempre endpoint REST (/sigt/fe/v1/) que aceita JSON.
+ * Endpoint SOAP (/sigt/fe/ws/v1/) foi descontinuado em favor de REST.
  */
 export function getAgtEndpointPath(env: AgtEnv, endpoint: AgtEndpointName): string {
-  if (env === 'sandbox' && (endpoint === 'solicitarSerie' || endpoint === 'listarFacturas')) {
-    return `/sigt/fe/ws/v1/${endpoint}`;
-  }
   return `/sigt/fe/v1/${endpoint}`;
 }
 

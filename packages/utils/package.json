@@ -26,8 +26,7 @@
     "@clinicaplus/types": "workspace:*",
     "axios": "^1.13.6",
     "date-fns": "^3.0.0",
-    "date-fns-tz": "^3.0.0",
-    "fast-xml-parser": "^4.3.6"
+    "date-fns-tz": "^3.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
