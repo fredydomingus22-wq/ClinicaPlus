@@ -322,7 +322,17 @@ export const fiscalController = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await agtApiClient.listarSeries(request as any, agtApiToken || '');
 
-      return res.json(response);
+      // Mapear resposta da AGT para formato esperado pelo frontend
+      const items = (response.seriesInfo || []).map((info: any) => ({
+        id: info.id || `${info.seriesCode}-${info.seriesYear}`,
+        serieCode: info.seriesCode,
+        documentType: info.documentType,
+        authorizedQuantity: 0, // AGT não fornece este campo em listarSeries
+        availableQuantity: 0, // AGT não fornece este campo em listarSeries
+        status: info.seriesStatus === 'A' ? 'ACTIVE' : 'EXPIRED'
+      }));
+
+      return res.json({ ...response, items });
     } catch (error: unknown) {
       logger.error({ error, clinicaId }, 'Erro ao listar sÃ©ries na AGT');
       return res.status(500).json({ error: 'Falha ao comunicar com a AGT' });
