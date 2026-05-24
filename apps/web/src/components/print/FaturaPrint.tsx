@@ -61,7 +61,12 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
     }
   }, [fatura.numeroFatura, pagamento?.numeroRecibo, clinica.nif]);
 
-  const hashControl = (pagamento?.fiscalHash || fatura.fiscalHash) ? `${(pagamento?.fiscalHash || fatura.fiscalHash)!.substring(0, 4)}-` : '';
+  const fiscalHash = (pagamento?.fiscalHash || fatura.fiscalHash) || '';
+  const hashControl = fatura.hashControl || '1';
+  const fiscalHashTruncado =
+    fiscalHash && fiscalHash.length > 16 ? `${fiscalHash.slice(0, 8)}…${fiscalHash.slice(-8)}` : fiscalHash;
+  // Não inventar prefixos derivados do hash. `hashControl` é o valor oficial.
+  const hashControlPrefix = hashControl ? `${hashControl} ` : '';
   const isCanceled = fatura.estado === 'ANULADA';
   const isDraft = !fatura.numeroFatura && !pagamento?.numeroRecibo;
 
@@ -434,7 +439,14 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
 
         {/* Rodapé e Frases Legais */}
         <div className="mt-10 text-[7pt] text-gray-700 leading-relaxed space-y-0.5">
-          <p className="font-semibold text-gray-800">{hashControl}Processado por programa validado nº {clinica.agtSoftwareCert || '0/AGT/2026'} - ClinicaPlus SaaS</p>
+          {fiscalHash && (
+            <p className="font-mono text-[7pt] text-gray-600">
+              Hash ({hashControl}): {fiscalHashTruncado}
+            </p>
+          )}
+          <p className="font-semibold text-gray-800">
+            {hashControlPrefix}Processado por programa validado nº {clinica.agtSoftwareCert || '0/AGT/2026'} - ClinicaPlus SaaS
+          </p>
           {pagamento && (
             <p className="font-medium text-gray-600">Este recibo não serve de fatura. Quita a fatura {fatura.numeroFatura} no valor de {formatKwanza(pagamento.valor)}.</p>
           )}

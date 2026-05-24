@@ -15,10 +15,22 @@ export interface ConfiguracaoFiscalInput {
   enderecoPostal?: string | undefined;
   regimeFiscal?: 'GERAL' | 'SIMPLIFICADO' | 'EXUSA' | undefined;
   serieDocFiscal?: string | undefined;
-  agtApiToken?: string | undefined;
   agtPrivateKey?: string | undefined;
   agtPublicKey?: string | undefined;
 }
+
+/**
+ * View-model da configuração fiscal vinda do backend.
+ * Por segurança, o backend NÃO devolve os segredos (token/chaves).
+ */
+export type ConfiguracaoFiscalView = Omit<
+  ConfiguracaoFiscalInput,
+  'agtPrivateKey' | 'agtPublicKey'
+> & {
+  id: string;
+  agtPrivateKeyConfigured?: boolean;
+  agtPublicKeyConfigured?: boolean;
+};
 
 export interface TestarConexaoResult {
   success: boolean;
@@ -73,8 +85,8 @@ export const fiscalApi = {
   /**
    * Obtém a configuração fiscal actual da clínica (campos do modelo Clinica)
    */
-  async getConfiguracao() {
-    const response = await api.get<{ data: ConfiguracaoFiscalInput & { id: string } }>('/clinicas/me');
+  async getConfiguracao(): Promise<ConfiguracaoFiscalView> {
+    const response = await api.get<{ data: ConfiguracaoFiscalView }>('/clinicas/me');
     return response.data.data;
   },
 

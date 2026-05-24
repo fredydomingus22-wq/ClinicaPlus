@@ -81,8 +81,10 @@ export default function ConfiguracaoFiscalPage() {
         enderecoPostal: config.enderecoPostal || '',
         regimeFiscal: (config.regimeFiscal as 'GERAL' | 'SIMPLIFICADO' | 'EXUSA') || 'GERAL',
         serieDocFiscal: config.serieDocFiscal || '',
-        agtPrivateKey: config.agtPrivateKey || '',
-        agtPublicKey: config.agtPublicKey || '',
+        // Por segurança o backend não devolve as chaves depois de guardadas.
+        // Para substituir, o admin deve colar novamente e guardar.
+        agtPrivateKey: '',
+        agtPublicKey: '',
       });
     }
   }, [config, reset]);
@@ -91,9 +93,12 @@ export default function ConfiguracaoFiscalPage() {
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      const dataToSave = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined)
-      ) as ConfiguracaoFiscalInput;
+      const { agtPrivateKey, agtPublicKey, ...rest } = data;
+      const dataToSave: ConfiguracaoFiscalInput = {
+        ...(Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)) as ConfiguracaoFiscalInput),
+        ...(agtPrivateKey && agtPrivateKey.trim() ? { agtPrivateKey: agtPrivateKey.trim() } : {}),
+        ...(agtPublicKey && agtPublicKey.trim() ? { agtPublicKey: agtPublicKey.trim() } : {}),
+      };
 
       await guardarMutation.mutateAsync(dataToSave);
       toast.success('Configuração fiscal guardada com sucesso.');
@@ -262,6 +267,21 @@ export default function ConfiguracaoFiscalPage() {
                       Testar Conexão
                    </Button>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-600 font-medium">Chave Privada (RSA)</span>
+                    <Badge className={config.agtPrivateKeyConfigured ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}>
+                      {config.agtPrivateKeyConfigured ? 'Configurada' : 'Pendente'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-600 font-medium">Chave Pública (RSA)</span>
+                    <Badge className={config.agtPublicKeyConfigured ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}>
+                      {config.agtPublicKeyConfigured ? 'Configurada' : 'Pendente'}
+                    </Badge>
+                  </div>
+                </div>
              </div>
           </Card>
         </div>
@@ -350,6 +370,9 @@ export default function ConfiguracaoFiscalPage() {
                   className="w-full border border-neutral-200 rounded-lg px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono"
                   {...register('agtPrivateKey')}
                 />
+                <p className="text-[10px] text-neutral-400">
+                  Por segurança, a chave não é exibida depois de guardada. Cole aqui apenas se quiser substituir.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -360,6 +383,9 @@ export default function ConfiguracaoFiscalPage() {
                   className="w-full border border-neutral-200 rounded-lg px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono"
                   {...register('agtPublicKey')}
                 />
+                <p className="text-[10px] text-neutral-400">
+                  Cole aqui a chave pública correspondente (apenas se quiser substituir).
+                </p>
               </div>
             </div>
           </Card>
