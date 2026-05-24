@@ -134,8 +134,9 @@ export const fiscalApi = {
 
   /**
    * Solicita nova série à AGT
+   * Nota: serieCode e authorizedQuantity são determinados pela AGT com base no documentType
    */
-  async solicitarSerie(data: { serieCode: string; authorizedQuantity: number; documentType: string }) {
+  async solicitarSerie(data: { documentType: string; establishmentNumber?: string }) {
     const response = await api.post('/fiscal/series/solicitar', data);
     return response.data;
   },

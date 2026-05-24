@@ -60,7 +60,7 @@ export function useSeriesAgt() {
 export function useSolicitarSerieAgt() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { serieCode: string; authorizedQuantity: number; documentType: string }) => 
+    mutationFn: (data: { documentType: string; establishmentNumber?: string }) => 
       fiscalApi.solicitarSerie(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...fiscalKeys.all, 'series'] });

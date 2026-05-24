@@ -43,6 +43,7 @@ interface AgtSerie {
 
 export default function ConsolaFiscalPage() {
   const [activeTab, setActiveTab] = useState('series');
+  const [showSerieForm, setShowSerieForm] = useState(false);
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]!,
     endDate: new Date().toISOString().split('T')[0]!
@@ -63,12 +64,14 @@ export default function ConsolaFiscalPage() {
 
   const solicitarSerieMutation = useSolicitarSerieAgt();
 
+  const [documentType, setDocumentType] = useState('FT');
+  const [establishmentNumber, setEstablishmentNumber] = useState('SEDE');
+
   const handleSolicitarSerie = async () => {
     try {
       await solicitarSerieMutation.mutateAsync({
-        serieCode: 'A',
-        authorizedQuantity: 1000,
-        documentType: 'FT'
+        documentType,
+        establishmentNumber
       });
       toast.success('Solicitação de série enviada com sucesso!');
     } catch (err: unknown) {
@@ -177,10 +180,70 @@ export default function ConsolaFiscalPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-bold text-neutral-700 uppercase tracking-wider">Séries Ativas</h3>
-              <Button size="sm" onClick={handleSolicitarSerie} loading={solicitarSerieMutation.isPending}>
+              <Button size="sm" onClick={() => setShowSerieForm(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Solicitar Nova Série
               </Button>
             </div>
+
+            {showSerieForm && (
+              <Card className="p-4 bg-neutral-50 border-neutral-200">
+                <h4 className="font-bold text-neutral-900 mb-4">Solicitar Nova Série</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de Documento</label>
+                    <select
+                      value={documentType}
+                      onChange={(e) => setDocumentType(e.target.value)}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="FT">Factura (FT)</option>
+                      <option value="FR">Factura-Recibo (FR)</option>
+                      <option value="RC">Recibo (RC)</option>
+                      <option value="NC">Nota de Crédito (NC)</option>
+                      <option value="ND">Nota de Débito (ND)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Código do Estabelecimento</label>
+                    <Input
+                      value={establishmentNumber}
+                      onChange={(e) => setEstablishmentNumber(e.target.value)}
+                      placeholder="SEDE ou código do estabelecimento"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">Use "SEDE" para testes ou contribuinte de localização única</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSolicitarSerie} loading={solicitarSerieMutation.isPending}>
+                      Solicitar
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowSerieForm(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {solicitarSerieMutation.data?.seriesFEResult && (
+              <Card className="p-4 bg-green-50 border-green-200">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-green-900">Série Criada com Sucesso</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyJson(solicitarSerieMutation.data.seriesFEResult, 'Dados da série copiados.')}
+                  >
+                    <Copy className="h-3 w-3 mr-1" /> Copiar
+                  </Button>
+                </div>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-neutral-500">Código da Série:</span> <span className="font-mono font-bold">{solicitarSerieMutation.data.seriesFEResult.seriesCode}</span></div>
+                  <div><span className="text-neutral-500">Qtd. Autorizada:</span> {solicitarSerieMutation.data.seriesFEResult.authorizedQuantity}</div>
+                  <div><span className="text-neutral-500">Primeiro Nº:</span> {solicitarSerieMutation.data.seriesFEResult.firstDocumentNo}</div>
+                  <div><span className="text-neutral-500">Último Nº:</span> {solicitarSerieMutation.data.seriesFEResult.lastDocumentNo}</div>
+                </div>
+              </Card>
+            )}
 
             {loadingSeries ? (
               <div className="flex justify-center p-12"><Spinner /></div>

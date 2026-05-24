@@ -18,16 +18,14 @@ export function getAgtOrigin(env: AgtEnv): string {
 /**
  * Resolve o path completo do endpoint conforme a documentação AGT (DS.120).
  *
- * Nota: em Homologação, `listarFacturas` pode usar `/sigt/fe/ws/v1/`.
- * Fonte: skill AGT (`references/servicos-consulta.md`).
+ * Nota: em Homologação, `solicitarSerie` e `listarFacturas` usam `/sigt/fe/ws/v1/`.
+ * Fonte: documentação AGT oficial.
  */
 export function getAgtEndpointPath(env: AgtEnv, endpoint: AgtEndpointName): string {
-  const base =
-    env === 'sandbox' && endpoint === 'listarFacturas'
-      ? '/sigt/fe/ws/v1'
-      : '/sigt/fe/v1';
-
-  return `${base}/${endpoint}`;
+  if (env === 'sandbox' && (endpoint === 'solicitarSerie' || endpoint === 'listarFacturas')) {
+    return `/sigt/fe/ws/v1/${endpoint}`;
+  }
+  return `/sigt/fe/v1/${endpoint}`;
 }
 
 export function getAgtEndpointUrl(env: AgtEnv, endpoint: AgtEndpointName): string {

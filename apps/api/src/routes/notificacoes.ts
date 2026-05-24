@@ -10,6 +10,8 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const result = await notificacoesService.listByUser(req.user.id);
+    // Disable ETag for this endpoint to prevent incorrect 204 responses
+    res.removeHeader('ETag');
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 });
