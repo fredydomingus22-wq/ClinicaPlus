@@ -14,6 +14,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json turbo.js
 COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
 COPY packages/events/package.json ./packages/events/
+COPY packages/ui/package.json ./packages/ui/
 COPY apps/api/package.json ./apps/api/
 
 # Install all dependencies (frozen for reproducibility)
@@ -23,12 +24,14 @@ RUN pnpm install --frozen-lockfile
 COPY packages/types ./packages/types
 COPY packages/utils ./packages/utils
 COPY packages/events ./packages/events
+COPY packages/ui ./packages/ui
 COPY apps/api ./apps/api
 
-# Build shared packages first, then API
+# Build shared packages first, then API (turbo handles dependencies automatically)
 RUN pnpm --filter=@clinicaplus/types build
 RUN pnpm --filter=@clinicaplus/utils build
 RUN pnpm --filter=@clinicaplus/events build
+RUN pnpm --filter=@clinicaplus/ui build
 RUN pnpm --filter=api exec prisma generate
 RUN pnpm --filter=api build
 
@@ -49,9 +52,12 @@ COPY --from=builder /app/packages/utils/dist ./packages/utils/dist
 COPY --from=builder /app/packages/utils/node_modules ./packages/utils/node_modules
 COPY --from=builder /app/packages/events/dist ./packages/events/dist
 COPY --from=builder /app/packages/events/node_modules ./packages/events/node_modules
+COPY --from=builder /app/packages/ui/dist ./packages/ui/dist
+COPY --from=builder /app/packages/ui/node_modules ./packages/ui/node_modules
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/utils/package.json ./packages/utils/package.json
 COPY --from=builder /app/packages/events/package.json ./packages/events/package.json
+COPY --from=builder /app/packages/ui/package.json ./packages/ui/package.json
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
