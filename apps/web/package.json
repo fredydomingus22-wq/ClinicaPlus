@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "pnpm -w exec turbo run build --filter=@clinicaplus/types --filter=@clinicaplus/utils --filter=@clinicaplus/ui --filter=@clinicaplus/events && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint . --max-warnings 0 --no-warn-ignored",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report"

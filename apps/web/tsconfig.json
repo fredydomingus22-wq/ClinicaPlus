@@ -13,7 +13,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite-plugin-pwa/client"]
+    "baseUrl": ".",
+    "paths": {
+      "@clinicaplus/events": ["../../packages/events/src/index.ts"],
+      "@clinicaplus/types": ["../../packages/types/src/index.ts"],
+      "@clinicaplus/ui": ["../../packages/ui/src/index.tsx"],
+      "@clinicaplus/utils": ["../../packages/utils/src/index.ts"],
+      "@clinicaplus/utils/server": ["../../packages/utils/src/server.ts"]
+    }
   },
   "include": ["src"],
   "exclude": [
