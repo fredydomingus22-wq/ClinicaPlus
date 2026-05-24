@@ -58,10 +58,13 @@ export class AgtApiClient {
     if (this.logger) {
       const status = error?.response?.status;
       const errors = error?.response?.data ? extractAgtErrorEntries(error.response.data) : [];
+      const errorCode = error?.code;
+      const errorMessage = error?.message;
       this.logger.error(
         {
-          error,
           status,
+          errorCode,
+          errorMessage,
           agtErrors: errors.length ? errors : undefined,
         },
         `Erro ao comunicar com a AGT`

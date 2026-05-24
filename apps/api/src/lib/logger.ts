@@ -11,7 +11,7 @@ const transport = config.NODE_ENV !== 'production'
  * Redacts sensitive headers automatically.
  */
 export const logger: Logger = pino({
-  level: config.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: config.NODE_ENV === 'production' ? 'warn' : 'debug',
   base: {
     service: 'clinicaplus-api',
     env: config.NODE_ENV,
@@ -25,6 +25,12 @@ export const logger: Logger = pino({
       'req.headers["x-clinicaplus-signature"]'
     ],
     censor: '[REDACTED]',
+  },
+  serializers: {
+    err: pino.stdSerializers.err,
+    error: pino.stdSerializers.err,
+    req: pino.stdSerializers.req,
+    res: pino.stdSerializers.res,
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   ...(transport ? { transport } : {}),
