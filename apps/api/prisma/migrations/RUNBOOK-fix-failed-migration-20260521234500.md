@@ -101,6 +101,7 @@ As seguintes migrações existem localmente mas podem não ter sido aplicadas em
 2. `20260522140000_add_odontograma` — cria tabela odontogramas
 3. `20260523120000_fatura_snapshot_cliente_country` — adiciona coluna clienteCountry (idempotente)
 4. `20260524123000_remove_agt_api_token` — remove coluna agtApiToken (idempotente)
+5. `20260524123500_add_emcontingencia_to_faturas` — adiciona coluna emContingencia em faturas (idempotente)
 
 ### Procedimento de emergência (se `prisma migrate deploy` falhar)
 
@@ -154,6 +155,10 @@ ALTER TABLE "fatura_snapshots"
 -- Migration 20260524123000: remover coluna agtApiToken
 ALTER TABLE "clinicas"
   DROP COLUMN IF EXISTS "agtApiToken";
+
+-- Migration 20260524123500: adicionar coluna emContingencia
+ALTER TABLE "faturas"
+  ADD COLUMN IF NOT EXISTS "emContingencia" BOOLEAN NOT NULL DEFAULT false;
 ```
 
 Após aplicar manualmente, marque as migrações como aplicadas na tabela `_prisma_migrations`:
@@ -164,7 +169,8 @@ VALUES
   ('20260521234000_add_contingencia_cols_sequencia_doc_fiscal', NOW(), NOW(), 1),
   ('20260522140000_add_odontograma', NOW(), NOW(), 1),
   ('20260523120000_fatura_snapshot_cliente_country', NOW(), NOW(), 1),
-  ('20260524123000_remove_agt_api_token', NOW(), NOW(), 1)
+  ('20260524123000_remove_agt_api_token', NOW(), NOW(), 1),
+  ('20260524123500_add_emcontingencia_to_faturas', NOW(), NOW(), 1)
 ON CONFLICT ("migration_name") DO NOTHING;
 ```
 
