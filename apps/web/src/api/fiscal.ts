@@ -164,16 +164,24 @@ export const fiscalApi = {
       : [];
 
     const fromStatusResult = Array.isArray(statusResult?.resultEntryList)
-      ? statusResult.resultEntryList.map((entry: { documentEntryResult: { id?: string; documentNo: string; documentDate: string; netTotal?: string } }) => ({
-          submissionUUID: entry.documentEntryResult.id || entry.documentEntryResult.documentNo,
-          submissionTimeStamp: entry.documentEntryResult.documentDate,
-          documentNo: entry.documentEntryResult.documentNo,
-          customerTaxID: '-',
-          totalWithoutTax: entry.documentEntryResult.netTotal ? Number(entry.documentEntryResult.netTotal) : null,
-          taxAmount: null,
-          grossTotal: entry.documentEntryResult.netTotal ? Number(entry.documentEntryResult.netTotal) : null,
-          hasPartialData: !entry.documentEntryResult.netTotal,
-        }))
+      ? statusResult.resultEntryList
+          .map((entry: { documentEntryResult?: { id?: string; documentNo: string; documentDate: string; netTotal?: string } }) => {
+            const docEntry = entry.documentEntryResult;
+            if (!docEntry) {
+              return null;
+            }
+            return {
+              submissionUUID: docEntry.id || docEntry.documentNo,
+              submissionTimeStamp: docEntry.documentDate,
+              documentNo: docEntry.documentNo,
+              customerTaxID: '-',
+              totalWithoutTax: docEntry.netTotal ? Number(docEntry.netTotal) : null,
+              taxAmount: null,
+              grossTotal: docEntry.netTotal ? Number(docEntry.netTotal) : null,
+              hasPartialData: !docEntry.netTotal,
+            };
+          })
+          .filter(Boolean) as AgtHistoricoItem[]
       : [];
 
     return {
