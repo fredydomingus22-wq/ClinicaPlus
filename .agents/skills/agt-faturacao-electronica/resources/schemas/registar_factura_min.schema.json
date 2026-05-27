@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AGT FE RegistarFactura - envelope mínimo",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "submissionUUID",
+    "taxRegistrationNumber",
+    "submissionTimeStamp",
+    "softwareInfo",
+    "jwsSignature"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "submissionUUID": { "type": "string" },
+    "taxRegistrationNumber": { "type": "string" },
+    "submissionTimeStamp": { "type": "string", "format": "date-time" },
+    "softwareInfo": { "type": "object" },
+    "jwsSignature": { "type": "string" }
+  },
+  "additionalProperties": true
+}

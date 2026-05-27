@@ -1,0 +1,3 @@
+display_name: "AGT Facturação Electrónica"
+short_description: "Integra, audita e corrige integrações com a API FE da AGT."
+default_prompt: "Audita e implementa integração robusta com a API de facturação electrónica da AGT, com validação JWS, segurança e troubleshooting de endpoints."

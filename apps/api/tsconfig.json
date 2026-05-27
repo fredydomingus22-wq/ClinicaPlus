@@ -11,6 +11,6 @@
       "@clinicaplus/utils/server": ["../../packages/utils/dist/server"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -91,7 +91,7 @@ export function App() {
       </a>
 
       {/* Live region for screen readers to announce dynamic notifications */}
-      <div aria-live="polite" aria-atomic="true" className="sr-only">
+      <div aria-live="polite" aria-atomic="true">
         <Toaster position="top-right" reverseOrder={false} />
       </div>
 
