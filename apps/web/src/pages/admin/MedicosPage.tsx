@@ -246,12 +246,14 @@ export default function MedicosPage() {
           </div>
         ) : (
           <div aria-busy={isLoading}>
-            <Table 
-              columns={columns}
-              data={data?.items || []}
-              isLoading={isLoading}
-              keyExtractor={(m) => m.id}
-            />
+            <div className="overflow-x-auto -mx-4 px-4">
+              <Table
+                columns={columns}
+                data={data?.items || []}
+                isLoading={isLoading}
+                keyExtractor={(m) => m.id}
+              />
+            </div>
           </div>
         )}
         

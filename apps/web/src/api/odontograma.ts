@@ -16,6 +16,11 @@ export const odontogramaApi = {
     return data;
   },
 
+  list: async (params?: { pacienteId?: string; limit?: number }): Promise<OdontogramaDTO[]> => {
+    const { data } = await api.get('/odontogramas', { params });
+    return data;
+  },
+
   create: async (payload: OdontogramaCreateInput): Promise<OdontogramaDTO> => {
     const { data } = await api.post('/odontogramas', payload);
     return data;

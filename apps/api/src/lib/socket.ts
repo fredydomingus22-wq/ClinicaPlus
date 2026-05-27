@@ -12,12 +12,15 @@ interface JwtPayload {
   exp?: number;
 }
 
+// Export io instance for graceful shutdown
+export let io: SocketServer | null = null;
+
 /**
  * Sets up Socket.io on the provided HTTP server.
  * Handles authentication, room management, and bridging Redis Pub/Sub to Socket events.
  */
 export function setupSocket(httpServer: HttpServer): SocketServer {
-  const io = new SocketServer(httpServer, {
+  io = new SocketServer(httpServer, {
     path: '/ws',
     cors: { 
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
@@ -147,8 +150,10 @@ export function setupSocket(httpServer: HttpServer): SocketServer {
       // This is primarily for safety against misconfigured emitters in other services.
       // E.g., don't allow emitting to a room that doesn't belong to the system.
       if (room.startsWith('clinica:') || room.startsWith('user:') || room.startsWith('medico:') || room.startsWith('paciente:')) {
-        io.to(room).emit(event, data);
-        logger.trace({ room, event }, 'WS: Evento emitido');
+        if (io) {
+          io.to(room).emit(event, data);
+          logger.trace({ room, event }, 'WS: Evento emitido');
+        }
       } else {
         logger.warn({ room, event }, 'WS: Tentativa de emitir para sala não autorizada bloqueada');
       }

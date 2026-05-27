@@ -23,3 +23,8 @@ export function exportToCsv(
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+// WhatsApp utilities
+export * from './whatsapp/phoneNormalizer';
+export * from './whatsapp/contactResolver';
+export * from './whatsapp/templates';

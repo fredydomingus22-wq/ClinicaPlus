@@ -1,50 +1,61 @@
 import React from 'react';
-import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
+import {
+  ArrowUpCircle,
+  ArrowDownCircle,
   Hash,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  ShoppingCart,
+  ArrowRightLeft
 } from 'lucide-react';
-import { 
-  Input, 
-  Button, 
-  Textarea
+import {
+  Input,
+  Button,
+  Textarea,
+  Select
 } from '@clinicaplus/ui';
-import { MovimentacaoEstoqueSchema, TipoMovimentacao, ProdutoDTO } from '@clinicaplus/types';
 import { useInventory } from '../../hooks/useInventory';
+import { MovimentarEstoqueSchema, type MovimentarEstoqueInput } from '../../schemas/inventory.schema';
+import type { ProdutoResponse, LoteComProdutoResponse } from '../../types/inventory.types';
 
 interface MovimentacaoEstoqueFormProps {
-  produto: ProdutoDTO;
+  produto: ProdutoResponse;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = ({ 
-  produto, 
-  onSuccess, 
-  onCancel 
-}) => {
-  const { useMovimentar } = useInventory();
-  const { mutate: movimentar, isPending } = useMovimentar();
+const TIPO_LABELS: Record<string, { label: string; icon: any; color: string }> = {
+  ENTRADA: { label: 'Entrada', icon: ArrowUpCircle, color: 'success' },
+  SAIDA: { label: 'Saída', icon: ArrowDownCircle, color: 'danger' },
+  AJUSTE: { label: 'Ajuste', icon: RefreshCw, color: 'neutral' },
+  VENDA: { label: 'Venda', icon: ShoppingCart, color: 'primary' },
+  TRANSFERENCIA: { label: 'Transferência', icon: ArrowRightLeft, color: 'secondary' },
+};
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
-    resolver: zodResolver(MovimentacaoEstoqueSchema),
+export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = ({
+  produto,
+  onSuccess,
+  onCancel
+}) => {
+  const { useMovimentar, useLotes } = useInventory();
+  const { mutate: movimentar, isPending } = useMovimentar();
+  const { data: lotes, isLoading: loadingLotes } = useLotes(produto.id);
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<MovimentarEstoqueInput>({
+    resolver: zodResolver(MovimentarEstoqueSchema) as any,
     defaultValues: {
       produtoId: produto.id,
-      tipo: TipoMovimentacao.ENTRADA,
+      tipo: 'ENTRADA',
       quantidade: 1,
-      motivo: '',
-      documentoReferencia: ''
     }
   });
 
   const tipo = watch('tipo');
 
-  const onSubmit = (values: z.infer<typeof MovimentacaoEstoqueSchema>) => {
-    movimentar(values as any, {
+  const onSubmit = (values: MovimentarEstoqueInput) => {
+    movimentar(values, {
       onSuccess: () => onSuccess?.()
     });
   };
@@ -64,31 +75,22 @@ export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = (
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Tipo de Movimentação */}
-        <div className="flex gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-          <button
-            type="button"
-            onClick={() => setValue('tipo', TipoMovimentacao.ENTRADA)}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
-              tipo === TipoMovimentacao.ENTRADA 
-                ? 'bg-success-50 border-success-200 text-success-700 shadow-sm' 
-                : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
-            }`}
-          >
-            <ArrowUpCircle className="w-4 h-4" />
-            <span className="text-sm font-bold">Entrada</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setValue('tipo', TipoMovimentacao.SAIDA)}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
-              tipo === TipoMovimentacao.SAIDA 
-                ? 'bg-danger-50 border-danger-200 text-danger-700 shadow-sm' 
-                : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
-            }`}
-          >
-            <ArrowDownCircle className="w-4 h-4" />
-            <span className="text-sm font-bold">Saída</span>
-          </button>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+          {Object.entries(TIPO_LABELS).map(([key, { label, icon: Icon, color }]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setValue('tipo', key as any)}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
+                tipo === key
+                  ? `bg-${color}-50 border-${color}-200 text-${color}-700 shadow-sm`
+                  : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="text-xs font-bold">{label}</span>
+            </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,11 +102,25 @@ export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = (
             error={errors.quantidade?.message as string}
           />
           
-          <Input 
-            label="Doc. Referência (Opcional)" 
-            placeholder="Ex: FT 2024/001" 
-            {...register('documentoReferencia')}
-            error={errors.documentoReferencia?.message as string}
+          {(tipo === 'SAIDA' || tipo === 'VENDA') && (
+            <Select
+              label="Lote (Opcional)"
+              placeholder="Deixar vazio para FIFO automático"
+              options={[
+                { value: '', label: 'Automático (FIFO)' },
+                ...(lotes || []).map((l: LoteComProdutoResponse) => ({ value: l.id, label: `${l.numeroLote} (${l.quantidade} unid.)` }))
+              ]}
+              {...register('loteId')}
+              error={errors.loteId?.message as string}
+              disabled={loadingLotes}
+            />
+          )}
+
+          <Input
+            label="Doc. Referência (Opcional)"
+            placeholder="Ex: FT 2024/001"
+            {...register('documentoRef')}
+            error={errors.documentoRef?.message as string}
           />
         </div>
 
@@ -115,7 +131,7 @@ export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = (
           error={errors.motivo?.message as string}
         />
 
-        {tipo === TipoMovimentacao.SAIDA && (produto.estoqueAtual || 0) < watch('quantidade') && (
+        {tipo === 'SAIDA' && (produto.estoqueAtual || 0) < watch('quantidade') && (
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-2 items-start text-amber-700">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div className="text-[11px]">
@@ -130,14 +146,14 @@ export const MovimentacaoEstoqueForm: React.FC<MovimentacaoEstoqueFormProps> = (
           <Button type="button" variant="ghost" fullWidth onClick={onCancel}>
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
-            fullWidth 
+          <Button
+            type="submit"
+            fullWidth
             loading={isPending}
-            variant={tipo === TipoMovimentacao.ENTRADA ? 'primary' : 'danger'}
+            variant={tipo === 'ENTRADA' ? 'primary' : 'danger'}
             className="shadow-lg"
           >
-            Confirmar {tipo === TipoMovimentacao.ENTRADA ? 'Entrada' : 'Saída'}
+            Confirmar {TIPO_LABELS[tipo]?.label}
           </Button>
         </div>
       </form>

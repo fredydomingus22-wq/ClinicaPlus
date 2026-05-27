@@ -9,7 +9,63 @@ import { reportWorker } from './workers/report.worker';
 import { reportAgtWorker } from './workers/report-agt.worker';
 import { criarSessoesWorker } from './workers/criarSessoes.worker';
 import { appointmentExpirationWorker } from './workers/appointment-expiration.worker';
+import { tratamentoWorker } from './workers/tratamento.worker';
+import { pdfWorker } from './workers/pdf.worker';
+import { schedulerWorker } from './workers/scheduler.worker';
+import { estoqueMinimoWorker, validadeProximaWorker, analyticsWorker, ESTOQUE_JOB_NAMES } from './workers/estoque.worker';
+import { Queue } from 'bullmq';
 import { schedulerService } from './services/scheduler.service';
+
+// Queue para jobs recorrentes do scheduler
+const schedulerQueue = new Queue('scheduler', { connection: redis });
+
+/**
+ * Configura jobs recorrentes do scheduler usando BullMQ.
+ * Substitui o node-cron em process para maior resiliência.
+ */
+async function setupScheduler(): Promise<void> {
+  // Lembretes de agendamento (verificar a cada hora)
+  await schedulerQueue.add(
+    'check-appointment-reminders',
+    { type: 'check-appointment-reminders' },
+    {
+      repeat: { pattern: '0 * * * *' }, // Cada hora
+      jobId: 'check-appointment-reminders',
+    }
+  );
+
+  // Limpeza de jobs expirados (diariamente às 2h)
+  await schedulerQueue.add(
+    'cleanup-expired-jobs',
+    { type: 'cleanup-expired-jobs' },
+    {
+      repeat: { pattern: '0 2 * * *' }, // 2h da manhã
+      jobId: 'cleanup-expired-jobs',
+    }
+  );
+
+  // Verificação de estoque mínimo (diariamente às 9h)
+  await schedulerQueue.add(
+    'check-estoque-minimo',
+    { type: 'check-estoque-minimo' },
+    {
+      repeat: { pattern: '0 9 * * *' }, // 9h da manhã
+      jobId: 'check-estoque-minimo',
+    }
+  );
+
+  // Verificação de validade próxima (diariamente às 10h)
+  await schedulerQueue.add(
+    'check-validade-proxima',
+    { type: 'check-validade-proxima' },
+    {
+      repeat: { pattern: '0 10 * * *' }, // 10h da manhã
+      jobId: 'check-validade-proxima',
+    }
+  );
+
+  logger.info('Scheduler jobs configured with BullMQ');
+}
 
 /**
  * Ponto de entrada do ClinicaPlus Worker.
@@ -36,7 +92,9 @@ async function main() {
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down gracefully...');
-    
+
+    schedulerService.stop();
+
     await Promise.all([
       healthServer.close(),
       emailWorker.close(),
@@ -46,11 +104,18 @@ async function main() {
       reportAgtWorker.close(),
       criarSessoesWorker.close(),
       appointmentExpirationWorker.close(),
+      tratamentoWorker.close(),
+      pdfWorker.close(),
+      schedulerWorker.close(),
+      estoqueMinimoWorker.close(),
+      validadeProximaWorker.close(),
+      analyticsWorker.close(),
+      schedulerQueue.close(),
     ]);
 
     await redis.quit();
     await prisma.$disconnect();
-    
+
     logger.info('Worker stopped');
     process.exit(0);
   };
@@ -58,7 +123,12 @@ async function main() {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
+  // Configurar scheduler com BullMQ (substitui node-cron)
+  await setupScheduler();
+
+  // Iniciar scheduler service (node-cron) - mantido para jobs não migrados
   schedulerService.start();
+
   logger.info('Worker is running and waiting for jobs');
 }
 

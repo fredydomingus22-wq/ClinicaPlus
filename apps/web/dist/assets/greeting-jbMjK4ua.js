@@ -1,0 +1,1 @@
+function e(){let e=new Date().getHours();return e>=5&&e<12?`Bom dia`:e>=12&&e<18?`Boa tarde`:`Boa noite`}export{e as t};

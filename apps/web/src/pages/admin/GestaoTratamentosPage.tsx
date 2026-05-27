@@ -25,13 +25,19 @@ import { TratamentoDetalheModal } from '../../components/tratamentos/TratamentoD
 import { CriarPlanoForm } from '../../components/tratamentos/CriarPlanoForm';
 
 export default function GestaoTratamentosPage() {
+  const [activeTab, setActiveTab] = useState<'ativo' | 'concluido'>('ativo');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [tipoFilter, setTipoFilter] = useState('');
+  const [pacienteFilter, setPacienteFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null);
 
+  // Map tab to status filter
+  const statusFilter = activeTab === 'ativo' ? 'ACTIVO' : 'CONCLUIDO';
+
   const { data, isLoading, error, refetch } = usePlanosClinica({
-    estado: statusFilter || undefined,
+    estado: statusFilter,
     q: searchTerm || undefined
   });
 
@@ -150,7 +156,7 @@ export default function GestaoTratamentosPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 bg-secondary-50 rounded-lg text-secondary-700 border border-secondary-100">
             <TrendingUp className="h-5 w-5" />
-            <span className="text-sm font-bold">{planos.length} Planos Ativos</span>
+            <span className="text-sm font-bold">{planos.length} Planos {activeTab === 'ativo' ? 'Ativos' : 'Concluídos'}</span>
           </div>
           <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Novo Plano
@@ -159,10 +165,27 @@ export default function GestaoTratamentosPage() {
       </div>
 
       <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        {/* Tabs */}
+        <div className="flex gap-2 p-1 bg-neutral-100 rounded-xl w-fit mb-6">
+          <button
+            onClick={() => setActiveTab('ativo')}
+            className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'ativo' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+          >
+            Ativos
+          </button>
+          <button
+            onClick={() => setActiveTab('concluido')}
+            className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'concluido' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+          >
+            Concluídos
+          </button>
+        </div>
+
+        {/* Advanced Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
-            <input 
+            <input
               type="text"
               placeholder="Pesquisar por paciente ou tratamento..."
               className="w-full h-10 pl-10 pr-4 text-sm border border-neutral-200 rounded-md outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
@@ -170,31 +193,53 @@ export default function GestaoTratamentosPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="w-full md:w-48">
-            <select 
+          <div className="w-full lg:w-48">
+            <select
               className="w-full h-10 px-3 text-sm border border-neutral-200 rounded-md outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={tipoFilter}
+              onChange={(e) => setTipoFilter(e.target.value)}
             >
-              <option value="">Todos os Estados</option>
-              <option value="ACTIVO">Ativos</option>
-              <option value="CONCLUIDO">Concluídos</option>
-              <option value="PENDENTE">Pendentes</option>
-              <option value="CANCELADO">Cancelados</option>
+              <option value="">Todos os Tipos</option>
+              <option value="fisioterapia">Fisioterapia</option>
+              <option value="ortodontia">Ortodontia</option>
+              <option value="odontologia">Odontologia</option>
             </select>
           </div>
+          <div className="w-full lg:w-48">
+            <input
+              type="date"
+              className="w-full h-10 px-3 text-sm border border-neutral-200 rounded-md outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+            />
+          </div>
+          {(searchTerm || tipoFilter || dateFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm('');
+                setTipoFilter('');
+                setDateFilter('');
+              }}
+            >
+              Limpar Filtros
+            </Button>
+          )}
         </div>
 
         {error ? (
           <ErrorMessage error={error} />
         ) : (
-          <Table 
-            columns={columns}
-            data={planos}
-            isLoading={isLoading}
-            keyExtractor={(p: PlanoTratamentoDTO) => p.id}
-            onRowClick={(p: PlanoTratamentoDTO) => setSelectedPlanoId(p.id)}
-          />
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table
+              columns={columns}
+              data={planos}
+              isLoading={isLoading}
+              keyExtractor={(p: PlanoTratamentoDTO) => p.id}
+              onRowClick={(p: PlanoTratamentoDTO) => setSelectedPlanoId(p.id)}
+            />
+          </div>
         )}
       </Card>
 

@@ -15,6 +15,7 @@ import {
   FaturaDTO,
   PagamentoDTO,
   ClinicaDTO,
+  TipoItemFatura,
 } from '@clinicaplus/types';
 import { 
   TipoFatura,
@@ -42,6 +43,7 @@ import { agtApiClient } from './fiscal/AgtApiClient';
 import { proximoNumero as obterProximoNumeroDocumento } from './fiscal/SequenciaService';
 import { reportAgtQueue } from '../lib/queues';
 import { decryptSecret } from '../lib/secretCrypto';
+import { estoqueCalculoService } from './estoque.calculo.service';
 
 type PagamentoCreateInput = z.infer<typeof PagamentoCreateSchema>;
 
@@ -74,9 +76,138 @@ export const faturasService = {
 
     if (!clinica) throw new AppError('Clínica não encontrada', 404);
 
+    // NOVO: Processar itens polimórficos
+    const itensProcessados = await Promise.all(
+      data.itens.map(async (item) => {
+        if (item.tipoItem === TipoItemFatura.PRODUTO && item.produtoId) {
+          const produto = await prisma.produto.findFirst({
+            where: { id: item.produtoId, clinicaId },
+            select: {
+              id: true,
+              nome: true,
+              precoVenda: true,
+              taxaIva: true,
+              codigoIva: true,
+              motivoIsencao: true,
+              gerenciaEstoque: true,
+            },
+          });
+
+          if (!produto) throw new AppError('Produto não encontrado', 404);
+
+          // Validar estoque se gerenciaEstoque
+          if (produto.gerenciaEstoque) {
+            const estoqueAtual = await estoqueCalculoService.calcularEstoqueProduto(
+              clinicaId,
+              produto.id
+            );
+
+            if (estoqueAtual < item.quantidade) {
+              throw new AppError(
+                `Estoque insuficiente para ${produto.nome}. Disponível: ${estoqueAtual}`,
+                400
+              );
+            }
+          }
+
+          return {
+            ...item,
+            descricao: item.descricao || produto.nome,
+            precoUnit: item.precoUnit || produto.precoVenda,
+            taxaIva: item.taxaIva ?? produto.taxaIva,
+            codigoIva: item.codigoIva || produto.codigoIva,
+            motivoIsencao: item.motivoIsencao ?? produto.motivoIsencao,
+          };
+        }
+
+        if (item.tipoItem === TipoItemFatura.TRATAMENTO && item.tratamentoId) {
+          const tratamento = await prisma.tipoTratamento.findFirst({
+            where: { id: item.tratamentoId, clinicaId },
+            select: { id: true, nome: true, preco: true },
+          });
+
+          if (!tratamento) throw new AppError('Tratamento não encontrado', 404);
+
+          return {
+            ...item,
+            descricao: item.descricao || tratamento.nome,
+            precoUnit: item.precoUnit || tratamento.preco,
+          };
+        }
+
+        if (item.tipoItem === TipoItemFatura.EXAME && item.exameId) {
+          const exame = await prisma.tipoExameClinica.findFirst({
+            where: { id: item.exameId, clinicaId },
+            select: { id: true, nome: true, preco: true },
+          });
+
+          if (!exame) throw new AppError('Exame não encontrado', 404);
+
+          return {
+            ...item,
+            descricao: item.descricao || exame.nome,
+            precoUnit: item.precoUnit || exame.preco,
+          };
+        }
+
+        if (item.tipoItem === TipoItemFatura.CONSULTA && item.medicoId) {
+          const medico = await prisma.medico.findFirst({
+            where: { id: item.medicoId, clinicaId },
+            select: { id: true, nome: true, preco: true },
+          });
+
+          if (!medico) throw new AppError('Médico não encontrado', 404);
+
+          return {
+            ...item,
+            descricao: item.descricao || `Consulta - ${medico.nome}`,
+            precoUnit: item.precoUnit || medico.preco,
+          };
+        }
+
+        // SERVICO - manter como está
+        return item;
+      })
+    );
+
     const tipoDoc = (data.tipoDocFiscal || TipoDocumentoFiscal.FT) as TipoDocumentoFiscal;
     const { formatado: numeroFatura } = await obterProximoNumeroDocumento(prisma as unknown as Prisma.TransactionClient, clinicaId, tipoDoc as unknown as PrismaTipoDoc);
-    const { subtotal, totalDesconto, totalIva, total, itensCalculados } = calcularFatura(data.itens, clinica.regimeFiscal);
+    
+    // Filtrar apenas campos necessários para cálculo
+    const itensParaCalculo = itensProcessados.map(item => ({
+      descricao: item.descricao,
+      quantidade: item.quantidade,
+      precoUnit: item.precoUnit,
+      desconto: item.desconto,
+      taxaIva: item.taxaIva,
+      codigoIva: item.codigoIva,
+      motivoIsencao: item.motivoIsencao || undefined,
+    }));
+    
+    const { subtotal, totalDesconto, totalIva, total, itensCalculados } = calcularFatura(itensParaCalculo, clinica.regimeFiscal);
+
+    // Merge dos itens calculados com os campos polimórficos originais
+    const itensParaCriar = itensProcessados.map((item, index) => {
+      const calculado = itensCalculados[index];
+      if (!calculado) {
+        throw new AppError('Erro ao calcular item da fatura', 500);
+      }
+      return {
+        tipoItem: item.tipoItem || TipoItemFatura.SERVICO,
+        produtoId: item.produtoId || null,
+        tratamentoId: item.tratamentoId || null,
+        exameId: item.exameId || null,
+        medicoId: item.medicoId || null,
+        descricao: item.descricao || 'Item sem descrição',
+        quantidade: item.quantidade,
+        precoUnit: item.precoUnit,
+        desconto: item.desconto,
+        taxaIva: calculado.taxaIva,
+        codigoIva: calculado.codigoIva,
+        motivoIsencao: (item.motivoIsencao || null) as any,
+        total: calculado.total
+      };
+    });
 
     const fatura = await prisma.fatura.create({
       data: {
@@ -99,16 +230,7 @@ export const faturasService = {
         dataVencimento: data.dataVencimento ? new Date(data.dataVencimento) : null,
         moeda: 'AOA',
         itens: {
-          create: itensCalculados.map(item => ({
-            descricao: item.descricao || 'Item sem descrição',
-            quantidade: item.quantidade,
-            precoUnit: item.precoUnit,
-            desconto: item.desconto,
-            taxaIva: item.taxaIva,
-            codigoIva: item.codigoIva,
-            motivoIsencao: (item.motivoIsencao || null) as any,
-            total: item.total
-          }))
+          create: itensParaCriar
         }
       },
       include: {
@@ -134,6 +256,158 @@ export const faturasService = {
     });
 
     return toFaturaDTO(fatura);
+  },
+
+  async listItensFacturaveis(
+    clinicaId: string,
+    busca?: string,
+    tipo?: TipoItemFatura
+  ) {
+    const itens: any[] = [];
+
+    // Produtos
+    if (!tipo || tipo === TipoItemFatura.PRODUTO) {
+      const produtos = await prisma.produto.findMany({
+        where: {
+          clinicaId,
+          ativo: true,
+          ...(busca ? {
+            OR: [
+              { nome: { contains: busca, mode: 'insensitive' } },
+              { codigo: { contains: busca, mode: 'insensitive' } },
+            ],
+          } : {}),
+        },
+        select: {
+          id: true,
+          nome: true,
+          codigo: true,
+          precoVenda: true,
+          taxaIva: true,
+          codigoIva: true,
+          motivoIsencao: true,
+          gerenciaEstoque: true,
+        },
+        orderBy: { nome: 'asc' },
+      });
+
+      const produtoIds = produtos.map(p => p.id);
+      const estoqueBatch = await estoqueCalculoService.calcularEstoqueBatch(
+        clinicaId,
+        produtoIds
+      );
+
+      itens.push(...produtos.map(p => ({
+        id: p.id,
+        tipo: TipoItemFatura.PRODUTO,
+        nome: p.nome,
+        codigo: p.codigo,
+        preco: p.precoVenda,
+        taxaIva: p.taxaIva,
+        codigoIva: p.codigoIva,
+        motivoIsencao: p.motivoIsencao,
+        estoqueAtual: estoqueBatch[p.id] || 0,
+        gerenciaEstoque: p.gerenciaEstoque,
+      })));
+    }
+
+    // Tratamentos
+    if (!tipo || tipo === TipoItemFatura.TRATAMENTO) {
+      const tratamentos = await prisma.tipoTratamento.findMany({
+        where: {
+          clinicaId,
+          ativo: true,
+          ...(busca ? {
+            OR: [
+              { nome: { contains: busca, mode: 'insensitive' } },
+            ],
+          } : {}),
+        },
+        select: {
+          id: true,
+          nome: true,
+          preco: true,
+        },
+        orderBy: { nome: 'asc' },
+      });
+
+      itens.push(...tratamentos.map(t => ({
+        id: t.id,
+        tipo: TipoItemFatura.TRATAMENTO,
+        nome: t.nome,
+        codigo: null,
+        preco: t.preco,
+        taxaIva: 14,
+        codigoIva: 'IVA',
+        motivoIsencao: null,
+      })));
+    }
+
+    // Exames
+    if (!tipo || tipo === TipoItemFatura.EXAME) {
+      const exames = await prisma.tipoExameClinica.findMany({
+        where: {
+          clinicaId,
+          ativo: true,
+          ...(busca ? {
+            OR: [
+              { nome: { contains: busca, mode: 'insensitive' } },
+            ],
+          } : {}),
+        },
+        select: {
+          id: true,
+          nome: true,
+          preco: true,
+        },
+        orderBy: { nome: 'asc' },
+      });
+
+      itens.push(...exames.map(e => ({
+        id: e.id,
+        tipo: TipoItemFatura.EXAME,
+        nome: e.nome,
+        codigo: null,
+        preco: e.preco,
+        taxaIva: 14,
+        codigoIva: 'IVA',
+        motivoIsencao: null,
+      })));
+    }
+
+    // Consultas (Médicos)
+    if (!tipo || tipo === TipoItemFatura.CONSULTA) {
+      const medicos = await prisma.medico.findMany({
+        where: {
+          clinicaId,
+          ativo: true,
+          ...(busca ? {
+            OR: [
+              { nome: { contains: busca, mode: 'insensitive' } },
+            ],
+          } : {}),
+        },
+        select: {
+          id: true,
+          nome: true,
+          preco: true,
+        },
+        orderBy: { nome: 'asc' },
+      });
+
+      itens.push(...medicos.map(m => ({
+        id: m.id,
+        tipo: TipoItemFatura.CONSULTA,
+        nome: `Consulta - ${m.nome}`,
+        codigo: null,
+        preco: m.preco,
+        taxaIva: 14,
+        codigoIva: 'IVA',
+        motivoIsencao: null,
+      })));
+    }
+
+    return itens;
   },
 
   async emitir(id: string, clinicaId: string, criadoPor: string): Promise<FaturaDTO> {
@@ -303,6 +577,36 @@ export const faturasService = {
             criadoPor,
           }
         });
+      }
+
+      // NOVO: Deduzir stock apenas para PRODUTO após emissão bem-sucedida
+      for (const item of faturaActualizada.itens) {
+        if (item.tipoItem === TipoItemFatura.PRODUTO && item.produtoId) {
+          // Buscar lote FIFO
+          const loteId = await estoqueCalculoService.encontrarLoteFIFO(clinicaId, item.produtoId, item.quantidade);
+
+          if (loteId) {
+            // Atualizar quantidade do lote
+            await tx.estoqueLote.update({
+              where: { id: loteId },
+              data: { quantidade: { decrement: item.quantidade } },
+            });
+
+            // Registar movimentação
+            await tx.movimentacaoEstoque.create({
+              data: {
+                clinicaId,
+                produtoId: item.produtoId,
+                loteId,
+                quantidade: item.quantidade,
+                tipo: 'VENDA',
+                motivo: `Venda na fatura ${numeroFatura}`,
+                documentoRef: numeroFatura,
+                utilizadorId: criadoPor,
+              },
+            });
+          }
+        }
       }
 
       return faturaActualizada;
@@ -989,6 +1293,11 @@ function toFaturaDTO(fatura: unknown): FaturaDTO {
     itens: (f.itens as any[] | undefined)?.map((i: any) => ({
       id: i.id,
       faturaId: f.id,
+      tipoItem: i.tipoItem || TipoItemFatura.SERVICO,
+      produtoId: i.produtoId || undefined,
+      tratamentoId: i.tratamentoId || undefined,
+      exameId: i.exameId || undefined,
+      medicoId: i.medicoId || undefined,
       descricao: i.descricao,
       quantidade: i.quantidade,
       precoUnit: i.precoUnit,

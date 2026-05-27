@@ -14,6 +14,10 @@ import {
   History,
   Archive,
   FileSignature,
+  Database,
+  Package,
+  Building,
+  DollarSign,
   type LucideIcon
 } from 'lucide-react';
 import { Papel } from '@clinicaplus/types';
@@ -89,25 +93,143 @@ export const NAV_CONFIG: NavItem[] = [
     ]
   },
 
+  // Cadastros - grupo colapsável com filhos
+  {
+    to: '#',
+    label: 'Cadastros',
+    icon: Database,
+    priority: true,
+    roles: [Papel.ADMIN],
+    groupId: 'cadastros',
+    children: [
+      {
+        to: '/admin/inventario/catalogo',
+        label: 'Produtos e Serviços',
+        icon: Package,
+        roles: [Papel.ADMIN],
+        parent: 'cadastros',
+        groupId: 'cadastros-produtos-servicos'
+      },
+      {
+        to: '/admin/cadastros/fornecedores',
+        label: 'Fornecedores',
+        icon: Building,
+        roles: [Papel.ADMIN],
+        parent: 'cadastros',
+        groupId: 'cadastros-fornecedores'
+      },
+      {
+        to: '/admin/configuracao/servicos',
+        label: 'Exames e Procedimentos',
+        icon: Activity,
+        roles: [Papel.ADMIN],
+        parent: 'cadastros',
+        groupId: 'cadastros-procedimentos'
+      },
+      {
+        to: '/admin/especialidades',
+        label: 'Especialidades',
+        icon: Stethoscope,
+        roles: [Papel.ADMIN],
+        parent: 'cadastros',
+        groupId: 'cadastros-especialidades'
+      }
+    ]
+  },
+
   // Agendamentos - sem filhos por enquanto
   { to: '/admin/agendamentos', label: 'Agendamentos', icon: Calendar, priority: true, roles: [Papel.ADMIN], groupId: 'agendamentos' },
   { to: '/recepcao/agendamentos', label: 'Agendamentos', icon: Calendar, priority: true, roles: [Papel.RECEPCIONISTA], groupId: 'agendamentos' },
   { to: '/recepcao/hoje', label: 'Hoje', icon: Clock, priority: true, roles: [Papel.RECEPCIONISTA], groupId: 'agendamentos' },
   { to: '/medico/agenda', label: 'Minha Agenda', icon: Calendar, priority: true, roles: [Papel.MEDICO], groupId: 'agendamentos' },
 
-  // Financeiro
-  { to: '/admin/financeiro', label: 'Financeiro', icon: Wallet, priority: true, roles: [Papel.ADMIN], groupId: 'financeiro' },
-  { to: '/admin/financeiro/seguros', label: 'Seguros de Saúde', icon: ShieldCheck, roles: [Papel.ADMIN], groupId: 'financeiro' },
-  { to: '/recepcao/financeiro', label: 'Financeiro', icon: Wallet, priority: true, roles: [Papel.RECEPCIONISTA], groupId: 'financeiro' },
+  // Financeiro - grupo colapsável com filhos
+  {
+    to: '#',
+    label: 'Financeiro',
+    icon: DollarSign,
+    priority: true,
+    roles: [Papel.ADMIN],
+    groupId: 'financeiro',
+    children: [
+      {
+        to: '/admin/financeiro',
+        label: 'Faturação',
+        icon: Wallet,
+        roles: [Papel.ADMIN],
+        parent: 'financeiro',
+        groupId: 'financeiro-faturacao'
+      },
+      {
+        to: '/admin/relatorios',
+        label: 'Relatórios',
+        icon: BarChart3,
+        roles: [Papel.ADMIN],
+        parent: 'financeiro',
+        groupId: 'financeiro-relatorios'
+      },
+      {
+        to: '/admin/contratos',
+        label: 'Contratos',
+        icon: FileSignature,
+        roles: [Papel.ADMIN],
+        parent: 'financeiro',
+        groupId: 'financeiro-contratos'
+      }
+    ]
+  },
+  {
+    to: '/recepcao/financeiro', label: 'Financeiro', icon: Wallet, priority: true, roles: [Papel.RECEPCIONISTA], groupId: 'financeiro' },
   { to: '/recepcao/financeiro/seguros', label: 'Seguros de Saúde', icon: ShieldCheck, roles: [Papel.RECEPCIONISTA], groupId: 'financeiro' },
 
-  // Saúde/Exames/Tratamentos
-  { to: '/admin/exames', label: 'Gestao de Exames', icon: FileText, priority: true, roles: [Papel.ADMIN], groupId: 'saude' },
+  // Gestão Clínica - grupo colapsável com filhos
+  {
+    to: '#',
+    label: 'Gestão Clínica',
+    icon: Stethoscope,
+    priority: true,
+    roles: [Papel.ADMIN],
+    groupId: 'gestao-clinica',
+    children: [
+      {
+        to: '/admin/tratamentos',
+        label: 'Gestão de Tratamentos',
+        icon: Activity,
+        roles: [Papel.ADMIN],
+        parent: 'gestao-clinica',
+        groupId: 'gestao-clinica-tratamentos'
+      },
+      {
+        to: '/admin/exames',
+        label: 'Gestão de Exames',
+        icon: FileText,
+        roles: [Papel.ADMIN],
+        parent: 'gestao-clinica',
+        groupId: 'gestao-clinica-exames'
+      },
+      {
+        to: '/admin/anamneses/templates',
+        label: 'Templates de Anamnese',
+        icon: FileText,
+        roles: [Papel.ADMIN],
+        parent: 'gestao-clinica',
+        groupId: 'gestao-clinica-anamneses'
+      },
+      {
+        to: '/admin/odontogramas',
+        label: 'Odontogramas',
+        icon: Activity,
+        roles: [Papel.ADMIN],
+        parent: 'gestao-clinica',
+        groupId: 'gestao-clinica-odontogramas'
+      }
+    ]
+  },
+
+  // Saúde/Exames/Tratamentos - Médico
   { to: '/medico/exames', label: 'Gestao de Exames', icon: FileText, priority: true, roles: [Papel.MEDICO], groupId: 'saude' },
-  { to: '/admin/tratamentos', label: 'Gestao de Tratamentos', icon: Activity, priority: true, roles: [Papel.ADMIN], groupId: 'saude' },
   { to: '/medico/tratamentos', label: 'Gestao de Tratamentos', icon: Activity, priority: true, roles: [Papel.MEDICO], groupId: 'saude' },
   { to: '/medico/anamneses/templates', label: 'Templates de Anamnese', icon: FileText, roles: [Papel.MEDICO], groupId: 'saude' },
-  { to: '/admin/anamneses/templates', label: 'Templates de Anamnese', icon: FileText, roles: [Papel.ADMIN], groupId: 'saude' },
   { to: '/medico/receitas', label: 'Receitas', icon: FileText, priority: true, roles: [Papel.MEDICO], groupId: 'saude' },
   { to: '/medico/historico', label: 'Historico', icon: Clock, priority: true, roles: [Papel.MEDICO], groupId: 'saude' },
 
@@ -117,11 +239,8 @@ export const NAV_CONFIG: NavItem[] = [
   { to: '/recepcao/perfil', label: 'Meu Perfil', icon: User, roles: [Papel.RECEPCIONISTA], groupId: 'perfil' },
 
   // Admin - Configurações
-  { to: '/admin/relatorios', label: 'Relatorios', icon: BarChart3, roles: [Papel.ADMIN], groupId: 'admin' },
-  { to: '/admin/especialidades', label: 'Especialidades', icon: Stethoscope, roles: [Papel.ADMIN], groupId: 'admin' },
   { to: '/admin/integracoes', label: 'Integracoes', icon: ShieldCheck, roles: [Papel.ADMIN], groupId: 'admin' },
   { to: '/admin/configuracao', label: 'Definicoes', icon: Settings, roles: [Papel.ADMIN], groupId: 'admin' },
-  { to: '/admin/contratos', label: 'Contratos', icon: FileSignature, roles: [Papel.ADMIN], groupId: 'admin' },
   { to: '/admin/inventario/dashboard', label: 'Dashboard Inventario', icon: BarChart3, priority: true, roles: [Papel.ADMIN], groupId: 'admin' },
   { to: '/admin/inventario/catalogo', label: 'Catalogo de Itens', icon: Archive, priority: true, roles: [Papel.ADMIN], groupId: 'admin' },
 

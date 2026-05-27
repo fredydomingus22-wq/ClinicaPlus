@@ -118,8 +118,6 @@ export default function InventoryDashboardPage() {
           value={formatKwanza(kpis?.valorTotalEstoque || 0)} 
           icon={Package} 
           color="blue"
-          trend={{ value: 12, isPositive: true }}
-          badgeText="+12% Crescimento"
         />
         <KpiCard 
           label="Taxa de Ruptura" 
@@ -133,15 +131,35 @@ export default function InventoryDashboardPage() {
           value={kpis?.diasEstoque || 0} 
           icon={Clock} 
           color="slate"
-          badgeText="Disponibilidade"
         />
         <KpiCard 
           label="Rotatividade (Turnover)" 
           value={kpis?.taxaRotatividade || 0} 
           icon={TrendingUp} 
           color="green"
-          trend={{ value: 8, isPositive: true }}
-          badgeText="Alta Eficiência"
+        />
+      </div>
+
+      {/* Secondary KPIs - Validity and Stock Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <KpiCard 
+          label="Itens Abaixo do Mínimo" 
+          value={kpis?.itensAbaixoMinimo || 0} 
+          icon={AlertTriangle} 
+          color={(kpis?.itensAbaixoMinimo || 0) > 0 ? "red" : "green"}
+          badgeText={(kpis?.itensAbaixoMinimo || 0) > 0 ? "Atenção" : "OK"}
+        />
+        <KpiCard 
+          label="Vencem em 30 dias" 
+          value={kpis?.itensComValidade30d || 0} 
+          icon={CalendarDays} 
+          color={(kpis?.itensComValidade30d || 0) > 0 ? "amber" : "green"}
+        />
+        <KpiCard 
+          label="Vencem em 60 dias" 
+          value={kpis?.itensComValidade60d || 0} 
+          icon={CalendarDays} 
+          color={(kpis?.itensComValidade60d || 0) > 0 ? "blue" : "green"}
         />
       </div>
 

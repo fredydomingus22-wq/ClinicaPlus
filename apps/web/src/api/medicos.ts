@@ -28,6 +28,10 @@ export const medicosApi = {
   create: (data: MedicoCreateInput) =>
     apiClient.post<{ data: MedicoDTO }>('/medicos', data).then(r => r.data.data),
 
+  /** Allows an admin to configure themselves as a médico */
+  setupAsMedico: (data: MedicoCreateInput) =>
+    apiClient.post<{ data: MedicoDTO }>('/medicos/setup-as-medico', data).then(r => r.data.data),
+
   update: (id: string, data: MedicoUpdateInput) =>
     apiClient.patch<{ data: MedicoDTO }>(`/medicos/${id}`, data).then(r => r.data.data),
 

@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
+import type { Prisma } from '@prisma/client';
 import type {
   OdontogramaCreateInput,
   OdontogramaDTO,
@@ -32,6 +33,23 @@ function toDto(record: {
     atualizadoEm: record.atualizadoEm.toISOString(),
   };
 }
+
+type OdontogramaListRecord = Prisma.OdontogramaGetPayload<{
+  include: {
+    paciente: {
+      select: {
+        id: true;
+        nome: true;
+      };
+    };
+    agendamento: {
+      select: {
+        id: true;
+        dataHora: true;
+      };
+    };
+  };
+}>;
 
 async function assertAgendamentoContext(
   clinicaId: string,
@@ -123,6 +141,41 @@ export class OdontogramaService {
     });
 
     return records.map(toDto);
+  }
+
+  static async list(clinicaId: string, pacienteId?: string, limit?: number): Promise<OdontogramaDTO[]> {
+    const where: { clinicaId: string; pacienteId?: string } = { clinicaId };
+    if (pacienteId) {
+      where.pacienteId = pacienteId;
+    }
+
+    const findManyArgs = {
+      where,
+      orderBy: { criadoEm: 'desc' },
+      include: {
+        paciente: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
+        agendamento: {
+          select: {
+            id: true,
+            dataHora: true,
+          },
+        },
+      },
+      ...(limit !== undefined ? { take: limit } : {}),
+    } satisfies Prisma.OdontogramaFindManyArgs;
+
+    const records = await prisma.odontograma.findMany(findManyArgs) as OdontogramaListRecord[];
+
+    return records.map((record) => ({
+      ...toDto(record),
+      paciente: record.paciente,
+      agendamento: record.agendamento,
+    }));
   }
 
   static async getById(clinicaId: string, id: string): Promise<OdontogramaDTO> {

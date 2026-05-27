@@ -6,6 +6,7 @@ export const odontogramaKeys = {
   all: () => ['odontogramas'] as const,
   byAgendamento: (id: string) => [...odontogramaKeys.all(), 'agendamento', id] as const,
   byPaciente: (id: string) => [...odontogramaKeys.all(), 'paciente', id] as const,
+  list: (params?: { pacienteId?: string; limit?: number }) => [...odontogramaKeys.all(), 'list', params] as const,
 };
 
 export function useOdontogramaByAgendamento(agendamentoId: string) {
@@ -21,6 +22,13 @@ export function useOdontogramaByPaciente(pacienteId: string) {
     queryKey: odontogramaKeys.byPaciente(pacienteId),
     queryFn: () => odontogramaApi.getByPaciente(pacienteId),
     enabled: !!pacienteId,
+  });
+}
+
+export function useOdontogramasList(params?: { pacienteId?: string; limit?: number }) {
+  return useQuery({
+    queryKey: odontogramaKeys.list(params),
+    queryFn: () => odontogramaApi.list(params),
   });
 }
 

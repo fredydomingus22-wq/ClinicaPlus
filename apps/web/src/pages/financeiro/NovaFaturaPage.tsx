@@ -7,6 +7,7 @@ import {
   EstadoAgendamento,
   TipoFatura, 
   TipoDocumentoFiscal,
+  TipoItemFatura,
   type FaturaCreateInput
 } from '@clinicaplus/types';
 import { 
@@ -355,6 +356,7 @@ function Step2ItemsDrafting() {
             variant="ghost" 
             size="sm" 
             onClick={() => append({ 
+              tipoItem: TipoItemFatura.SERVICO,
               descricao: '', 
               quantidade: 1, 
               precoUnit: 0, 
@@ -396,49 +398,90 @@ function Step2ItemsDrafting() {
   );
 }
 
+import { useAuthStore } from '../../stores/auth.store';
+import { ItemFacturavelCombobox } from '../../components/faturacao/ItemFacturavelCombobox';
+import type { ItemFacturavelSelect } from '@clinicaplus/types';
+
 function ItemRow({ index, onRemove }: { index: number; onRemove: () => void }) {
-  const { register, watch } = useFormContext<FaturaCreateInput>();
+  const { register, watch, setValue } = useFormContext<FaturaCreateInput>();
+  const { utilizador } = useAuthStore();
+  const clinicaId = utilizador?.clinicaId || '';
   
   const q = Number(watch(`itens.${index}.quantidade`)) || 0;
   const p = Number(watch(`itens.${index}.precoUnit`)) || 0;
   const d = Number(watch(`itens.${index}.desconto`)) || 0;
   const rowTotal = (q * p) - d;
+  const descricao = watch(`itens.${index}.descricao`) || '';
+
+  /** Seleccionou um item do catálogo */
+  const handleSelect = (item: ItemFacturavelSelect) => {
+    setValue(`itens.${index}.tipoItem`, item.tipo as TipoItemFatura);
+    setValue(`itens.${index}.descricao`, item.nome);
+    setValue(`itens.${index}.precoUnit`, item.preco);
+    setValue(`itens.${index}.taxaIva`, item.taxaIva);
+    setValue(`itens.${index}.codigoIva`, item.codigoIva);
+    if (item.motivoIsencao) setValue(`itens.${index}.motivoIsencao`, item.motivoIsencao);
+
+    // Definir o ID correcto conforme o tipo
+    setValue(`itens.${index}.produtoId`, undefined);
+    setValue(`itens.${index}.tratamentoId`, undefined);
+    setValue(`itens.${index}.exameId`, undefined);
+    setValue(`itens.${index}.medicoId`, undefined);
+    switch (item.tipo) {
+      case TipoItemFatura.PRODUTO:    setValue(`itens.${index}.produtoId`,    item.id); break;
+      case TipoItemFatura.TRATAMENTO: setValue(`itens.${index}.tratamentoId`, item.id); break;
+      case TipoItemFatura.EXAME:      setValue(`itens.${index}.exameId`,      item.id); break;
+      case TipoItemFatura.CONSULTA:   setValue(`itens.${index}.medicoId`,     item.id); break;
+    }
+  };
+
+  /** Limpou a selecção → volta a serviço livre */
+  const handleClear = () => {
+    setValue(`itens.${index}.tipoItem`, TipoItemFatura.SERVICO);
+    setValue(`itens.${index}.descricao`, '');
+    setValue(`itens.${index}.produtoId`, undefined);
+    setValue(`itens.${index}.tratamentoId`, undefined);
+    setValue(`itens.${index}.exameId`, undefined);
+    setValue(`itens.${index}.medicoId`, undefined);
+  };
 
   return (
     <tr className="group">
-      <td className="px-4 py-3">
-        <input 
-          {...register(`itens.${index}.descricao`)} 
-          placeholder="Ex: Consulta de Pediatria"
-          className="w-full text-sm outline-none bg-transparent focus:ring-1 focus:ring-primary-500 rounded px-1"
+      <td className="px-4 py-2 min-w-[260px]">
+        <ItemFacturavelCombobox
+          clinicaId={clinicaId}
+          value={descricao}
+          onSelect={handleSelect}
+          onChange={(v) => setValue(`itens.${index}.descricao`, v)}
+          onClear={handleClear}
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2 w-20">
         <input 
           type="number" 
           min="1"
           {...register(`itens.${index}.quantidade`, { valueAsNumber: true })}
-          className="w-full text-sm text-center outline-none bg-transparent focus:ring-1 focus:ring-primary-500 rounded"
+          className="w-full text-sm text-center outline-none bg-transparent focus:ring-1 focus:ring-primary-400 rounded p-1"
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2 w-28">
         <input 
           type="number"
           {...register(`itens.${index}.precoUnit`, { valueAsNumber: true })}
-          className="w-full text-sm text-right font-mono outline-none bg-transparent focus:ring-1 focus:ring-primary-500 rounded px-1"
+          className="w-full text-sm text-right font-mono outline-none bg-transparent focus:ring-1 focus:ring-primary-400 rounded p-1"
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2 w-24">
         <input 
           type="number"
           {...register(`itens.${index}.desconto`, { valueAsNumber: true })}
-          className="w-full text-sm text-right font-mono text-red-600 outline-none bg-transparent focus:ring-1 focus:ring-primary-500 rounded px-1"
+          className="w-full text-sm text-right font-mono text-red-500 outline-none bg-transparent focus:ring-1 focus:ring-primary-400 rounded p-1"
         />
       </td>
-      <td className="px-4 py-3 text-right font-mono font-bold text-sm text-neutral-900 font-mono">
+      <td className="px-3 py-2 text-right font-mono font-bold text-sm text-neutral-800 w-28">
         {formatKwanza(rowTotal)}
       </td>
-      <td className="px-4 py-3 text-center">
+      <td className="px-3 py-2 text-center w-10">
         <button 
           type="button" 
           onClick={onRemove}

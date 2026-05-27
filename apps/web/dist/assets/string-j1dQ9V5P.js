@@ -1,0 +1,1 @@
+function e(e){if(!e)return``;let t=e.trim().split(/\s+/);if(t.length===0)return``;if(t.length===1)return(t[0]||``).substring(0,2).toUpperCase();let n=t[0]||``,r=t[t.length-1]||``;return((n[0]||``)+(r===n?``:r[0]||``)).toUpperCase()}export{e as t};

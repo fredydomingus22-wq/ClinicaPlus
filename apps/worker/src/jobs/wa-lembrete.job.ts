@@ -1,18 +1,8 @@
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { whatsappQueue } from '../lib/queues';
-import { addHours, addDays, startOfDay, endOfDay, format } from 'date-fns';
-import { pt } from 'date-fns/locale';
-
-/**
- * Templates de mensagens para lembretes
- */
-const TEMPLATES = {
-  '24h': (nome: string, hora: string) => 
-    `Olá ${nome}, lembramos o seu agendamento para amanhã às ${hora}.`,
-  '2h': (nome: string, hora: string) => 
-    `Olá ${nome}, o seu agendamento é daqui a pouco, às ${hora}.`
-};
+import { addHours, addDays, startOfDay, endOfDay } from 'date-fns';
+import axios from 'axios';
 
 /**
  * Job para enviar lembretes de agendamento via WhatsApp.
@@ -46,6 +36,7 @@ export async function jobWaLembretes(tipo: '24h' | '2h') {
       },
       include: {
         paciente: true,
+        medico: true,
         clinica: {
           include: { 
             waInstancias: { 
@@ -65,26 +56,31 @@ export async function jobWaLembretes(tipo: '24h' | '2h') {
 
     log.info({ count: agendamentos.length }, 'Candidatos a lembrete encontrados');
 
-    let enfileirados = 0;
+    let enviados = 0;
+    let falhas = 0;
+
     for (const ag of agendamentos) {
       const instancia = ag.clinica.waInstancias[0];
       if (!instancia || instancia.automacoes.length === 0) continue;
 
-      const horaFormatada = format(ag.dataHora, 'HH:mm', { locale: pt });
-      const texto = TEMPLATES[tipo](ag.paciente.nome, horaFormatada);
-
-      await whatsappQueue.add('lembrete', {
-        numero: ag.paciente.telefone!,
-        clinicaId: ag.clinicaId,
-        texto,
-        agendamentoId: ag.id
-      }, {
-        jobId: `wa-rem-${tipo}-${ag.id}`
-      });
-      enfileirados++;
+      try {
+        // Chama API interna para enviar lembrete
+        await axios.post(`${process.env.API_URL || 'http://localhost:3000'}/api/whatsapp/lembrete`, {
+          agendamentoId: ag.id,
+          tipo,
+        }, {
+          headers: {
+            'x-api-key': process.env.WORKER_API_KEY || 'worker-key',
+          },
+        });
+        enviados++;
+      } catch (error) {
+        log.error({ agendamentoId: ag.id, error }, 'Falha ao enviar lembrete');
+        falhas++;
+      }
     }
 
-    log.info({ enfileirados }, 'Ciclo de lembretes concluído');
+    log.info({ enviados, falhas }, 'Ciclo de lembretes concluído');
   } catch (err) {
     log.error({ err }, 'Falha fatal no job de lembretes');
     throw err;

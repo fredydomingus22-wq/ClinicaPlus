@@ -16,6 +16,7 @@
     "@clinicaplus/utils": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@types/node-cron": "^3.0.11",
+    "axios": "^1.13.6",
     "bullmq": "^5.0.0",
     "date-fns": "^3.0.0",
     "dayjs": "^1.11.10",
@@ -23,6 +24,8 @@
     "ioredis": "5.4.1",
     "node-cron": "^4.2.1",
     "pino": "^10.3.1",
+    "puppeteer": "^25.0.4",
+    "redlock": "5.0.0-beta.2",
     "resend": "^6.9.3",
     "zod": "^3.22.0"
   },

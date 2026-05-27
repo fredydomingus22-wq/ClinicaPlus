@@ -15,15 +15,15 @@ export function TopNav() {
   }
   
   return (
-    <div className="flex items-center justify-end gap-1 bg-white border-b border-[#e5e5e5] px-4 py-2 overflow-x-auto">
+    <div className="flex items-center justify-end gap-1 bg-white border-b border-[#e5e5e5] px-4 py-0.5 overflow-x-auto">
       {siblingItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) => `
-            px-4 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
-            ${isActive 
-              ? 'border-[#1a1a1a] text-[#1a1a1a]' 
+            px-4 py-0.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+            ${isActive
+              ? 'border-[#1a1a1a] text-[#1a1a1a]'
               : 'border-transparent text-[#737373] hover:text-[#1a1a1a] hover:border-[#d4d4d4]'
             }
           `}

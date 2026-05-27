@@ -1,0 +1,1 @@
+function e(e){return new Intl.NumberFormat(`pt-AO`,{style:`decimal`,minimumFractionDigits:0,maximumFractionDigits:0}).format(e)+` Kz`}export{e as t};

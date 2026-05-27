@@ -1,0 +1,1 @@
+{"version":3,"file":"money.js","sourceRoot":"","sources":["../../src/fiscal/money.ts"],"names":[],"mappings":";;AAIA,wCAEC;AAMD,oCAEC;AAdD;;;GAGG;AACH,SAAgB,cAAc,CAAC,KAAa;IAC1C,OAAO,IAAI,CAAC,IAAI,CAAC,KAAK,GAAG,GAAG,CAAC,GAAG,GAAG,CAAC;AACtC,CAAC;AAED;;;GAGG;AACH,SAAgB,YAAY,CAAC,YAAoB;IAC/C,OAAO,IAAI,CAAC,IAAI,CAAC,YAAY,CAAC,CAAC;AACjC,CAAC"}

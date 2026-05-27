@@ -43,13 +43,11 @@ export function useSocket(): Socket | null {
     });
 
     instance.on('connect', () => {
-      // eslint-disable-next-line no-console
-      console.log('✅ Socket connected:', instance?.id);
+      // Socket connected - no logging needed in production
     });
 
     instance.on('connect_error', (err) => {
-      // eslint-disable-next-line no-console
-      console.error('❌ Socket connection error:', err.message);
+      // Socket connection error - handled via toast
       
       if (err.message === 'timeout') {
          toast.error('Ligação lenta detectada. A tentar restabelecer...');
@@ -59,8 +57,7 @@ export function useSocket(): Socket | null {
     });
 
     instance.on('auth:expired', () => {
-      // eslint-disable-next-line no-console
-      console.warn('⚠️ Socket auth expired');
+      // Socket auth expired - handled by disconnect
       instance?.disconnect();
       instance = null;
     });

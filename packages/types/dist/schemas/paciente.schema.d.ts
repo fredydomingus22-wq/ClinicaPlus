@@ -1,0 +1,110 @@
+import { z } from 'zod';
+export declare const PacienteCreateSchema: z.ZodObject<{
+    nome: z.ZodString;
+    email: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    nif: z.ZodString;
+    telefone: z.ZodOptional<z.ZodString>;
+    dataNascimento: z.ZodEffects<z.ZodString, string, string>;
+    genero: z.ZodEnum<["M", "F", "OUTRO"]>;
+    tipoSangue: z.ZodOptional<z.ZodString>;
+    alergias: z.ZodDefault<z.ZodUnion<[z.ZodEffects<z.ZodString, string[], string>, z.ZodArray<z.ZodString, "many">]>>;
+    endereco: z.ZodOptional<z.ZodString>;
+    provincia: z.ZodOptional<z.ZodString>;
+    seguroSaude: z.ZodDefault<z.ZodBoolean>;
+    seguradora: z.ZodOptional<z.ZodString>;
+    ativo: z.ZodDefault<z.ZodBoolean>;
+}, "strip", z.ZodTypeAny, {
+    ativo: boolean;
+    nome: string;
+    nif: string;
+    dataNascimento: string;
+    genero: "OUTRO" | "M" | "F";
+    alergias: string[];
+    seguroSaude: boolean;
+    email?: string | undefined;
+    provincia?: string | undefined;
+    telefone?: string | undefined;
+    endereco?: string | undefined;
+    tipoSangue?: string | undefined;
+    seguradora?: string | undefined;
+}, {
+    nome: string;
+    nif: string;
+    dataNascimento: string;
+    genero: "OUTRO" | "M" | "F";
+    ativo?: boolean | undefined;
+    email?: string | undefined;
+    provincia?: string | undefined;
+    telefone?: string | undefined;
+    endereco?: string | undefined;
+    tipoSangue?: string | undefined;
+    alergias?: string | string[] | undefined;
+    seguroSaude?: boolean | undefined;
+    seguradora?: string | undefined;
+}>;
+export declare const PacienteUpdateSchema: z.ZodObject<{
+    nome: z.ZodOptional<z.ZodString>;
+    email: z.ZodOptional<z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>>;
+    nif: z.ZodOptional<z.ZodString>;
+    telefone: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    dataNascimento: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
+    genero: z.ZodOptional<z.ZodEnum<["M", "F", "OUTRO"]>>;
+    tipoSangue: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    alergias: z.ZodOptional<z.ZodDefault<z.ZodUnion<[z.ZodEffects<z.ZodString, string[], string>, z.ZodArray<z.ZodString, "many">]>>>;
+    endereco: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    provincia: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    seguroSaude: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    seguradora: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    ativo: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+}, "strip", z.ZodTypeAny, {
+    ativo?: boolean | undefined;
+    email?: string | undefined;
+    nome?: string | undefined;
+    nif?: string | undefined;
+    provincia?: string | undefined;
+    telefone?: string | undefined;
+    endereco?: string | undefined;
+    dataNascimento?: string | undefined;
+    genero?: "OUTRO" | "M" | "F" | undefined;
+    tipoSangue?: string | undefined;
+    alergias?: string[] | undefined;
+    seguroSaude?: boolean | undefined;
+    seguradora?: string | undefined;
+}, {
+    ativo?: boolean | undefined;
+    email?: string | undefined;
+    nome?: string | undefined;
+    nif?: string | undefined;
+    provincia?: string | undefined;
+    telefone?: string | undefined;
+    endereco?: string | undefined;
+    dataNascimento?: string | undefined;
+    genero?: "OUTRO" | "M" | "F" | undefined;
+    tipoSangue?: string | undefined;
+    alergias?: string | string[] | undefined;
+    seguroSaude?: boolean | undefined;
+    seguradora?: string | undefined;
+}>;
+export declare const PacienteListQuerySchema: z.ZodObject<{
+    q: z.ZodOptional<z.ZodString>;
+    provincia: z.ZodOptional<z.ZodString>;
+    ativo: z.ZodOptional<z.ZodBoolean>;
+    page: z.ZodDefault<z.ZodNumber>;
+    limit: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    page: number;
+    limit: number;
+    ativo?: boolean | undefined;
+    q?: string | undefined;
+    provincia?: string | undefined;
+}, {
+    ativo?: boolean | undefined;
+    page?: number | undefined;
+    limit?: number | undefined;
+    q?: string | undefined;
+    provincia?: string | undefined;
+}>;
+export type PacienteCreateInput = z.infer<typeof PacienteCreateSchema>;
+export type PacienteUpdateInput = z.infer<typeof PacienteUpdateSchema>;
+export type PacienteListQuery = z.infer<typeof PacienteListQuerySchema>;
+//# sourceMappingURL=paciente.schema.d.ts.map

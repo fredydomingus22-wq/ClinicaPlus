@@ -141,12 +141,14 @@ export default function GestaoExamesPage() {
         {error ? (
           <ErrorMessage error={error} />
         ) : (
-          <Table 
-            columns={columns}
-            data={exames}
-            isLoading={isLoading}
-            keyExtractor={(ex: ExameComPaciente) => ex.id}
-          />
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table
+              columns={columns}
+              data={exames}
+              isLoading={isLoading}
+              keyExtractor={(ex: ExameComPaciente) => ex.id}
+            />
+          </div>
         )}
       </Card>
     </div>

@@ -5,8 +5,8 @@ services:
     container_name: clinicaplus-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: clinicaplus
     ports:
       - "5434:5432"
@@ -29,9 +29,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - AUTHENTICATION_API_KEY=evol-clinica-plus-v2-dev-key
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:password@db:5432/clinicaplus?schema=evolution
+      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/clinicaplus?schema=evolution
       - CACHE_REDIS_ENABLED=true
       - CACHE_REDIS_URI=redis://redis:6379
     volumes:
@@ -51,12 +51,12 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:password@db:5432/clinicaplus?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/clinicaplus?schema=public
       - REDIS_URL=redis://redis:6379
       - PORT=3001
-      - FRONTEND_URL=http://localhost:5173
-      - JWT_SECRET=change-me-locally-1234567890-very-long-secret-key-clinica-plus
-      - JWT_REFRESH_SECRET=change-me-locally-refresh-1234567890-very-long-secret-key
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
     depends_on:
       - db
       - redis

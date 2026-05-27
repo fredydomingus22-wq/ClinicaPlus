@@ -1,25 +1,40 @@
 import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/AppError';
-import { TipoMovimentacao } from '@clinicaplus/types';
+import { estoqueCalculoService } from './estoque.calculo.service';
+import { InventoryMapper } from '../dto/inventory.dto';
+import {
+  CreateLoteSchema,
+  MovimentarEstoqueSchema,
+} from '../schemas/inventory.schema';
+
+/**
+ * Helper para invalidar cache de estoque após movimentações
+ */
+async function invalidateEstoqueCache(clinicaId: string, produtoId: string): Promise<void> {
+  try {
+    const pattern = `estoque:*:${clinicaId}:${produtoId}*`;
+    const { redis } = await import('../lib/redis');
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch {
+    // Silenciosamente falhar se o cache não estiver disponível
+  }
+}
 
 export const estoqueService = {
   /**
    * Registra uma movimentação de estoque
    */
-  async movimentar(clinicaId: string, data: {
-    produtoId: string;
-    loteId?: string;
-    quantidade: number;
-    tipo: TipoMovimentacao;
-    motivo?: string;
-    documentoRef?: string;
-    utilizadorId?: string;
-  }) {
-    const { produtoId, quantidade, tipo, loteId } = data;
+  async movimentar(clinicaId: string, data: unknown) {
+    const validated = MovimentarEstoqueSchema.parse(data);
+    const { produtoId, quantidade, tipo, loteId } = validated;
 
     // 1. Validar produto
     const produto = await prisma.produto.findFirst({
       where: { id: produtoId, clinicaId },
+      select: { id: true, gerenciaEstoque: true },
     });
 
     if (!produto) {
@@ -31,39 +46,35 @@ export const estoqueService = {
     }
 
     // 2. Se for saída, validar saldo
-    const eSaida = [TipoMovimentacao.SAIDA, TipoMovimentacao.VENDA].includes(tipo);
+    const eSaida = ['SAIDA', 'VENDA'].includes(tipo);
     const fator = eSaida ? -1 : 1;
 
     return await prisma.$transaction(async (tx) => {
-      let loteFinalId = loteId;
+      let loteFinalId: string | undefined = loteId || undefined;
 
-      // Se for saída e não especificou lote, tentar FIFO (mais antigo primeiro)
+      // Se for saída e não especificou lote, tentar FIFO usando service centralizado
       if (eSaida && !loteFinalId) {
-        const loteDisponivel = await tx.estoqueLote.findFirst({
-          where: { 
-            produtoId, 
-            clinicaId, 
-            quantidade: { gte: quantidade } 
-          },
-          orderBy: { dataValidade: 'asc' },
-        });
+        loteFinalId = await estoqueCalculoService.encontrarLoteFIFO(clinicaId, produtoId, quantidade) || undefined;
 
-        if (!loteDisponivel) {
+        if (!loteFinalId) {
           throw new AppError('Não há estoque suficiente disponível em lotes válidos', 400);
         }
-        loteFinalId = loteDisponivel.id;
       }
 
       // Se tiver lote (especificado ou encontrado), atualizar saldo do lote
       if (loteFinalId) {
-        const lote = await tx.estoqueLote.findFirst({
-          where: { id: loteFinalId, clinicaId },
-        });
+        const saldoSuficiente = await estoqueCalculoService.verificarSaldoLote(clinicaId, loteFinalId, quantidade);
 
-        if (!lote) throw new AppError('Lote não encontrado', 404);
-        
-        if (eSaida && lote.quantidade < quantidade) {
-          throw new AppError(`Estoque insuficiente no lote ${lote.numeroLote}. Disponível: ${lote.quantidade}`, 400);
+        if (!saldoSuficiente) {
+          const lote = await tx.estoqueLote.findFirst({
+            where: { id: loteFinalId, clinicaId },
+            select: { numeroLote: true, quantidade: true },
+          });
+
+          if (lote) {
+            throw new AppError(`Estoque insuficiente no lote ${lote.numeroLote}. Disponível: ${lote.quantidade}`, 400);
+          }
+          throw new AppError('Lote não encontrado', 404);
         }
 
         await tx.estoqueLote.update({
@@ -80,13 +91,47 @@ export const estoqueService = {
           loteId: loteFinalId || null,
           quantidade,
           tipo,
-          motivo: data.motivo || null,
-          documentoRef: data.documentoRef || null,
-          utilizadorId: data.utilizadorId || null,
+          motivo: validated.motivo || null,
+          documentoRef: validated.documentoRef || null,
+          utilizadorId: (validated as any).utilizadorId || null,
+        },
+        select: {
+          id: true,
+          clinicaId: true,
+          produtoId: true,
+          loteId: true,
+          utilizadorId: true,
+          tipo: true,
+          quantidade: true,
+          motivo: true,
+          documentoRef: true,
+          criadoEm: true,
+          lote: {
+            select: {
+              id: true,
+              clinicaId: true,
+              produtoId: true,
+              numeroLote: true,
+              dataValidade: true,
+              quantidade: true,
+              criadoEm: true,
+              atualizadoEm: true,
+            },
+          },
+          produto: {
+            select: {
+              id: true,
+              nome: true,
+              codigo: true,
+            },
+          },
         },
       });
 
-      return movimento;
+      // Invalidar cache do produto após movimentação
+      await invalidateEstoqueCache(clinicaId, produtoId);
+
+      return InventoryMapper.toMovimentacaoResponse(movimento);
     });
   },
 
@@ -96,38 +141,50 @@ export const estoqueService = {
   async listLotes(clinicaId: string, produtoId: string) {
     const lotes = await prisma.estoqueLote.findMany({
       where: { clinicaId, produtoId },
+      select: {
+        id: true,
+        clinicaId: true,
+        produtoId: true,
+        numeroLote: true,
+        dataValidade: true,
+        quantidade: true,
+        criadoEm: true,
+        atualizadoEm: true,
+        produto: {
+          select: {
+            id: true,
+            nome: true,
+            codigo: true,
+          },
+        },
+      },
       orderBy: [
         { dataValidade: 'asc' },
         { criadoEm: 'desc' },
       ],
     });
-    return { data: lotes };
+
+    return { data: lotes.map(l => InventoryMapper.toLoteComProdutoResponse(l)) };
   },
 
   /**
    * Obtém o estoque total de um produto (soma de todos os lotes)
+   * DEPRECATED: Use estoqueCalculoService.calcularEstoqueProduto
    */
   async getEstoqueTotal(clinicaId: string, produtoId: string): Promise<number> {
-    const result = await prisma.estoqueLote.aggregate({
-      where: { clinicaId, produtoId },
-      _sum: { quantidade: true },
-    });
-    return result._sum.quantidade || 0;
+    return estoqueCalculoService.calcularEstoqueProduto(clinicaId, produtoId);
   },
 
   /**
    * Cria ou atualiza um lote manualmente (entrada de mercadoria manual)
    */
-  async createLote(clinicaId: string, data: {
-    produtoId: string;
-    numeroLote: string;
-    dataValidade?: Date | string;
-    quantidade: number;
-    utilizadorId?: string;
-  }) {
+  async createLote(clinicaId: string, data: unknown) {
+    const validated = CreateLoteSchema.parse(data);
+
     // Validar produto
     const produto = await prisma.produto.findFirst({
-      where: { id: data.produtoId, clinicaId },
+      where: { id: validated.produtoId, clinicaId },
+      select: { id: true },
     });
 
     if (!produto) throw new AppError('Produto não encontrado', 404);
@@ -135,25 +192,46 @@ export const estoqueService = {
     return await prisma.$transaction(async (tx) => {
       // Tentar encontrar lote existente com mesmo número
       let lote = await tx.estoqueLote.findFirst({
-        where: { clinicaId, produtoId: data.produtoId, numeroLote: data.numeroLote },
+        where: { clinicaId, produtoId: validated.produtoId, numeroLote: validated.numeroLote },
+        select: { id: true },
       });
 
       if (lote) {
         lote = await tx.estoqueLote.update({
           where: { id: lote.id },
-          data: { 
-            quantidade: { increment: data.quantidade },
-            ...(data.dataValidade ? { dataValidade: new Date(data.dataValidade) } : {}),
+          data: {
+            quantidade: { increment: validated.quantidade },
+            ...(validated.dataValidade ? { dataValidade: validated.dataValidade } : {}),
+          },
+          select: {
+            id: true,
+            clinicaId: true,
+            produtoId: true,
+            numeroLote: true,
+            dataValidade: true,
+            quantidade: true,
+            criadoEm: true,
+            atualizadoEm: true,
           },
         });
       } else {
         lote = await tx.estoqueLote.create({
           data: {
             clinicaId,
-            produtoId: data.produtoId,
-            numeroLote: data.numeroLote,
-            dataValidade: data.dataValidade ? new Date(data.dataValidade) : null,
-            quantidade: data.quantidade,
+            produtoId: validated.produtoId,
+            numeroLote: validated.numeroLote,
+            dataValidade: validated.dataValidade || null,
+            quantidade: validated.quantidade,
+          },
+          select: {
+            id: true,
+            clinicaId: true,
+            produtoId: true,
+            numeroLote: true,
+            dataValidade: true,
+            quantidade: true,
+            criadoEm: true,
+            atualizadoEm: true,
           },
         });
       }
@@ -162,16 +240,19 @@ export const estoqueService = {
       await tx.movimentacaoEstoque.create({
         data: {
           clinicaId,
-          produtoId: data.produtoId,
+          produtoId: validated.produtoId,
           loteId: lote.id,
-          quantidade: data.quantidade,
-          tipo: TipoMovimentacao.ENTRADA,
+          quantidade: validated.quantidade,
+          tipo: 'ENTRADA',
           motivo: 'Entrada manual / Cadastro de lote',
-          utilizadorId: data.utilizadorId || null,
+          utilizadorId: (validated as any).utilizadorId || null,
         },
       });
 
-      return lote;
+      // Invalidar cache do produto após criação de lote
+      await invalidateEstoqueCache(clinicaId, validated.produtoId);
+
+      return InventoryMapper.toLoteResponse(lote);
     });
   }
 };

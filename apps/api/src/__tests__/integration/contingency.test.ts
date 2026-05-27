@@ -5,7 +5,7 @@ import { faturasService } from '../../services/faturas.service';
 import { contingencySyncService } from '../../services/fiscal/ContingencySyncService';
 import { agtApiClient } from '../../services/fiscal/AgtApiClient';
 import { EstadoFatura } from '@prisma/client';
-import { TipoFatura, TipoDocumentoFiscal } from '@clinicaplus/types';
+import { TipoFatura, TipoDocumentoFiscal, TipoItemFatura } from '@clinicaplus/types';
 
 describe('Contingency Failover & Synchronization (Decreto 71/25)', () => {
   let ctx: Awaited<ReturnType<typeof factories.setupClinicaCompleta>>;
@@ -32,7 +32,7 @@ describe('Contingency Failover & Synchronization (Decreto 71/25)', () => {
         retencaoFonte: 0,
         retrodatar: false,
         itens: [
-          { descricao: 'Consulta Geral', quantidade: 1, precoUnit: 15000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
+          { tipoItem: TipoItemFatura.SERVICO, descricao: 'Consulta Geral', quantidade: 1, precoUnit: 15000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
         ],
       },
       ctx.clinica.id,
@@ -101,7 +101,7 @@ describe('Contingency Failover & Synchronization (Decreto 71/25)', () => {
         retencaoFonte: 0,
         retrodatar: false,
         itens: [
-          { descricao: 'Exame de Sangue', quantidade: 1, precoUnit: 8000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
+          { tipoItem: TipoItemFatura.SERVICO, descricao: 'Exame de Sangue', quantidade: 1, precoUnit: 8000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
         ],
       },
       ctx.clinica.id,

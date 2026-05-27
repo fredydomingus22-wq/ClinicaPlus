@@ -206,13 +206,15 @@ export default function DocumentosFiscaisPage() {
           </div>
         </div>
         
-        <Table
-          columns={columns}
-          data={data?.items || []}
-          isLoading={isLoading}
-          keyExtractor={(f) => f.id}
-          onRowClick={(f) => navigate(`/admin/financeiro/${f.id}`)}
-        />
+        <div className="overflow-x-auto -mx-4 px-4">
+          <Table
+            columns={columns}
+            data={data?.items || []}
+            isLoading={isLoading}
+            keyExtractor={(f) => f.id}
+            onRowClick={(f) => navigate(`/admin/financeiro/${f.id}`)}
+          />
+        </div>
       </Card>
 
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-4">

@@ -125,11 +125,12 @@ export default function HojePage() {
             <p className="mt-1 text-sm text-neutral-600">Não existem consultas marcadas para hoje com os filtros selecionados.</p>
           </div>
         ) : (
-          <Table<AgendamentoDTO>
-            data={agendamentos || []}
-            keyExtractor={(ag) => ag.id}
-            itemTestId="agendamento-card"
-            columns={[
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table<AgendamentoDTO>
+              data={agendamentos || []}
+              keyExtractor={(ag) => ag.id}
+              itemTestId="agendamento-card"
+              columns={[
               {
                 header: 'Hora',
                 accessor: (ag) => (
@@ -196,6 +197,7 @@ export default function HojePage() {
               }
             ]}
           />
+          </div>
         )}
       </Card>
 

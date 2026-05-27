@@ -9,78 +9,73 @@ datasource db {
 }
 
 model Clinica {
-  id                  String                @id @default(cuid())
-  nome                String
-  slug                String                @unique
-  tipoEntidade        String?               @default("EMPRESA") // SINGULAR ou EMPRESA
-  logo                String?               @db.Text
-  logotipoUrl         String?               @db.Text
-  telefone            String?
-  email               String                @unique
-  endereco            String?
-  cidade              String?
-  provincia           String?
-  plano               Plano                 @default(BASICO)
-  ativo               Boolean               @default(true)
-  criadoEm            DateTime              @default(now())
-  atualizadoEm        DateTime              @updatedAt
-  subscricaoValidaAte DateTime?
-  subscricaoEstado    EstadoSubscricao      @default(TRIAL)
-
-  // Campos Fiscais (AGT)
-  nif                 String?
-  razaoSocial         String?
-  regimeFiscal        RegimeFiscal          @default(GERAL)
-  agtSoftwareCert     String?               // NÃºmero de certificaÃ§Ã£o do software
-  enderecoPostal      String?               // Logradouro, NÃºmero, etc. por SAF-T
-  agtPrivateKey       String?   @db.Text    // Chave privada emitida pela AGT para o contribuinte
-  agtPublicKey        String?   @db.Text    // Chave pÃºblica emitida pela AGT para o contribuinte
-  serieDocFiscal      String                @default("CPLS") // SÃ©rie documental (ex: CPLS, 2026, etc)
-
-  // migration_009: campos de suspensÃ£o e notas internas do super admin
-  suspensaEm          DateTime?             // null = activa
-  motivoSuspensao     String?
-  notasInternas       String?               // visÃ­veis APENAS ao super admin
-  subscricoes         Subscricao[]
-  agendamentos        Agendamento[]
-  apiKeys             ApiKey[]
-  configuracao        ConfiguracaoClinica?
-  contactos           ContactoClinica[]
-  documentos          Documento[]
-  especialidades      Especialidade[]
-  exames              Exame[]
-  Fatura              Fatura[]
-  faturasAssinatura   FaturaAssinatura[]
-  impersonacoes       ImpersonationSession[]
-  lembretes           LembreteAgendamento[]
-  medicos             Medico[]
-  pacientes           Paciente[]
-  prontuarios         Prontuario[]
-  receitas            Receita[]
-  utilizadores        Utilizador[]
-  waInstancias        WaInstancia[]
-  webhooks            Webhook[]
-  sessoesTratamento   SessaoTratamento[]
-  planosTratamento    PlanoTratamento[]
-  tiposTratamento     TipoTratamento[]
-  tiposExamesClinica  TipoExameClinica[]
-  botIntegracoes      BotIntegracao[]
-  sequencias          SequenciaDocFiscal[]
-  // InventÃ¡rio
-  categoriasProduto   CategoriaProduto[]
-  produtos            Produto[]
-  lotesEstoque        EstoqueLote[]
+  id                   String                 @id @default(cuid())
+  nome                 String
+  slug                 String                 @unique
+  logo                 String?
+  telefone             String?
+  email                String                 @unique
+  endereco             String?
+  cidade               String?
+  provincia            String?
+  plano                Plano                  @default(BASICO)
+  ativo                Boolean                @default(true)
+  criadoEm             DateTime               @default(now())
+  atualizadoEm         DateTime               @updatedAt
+  subscricaoValidaAte  DateTime?
+  motivoSuspensao      String?
+  notasInternas        String?
+  suspensaEm           DateTime?
+  subscricaoEstado     EstadoSubscricao       @default(TRIAL)
+  agtSoftwareCert      String?
+  enderecoPostal       String?
+  nif                  String?
+  razaoSocial          String?
+  regimeFiscal         RegimeFiscal           @default(GERAL)
+  agtApiToken          String?
+  serieDocFiscal       String                 @default("CPLS")
+  agtPrivateKey        String?
+  agtPublicKey         String?
+  logotipoUrl          String?
+  tipoEntidade         String?                @default("EMPRESA")
+  agendamentos         Agendamento[]
+  anamneseTemplates    AnamneseTemplate[]
+  anamneses            Anamnese[]
+  apiKeys              ApiKey[]
+  botIntegracoes       BotIntegracao[]
+  categoriasProduto    CategoriaProduto[]
+  configuracao         ConfiguracaoClinica?
+  contactos            ContactoClinica[]
+  contractDocuments    ContractDocument[]
+  contractEvents       ContractEvent[]
+  contracts            Contract[]
+  documentos           Documento[]
+  especialidades       Especialidade[]
+  lotesEstoque         EstoqueLote[]
   movimentacoesEstoque MovimentacaoEstoque[]
-  anamneses           Anamnese[]
-  odontogramas        Odontograma[]
-  anamneseTemplates   AnamneseTemplate[]
-  contracts           Contract[]
-  contractEvents      ContractEvent[]
-  contractDocuments   ContractDocument[]
-
+  exames               Exame[]
+  Fatura               Fatura[]
+  faturasAssinatura    FaturaAssinatura[]
+  impersonacoes        ImpersonationSession[]
+  lembretes            LembreteAgendamento[]
+  medicos              Medico[]
+  odontogramas         Odontograma[]
+  pacientes            Paciente[]
+  planosTratamento     PlanoTratamento[]
+  produtos             Produto[]
+  prontuarios          Prontuario[]
+  receitas             Receita[]
+  sequencias           SequenciaDocFiscal[]
+  sessoesTratamento    SessaoTratamento[]
+  subscricoes          Subscricao[]
+  tiposExamesClinica   TipoExameClinica[]
+  tiposTratamento      TipoTratamento[]
+  utilizadores         Utilizador[]
+  waInstancias         WaInstancia[]
+  webhooks             Webhook[]
 
   @@index([slug])
-  @@index([suspensaEm])  // para filtrar clinicas activas/suspensas
+  @@index([suspensaEm])
   @@map("clinicas")
 }
 
@@ -99,29 +94,28 @@ model ContactoClinica {
 }
 
 model Utilizador {
-  id                   String                @id @default(cuid())
-  clinicaId            String?
-  nome                 String
-  email                String
-  avatarUrl            String?               @db.Text
-  passwordHash         String
-  papel                Papel
-  ativo                Boolean               @default(true)
-  criadoEm             DateTime              @default(now())
-  atualizadoEm         DateTime              @updatedAt
-  // migration_009: MFA para SUPER_ADMIN (TOTP)
-  mfaSecret            String?               // secret TOTP encriptado com APP_SECRET
-  mfaPending           Boolean               @default(false) // true = setup iniciado mas nÃ£o confirmado
-  mfaActivatedAt       DateTime?             // null = MFA nÃ£o activado ainda
-  medico               Medico?
-  notificacoes         Notificacao[]
-  paciente             Paciente?
-  refreshTokens        RefreshToken[]
-  systemLogs           SystemLog[]
-  permissoes           UtilizadorPermissao[]
-  clinica              Clinica?              @relation(fields: [clinicaId], references: [id])
-  impersonacoesFeitas  ImpersonationSession[] @relation("SuperAdminImpersonations")
+  id                     String                 @id @default(cuid())
+  clinicaId              String?
+  nome                   String
+  email                  String
+  passwordHash           String
+  papel                  Papel
+  ativo                  Boolean                @default(true)
+  criadoEm               DateTime               @default(now())
+  atualizadoEm           DateTime               @updatedAt
+  mfaActivatedAt         DateTime?
+  mfaPending             Boolean                @default(false)
+  mfaSecret              String?
+  avatarUrl              String?
+  impersonacoesFeitas    ImpersonationSession[] @relation("SuperAdminImpersonations")
   impersonacoesRecebidas ImpersonationSession[] @relation("ImpersonatedSessions")
+  medico                 Medico?
+  notificacoes           Notificacao[]
+  paciente               Paciente?
+  refreshTokens          RefreshToken[]
+  systemLogs             SystemLog[]
+  permissoes             UtilizadorPermissao[]
+  clinica                Clinica?               @relation(fields: [clinicaId], references: [id])
 
   @@unique([clinicaId, email])
   @@index([clinicaId])
@@ -144,43 +138,42 @@ model RefreshToken {
 }
 
 model Paciente {
-  id             String        @id @default(cuid())
-  clinicaId      String
-  numeroPaciente String
-  utilizadorId   String?       @unique
-  nome           String
-  avatarUrl      String?       @db.Text
-  dataNascimento DateTime
-  genero         String
-  tipoSangue     String?
-  alergias       String[]      @default([])
-  telefone       String?
-  email          String?
-  endereco       String?
-  provincia      String?
-  cidade         String?
-  nif            String?       @default("999999999")
-  seguroSaude    Boolean       @default(false)
-  seguradora     String?
-  ativo          Boolean       @default(true)
-  criadoEm       DateTime      @default(now())
-  atualizadoEm   DateTime      @updatedAt
-  origem         String?       @default("DIRECTO")
-  agendamentos   Agendamento[]
-  documentos     Documento[]
-  exames         Exame[]
-  Fatura         Fatura[]
-  clinica        Clinica       @relation(fields: [clinicaId], references: [id])
-  utilizador     Utilizador?   @relation(fields: [utilizadorId], references: [id])
-  prontuarios    Prontuario[]
-  receitas       Receita[]
-  waConversas    WaConversa[]
-  perfilWa       Json?         @map("perfil_wa") // Meta-dados do WhatsApp (sessÃ£o Intel)
-  planosTratamento  PlanoTratamento[]
-  anamneses      Anamnese[]
-  odontogramas   Odontograma[]
-  contracts      Contract[]
-
+  id               String            @id @default(cuid())
+  clinicaId        String
+  numeroPaciente   String
+  utilizadorId     String?           @unique
+  nome             String
+  dataNascimento   DateTime
+  genero           String
+  tipoSangue       String?
+  alergias         String[]          @default([])
+  telefone         String?
+  email            String?
+  endereco         String?
+  provincia        String?
+  seguroSaude      Boolean           @default(false)
+  seguradora       String?
+  ativo            Boolean           @default(true)
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
+  origem           String?           @default("DIRECTO")
+  perfilWa         Json?             @map("perfil_wa")
+  cidade           String?
+  nif              String?           @default("999999999")
+  avatarUrl        String?
+  agendamentos     Agendamento[]
+  anamneses        Anamnese[]
+  contracts        Contract[]
+  documentos       Documento[]
+  exames           Exame[]
+  Fatura           Fatura[]
+  odontogramas     Odontograma[]
+  clinica          Clinica           @relation(fields: [clinicaId], references: [id])
+  utilizador       Utilizador?       @relation(fields: [utilizadorId], references: [id])
+  planosTratamento PlanoTratamento[]
+  prontuarios      Prontuario[]
+  receitas         Receita[]
+  waConversas      WaConversa[]
 
   @@unique([clinicaId, numeroPaciente])
   @@index([clinicaId])
@@ -189,32 +182,33 @@ model Paciente {
 }
 
 model Medico {
-  id              String        @id @default(cuid())
-  clinicaId       String
-  utilizadorId    String        @unique
-  nome            String
-  ordem           String?
-  telefoneDireto  String?
+  id               String            @id @default(cuid())
+  clinicaId        String
+  utilizadorId     String            @unique
+  nome             String
+  ordem            String?
+  telefoneDireto   String?
   /// Forma: { [segunda...domingo]: { ativo: boolean, inicio?: string, fim?: string, pausaInicio?: string, pausaFim?: string } }
-  horario         Json
-  duracaoConsulta Int           @default(30)
-  preco           Int           @default(0)
-  ativo           Boolean       @default(true)
-  criadoEm        DateTime      @default(now())
-  atualizadoEm    DateTime      @updatedAt
-  especialidadeId String
-  agendamentos    Agendamento[]
-  documentos      Documento[]
-  exames          Exame[]
-  Fatura          Fatura[]
-  clinica         Clinica       @relation(fields: [clinicaId], references: [id])
-  especialidade   Especialidade @relation(fields: [especialidadeId], references: [id])
-  utilizador      Utilizador    @relation(fields: [utilizadorId], references: [id])
-  prontuarios     Prontuario[]
-  receitas        Receita[]
+  horario          Json
+  duracaoConsulta  Int               @default(30)
+  preco            Int               @default(0)
+  ativo            Boolean           @default(true)
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
+  especialidadeId  String
+  agendamentos     Agendamento[]
+  anamneses        Anamnese[]
+  documentos       Documento[]
+  exames           Exame[]
+  Fatura           Fatura[]
+  itensFatura      ItemFatura[]      @relation("ItemFaturaMedico")
+  clinica          Clinica           @relation(fields: [clinicaId], references: [id])
+  especialidade    Especialidade     @relation(fields: [especialidadeId], references: [id])
+  utilizador       Utilizador        @relation(fields: [utilizadorId], references: [id])
+  odontogramas     Odontograma[]
   planosTratamento PlanoTratamento[]
-  anamneses       Anamnese[]
-  odontogramas    Odontograma[]
+  prontuarios      Prontuario[]
+  receitas         Receita[]
 
   @@index([clinicaId])
   @@index([clinicaId, especialidadeId])
@@ -222,16 +216,16 @@ model Medico {
 }
 
 model Especialidade {
-  id           String   @id @default(cuid())
-  clinicaId    String
-  nome         String
-  descricao    String?
-  ativo        Boolean  @default(true)
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-  clinica      Clinica  @relation(fields: [clinicaId], references: [id])
-  medicos      Medico[]
+  id               String            @id @default(cuid())
+  clinicaId        String
+  nome             String
+  descricao        String?
+  ativo            Boolean           @default(true)
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
   anamneseTemplate AnamneseTemplate?
+  clinica          Clinica           @relation(fields: [clinicaId], references: [id])
+  medicos          Medico[]
 
   @@unique([clinicaId, nome])
   @@index([clinicaId])
@@ -239,42 +233,39 @@ model Especialidade {
 }
 
 model Agendamento {
-  id             String                @id @default(cuid())
-  clinicaId      String
-  pacienteId     String
-  medicoId       String
-  dataHora       DateTime
-  duracao        Int                   @default(30)
-  tipo           TipoAgendamento       @default(CONSULTA)
-  estado         EstadoAgendamento     @default(PENDENTE)
-  motivoConsulta String?
-  observacoes    String?
+  id                String                @id @default(cuid())
+  clinicaId         String
+  pacienteId        String
+  medicoId          String
+  dataHora          DateTime
+  duracao           Int                   @default(30)
+  tipo              TipoAgendamento       @default(CONSULTA)
+  estado            EstadoAgendamento     @default(PENDENTE)
+  motivoConsulta    String?
+  observacoes       String?
   /// Forma: { pa: string, temperatura: number, peso: number, altura: number, imc: number, frequenciaCardiaca: number, sintomas: string[], urgencia: string }
-  triagem        Json?
-  notasConsulta  String?
-  diagnostico    String?
-  canceladoPor   String?
-  canceladoEm    DateTime?
-  criadoEm       DateTime              @default(now())
-  atualizadoEm   DateTime              @updatedAt
-  canal          String?               @default("PRESENCIAL")
-  clinica        Clinica               @relation(fields: [clinicaId], references: [id])
-  medico         Medico                @relation(fields: [medicoId], references: [id])
-  paciente       Paciente              @relation(fields: [pacienteId], references: [id])
-  documentos     Documento[]
-  exames         Exame[]
-  Fatura         Fatura?
-  lembretes      LembreteAgendamento[]
-  prontuario     Prontuario?
-  receita        Receita?
-  anamnese       Anamnese?
-  odontograma    Odontograma?
-  confirmadoWa   Boolean               @default(false) @map("confirmado_wa") // ConfirmaÃ§Ã£o via Intel
-
-
-  planosOrigem   PlanoTratamento[]     @relation("AgendamentoPlanoTratamento")
-  sessoesTratamento SessaoTratamento[]
-
+  triagem           Json?
+  notasConsulta     String?
+  diagnostico       String?
+  canceladoPor      String?
+  canceladoEm       DateTime?
+  criadoEm          DateTime              @default(now())
+  atualizadoEm      DateTime              @updatedAt
+  canal             String?               @default("PRESENCIAL")
+  confirmadoWa      Boolean               @default(false) @map("confirmado_wa")
+  clinica           Clinica               @relation(fields: [clinicaId], references: [id])
+  medico            Medico                @relation(fields: [medicoId], references: [id])
+  paciente          Paciente              @relation(fields: [pacienteId], references: [id])
+  anamnese          Anamnese?
+  documentos        Documento[]
+  exames            Exame[]
+  Fatura            Fatura?
+  lembretes         LembreteAgendamento[]
+  odontograma       Odontograma?
+  planosOrigem      PlanoTratamento[]     @relation("AgendamentoPlanoTratamento")
+  prontuario        Prontuario?
+  receita           Receita?
+  sessoesTratamento SessaoTratamento?
 
   @@index([clinicaId])
   @@index([clinicaId, dataHora])
@@ -392,48 +383,37 @@ model GlobalSettings {
 }
 
 model Subscricao {
-  id                String            @id @default(cuid())
+  id                String                  @id @default(cuid())
   clinicaId         String
-  clinica           Clinica           @relation(fields: [clinicaId], references: [id])
-
   plano             Plano
-  estado            EstadoSubscricao  @default(TRIAL)
-
-  // Datas de validade
-  inicioEm          DateTime          @default(now())
-  validaAte         DateTime?         // data de expiraÃ§Ã£o (null = nÃ£o expira â€” ENTERPRISE vitalÃ­cio)
-  trialAte          DateTime?         // sÃ³ preenchido se estado = TRIAL
-
-  // Billing
-  valorKz           Int?              // valor pago em Kwanzas (null se gratuito/trial)
-  referenciaInterna String?           // ex: "INV-2026-0042" â€” referÃªncia da invoice gerada
-
-  // HistÃ³rico de mudanÃ§a
-  razao             RazaoMudancaPlano @default(UPGRADE_MANUAL)
-  planoAnterior     Plano?            // null na primeira subscriÃ§Ã£o
-  alteradoPor       String            @default("SISTEMA")
-  notas             String?           // notas internas do Super Admin
-
-  criadoEm          DateTime          @default(now())
-  atualizadoEm      DateTime          @updatedAt
-  
+  alteradoPor       String                  @default("SISTEMA")
+  criadoEm          DateTime                @default(now())
+  inicioEm          DateTime                @default(now())
+  notas             String?
+  planoAnterior     Plano?
+  razao             RazaoMudancaPlano       @default(UPGRADE_MANUAL)
+  referenciaInterna String?
+  trialAte          DateTime?
+  validaAte         DateTime?
+  valorKz           Int?
+  atualizadoEm      DateTime                @updatedAt
+  estado            EstadoSubscricao        @default(TRIAL)
   notificacoes      SubscricaoNotificacao[]
+  clinica           Clinica                 @relation(fields: [clinicaId], references: [id])
 
   @@index([clinicaId, estado])
   @@index([clinicaId, criadoEm(sort: Desc)])
-  @@index([validaAte])             // para o job nocturno de expiraÃ§Ã£o
+  @@index([validaAte])
   @@map("subscricoes")
 }
 
-// NotificaÃ§Ãµes de renovaÃ§Ã£o agendadas
 model SubscricaoNotificacao {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   subscricaoId String
-  subscricao   Subscricao @relation(fields: [subscricaoId], references: [id])
-
-  tipo         String   // "AVISO_30D" | "AVISO_7D" | "AVISO_1D" | "EXPIROU" | "GRACE_END"
+  tipo         String
   enviadoEm    DateTime?
   erro         String?
+  subscricao   Subscricao @relation(fields: [subscricaoId], references: [id])
 
   @@unique([subscricaoId, tipo])
   @@map("subscricao_notificacoes")
@@ -447,7 +427,6 @@ model FaturaAssinatura {
   moeda          String    @default("AOA")
   status         String    @default("PENDENTE")
   dataEmissao    DateTime  @default(now())
-
   dataPagamento  DateTime?
   dataVencimento DateTime
   urlPdf         String?
@@ -458,52 +437,46 @@ model FaturaAssinatura {
 }
 
 model Fatura {
-  id             String       @id @default(cuid())
-  clinicaId      String
-  numeroFatura   String
-  agendamentoId  String?      @unique
-  pacienteId     String
-  medicoId       String?
-  tipo           TipoFatura   @default(PARTICULAR)
-  estado         EstadoFatura @default(RASCUNHO)
-  subtotal       Int
-  desconto       Int          @default(0)
-  totalIva       Int          @default(0)
-  total          Int
-  notas          String?
-  dataEmissao    DateTime?
-  dataVencimento DateTime?
-
-  // Campos Fiscais (AGT)
-  tipoDocFiscal  TipoDocumentoFiscal @default(FT)
-  serieDocFiscal String              @default("CPLS")
-  valorExtenso   String?             // Total por extenso (obrigatÃ³rio AGT)
-  retencaoFonte  Int                 @default(0)
-  valorPago      Int                 @default(0) // Cache para parcelamento/display
-  moeda          String              @default("AOA")
-  fiscalHash     String?             // Assinatura RSA de 172 chars
-  hashControl    String?             @default("1") // VersÃ£o do algoritmo
-  documentoChave String?             // Dados concatenados para assinatura
-  statusEnvio    String              @default("PENDENTE") // PENDENTE, ENVIADO, ERRO, CONTINGENCIA
-  emContingencia Boolean             @default(false)     // Se foi emitida em contingência
-  agtRequestID   String?             // Token retornado pela AGT
-
-  // RelaÃ§Ãµes de AnulaÃ§Ã£o (NC)
+  id               String              @id @default(cuid())
+  clinicaId        String
+  numeroFatura     String
+  agendamentoId    String?             @unique
+  pacienteId       String
+  medicoId         String?
+  tipo             TipoFatura          @default(PARTICULAR)
+  estado           EstadoFatura        @default(RASCUNHO)
+  subtotal         Int
+  desconto         Int                 @default(0)
+  total            Int
+  notas            String?
+  dataEmissao      DateTime?
+  dataVencimento   DateTime?
+  criadoEm         DateTime            @default(now())
+  atualizadoEm     DateTime            @updatedAt
+  agtRequestID     String?
+  documentoChave   String?
+  fiscalHash       String?
+  hashControl      String?             @default("1")
+  moeda            String              @default("AOA")
+  retencaoFonte    Int                 @default(0)
+  statusEnvio      String              @default("PENDENTE")
+  tipoDocFiscal    TipoDocumentoFiscal @default(FT)
+  valorExtenso     String?
+  valorPago        Int                 @default(0)
+  totalIva         Int                 @default(0)
   faturaOriginalId String?
   motivoAnulacao   String?
-  faturaOriginal   Fatura?  @relation("FaturaAnulacao", fields: [faturaOriginalId], references: [id])
-  notasCredito     Fatura[] @relation("FaturaAnulacao")
-
-  snapshot       FaturaSnapshot?
-
-  criadoEm       DateTime     @default(now())
-  atualizadoEm   DateTime     @updatedAt
-  agendamento    Agendamento? @relation(fields: [agendamentoId], references: [id])
-  clinica        Clinica      @relation(fields: [clinicaId], references: [id])
-  medico         Medico?      @relation(fields: [medicoId], references: [id])
-  paciente       Paciente     @relation(fields: [pacienteId], references: [id])
-  itens          ItemFatura[]
-  pagamentos     Pagamento[]
+  serieDocFiscal   String              @default("CPLS")
+  emContingencia   Boolean             @default(false)
+  snapshot         FaturaSnapshot?
+  agendamento      Agendamento?        @relation(fields: [agendamentoId], references: [id])
+  clinica          Clinica             @relation(fields: [clinicaId], references: [id])
+  faturaOriginal   Fatura?             @relation("FaturaAnulacao", fields: [faturaOriginalId], references: [id])
+  notasCredito     Fatura[]            @relation("FaturaAnulacao")
+  medico           Medico?             @relation(fields: [medicoId], references: [id])
+  paciente         Paciente            @relation(fields: [pacienteId], references: [id])
+  itens            ItemFatura[]
+  pagamentos       Pagamento[]
 
   @@index([clinicaId])
   @@index([clinicaId, estado])
@@ -514,39 +487,50 @@ model Fatura {
 }
 
 model ItemFatura {
-  id         String @id @default(cuid())
-  faturaId   String
-  descricao  String
-  quantidade Int    @default(1)
-  precoUnit      Int
-  desconto       Int    @default(0)
-  taxaIva        Float  @default(0)    // Ex: 14.0
-  codigoIva      String @default("ISE") // Ex: IVA, ISE
-  motivoIsencao  String?               // Requisito se taxaIva = 0
-  total          Int
-  fatura     Fatura @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  faturaId      String
+  tipoItem      TipoItemFatura @default(SERVICO)
+  
+  // Campos polimórficos (apenas um preenchido por tipo)
+  produtoId     String?
+  tratamentoId  String?
+  exameId       String?
+  medicoId      String?
+  
+  descricao     String
+  quantidade    Int     @default(1)
+  precoUnit     Int
+  desconto      Int     @default(0)
+  total         Int
+  codigoIva     String  @default("ISE")
+  motivoIsencao String?
+  taxaIva       Float   @default(0)
+  fatura        Fatura  @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  
+  // Relações polimórficas
+  produto       Produto?           @relation("ItemFaturaProduto", fields: [produtoId], references: [id])
+  tratamento    TipoTratamento?    @relation("ItemFaturaTratamento", fields: [tratamentoId], references: [id])
+  exame         TipoExameClinica?  @relation("ItemFaturaExame", fields: [exameId], references: [id])
+  medico        Medico?            @relation("ItemFaturaMedico", fields: [medicoId], references: [id])
 
   @@map("itens_fatura")
 }
 
 model Pagamento {
-  id         String           @id @default(cuid())
-  clinicaId  String
-  faturaId   String
-  metodo     MetodoPagamento
-  valor      Int
-  referencia String?
-  notas      String?
-
-  // Campos Fiscais (RC)
-  numeroRecibo String?  // Ex: RC CPLS/1
-  fiscalHash   String?  // Assinatura RSA do Recibo
-  documentoChave String? // Dados concatenados para assinatura
-
-  criadoEm   DateTime         @default(now())
-  criadoPor  String
-  fatura     Fatura           @relation(fields: [faturaId], references: [id], onDelete: Cascade)
-  seguro     SeguroPagamento?
+  id             String           @id @default(cuid())
+  clinicaId      String
+  faturaId       String
+  metodo         MetodoPagamento
+  valor          Int
+  referencia     String?
+  notas          String?
+  criadoEm       DateTime         @default(now())
+  criadoPor      String
+  numeroRecibo   String?
+  fiscalHash     String?
+  documentoChave String?
+  fatura         Fatura           @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  seguro         SeguroPagamento?
 
   @@index([clinicaId])
   @@index([faturaId])
@@ -591,39 +575,34 @@ model Prontuario {
 }
 
 model Exame {
-  id               String       @id @default(cuid())
-  clinicaId        String
-  pacienteId       String
-  medicoId         String
-  agendamentoId    String?
-  
-  nome             String       // legado
-  tipo             TipoExame    @default(LABORATORIO) // legado
-  status           String       @default("PENDENTE")  // status antigo (legado)
-  resultado        String?      // legado
-  dataPedido       DateTime     @default(now())
-  dataResultado    DateTime?
-  
-  // -- NOVOS CAMPOS DO MÃ“DULO (SPRINT I) --
-  tipoExameId      String?           // NOVO: Link opcional para o catÃ¡logo
-  descricao        String?           // NOVO: indicaÃ§Ã£o clÃ­nica/observaÃ§Ãµes
-  estado           EstadoExame       @default(PENDENTE) // NOVO: mÃ¡quina de estados tipada
-  dataRealizacao   DateTime?         // NOVO
-  laudoUrl         String?           // NOVO: URL do ficheiro no Supabase
-  laudoNota        String?           // NOVO: texto complementar ao ficheiro
-  
-  criadoEm         DateTime     @default(now())
-  atualizadoEm     DateTime     @updatedAt  // NOVO: tracking correto (caso falte no original)
-  
-  agendamento      Agendamento? @relation(fields: [agendamentoId], references: [id])
-  clinica          Clinica      @relation(fields: [clinicaId], references: [id])
-  medico           Medico       @relation(fields: [medicoId], references: [id])
-  paciente         Paciente     @relation(fields: [pacienteId], references: [id])
-  tipoCatalogo     TipoExameClinica? @relation(fields: [tipoExameId], references: [id]) // NOVO
+  id             String            @id @default(cuid())
+  clinicaId      String
+  pacienteId     String
+  medicoId       String
+  agendamentoId  String?
+  nome           String
+  tipo           TipoExame         @default(LABORATORIO)
+  status         String            @default("PENDENTE")
+  resultado      String?
+  dataPedido     DateTime          @default(now())
+  dataResultado  DateTime?
+  criadoEm       DateTime          @default(now())
+  atualizadoEm   DateTime          @updatedAt
+  dataRealizacao DateTime?
+  descricao      String?
+  estado         EstadoExame       @default(PENDENTE)
+  laudoNota      String?
+  laudoUrl       String?
+  tipoExameId    String?
+  agendamento    Agendamento?      @relation(fields: [agendamentoId], references: [id])
+  clinica        Clinica           @relation(fields: [clinicaId], references: [id])
+  medico         Medico            @relation(fields: [medicoId], references: [id])
+  paciente       Paciente          @relation(fields: [pacienteId], references: [id])
+  tipoCatalogo   TipoExameClinica? @relation(fields: [tipoExameId], references: [id])
 
   @@index([clinicaId])
   @@index([pacienteId])
-  @@index([clinicaId, estado]) // NOVO
+  @@index([clinicaId, estado])
   @@map("exames")
 }
 
@@ -648,33 +627,29 @@ model Documento {
 }
 
 model WaInstancia {
-  id             String             @id @default(cuid())
-  clinicaId      String
+  id                String            @id @default(cuid())
+  clinicaId         String
   /// Nome da instÃ¢ncia na Evolution API ("cp-slug-abc123"). Pode ser vazio em instÃ¢ncias Meta puras.
-  evolutionName  String             @unique
-  evolutionToken String
-  estado         WaEstadoInstancia  @default(DESCONECTADO)
-  numeroTelefone String?
-  qrCodeBase64   String?
-  qrExpiresAt    DateTime?
-  criadoEm       DateTime           @default(now())
-  atualizadoEm   DateTime           @updatedAt
-
-  // â”€â”€ Meta Cloud API (migration_meta_cloud) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  /// Tipo de integraÃ§Ã£o: BAILEYS (padrÃ£o, via Evolution API) ou META_CLOUD (API oficial Meta)
-  tipoIntegracao     WaTipoIntegracao  @default(BAILEYS)
-  /// Meta: Phone Number ID obtido no Meta Business Suite â†’ WhatsApp â†’ API Setup
-  metaPhoneNumberId  String?
-  /// Meta: WhatsApp Business Account ID
-  metaWabaId         String?
+  evolutionName     String            @unique
+  evolutionToken    String
+  estado            WaEstadoInstancia @default(DESCONECTADO)
+  numeroTelefone    String?
+  qrCodeBase64      String?
+  criadoEm          DateTime          @default(now())
+  atualizadoEm      DateTime          @updatedAt
+  qrExpiresAt       DateTime?
   /// Meta: System User Access Token (armazenar encriptado em produÃ§Ã£o)
-  metaAccessToken    String?
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  conversas      WaConversa[]
-  automacoes     WaAutomacao[]
-  botIntegracao  BotIntegracao?
-  clinica        Clinica            @relation(fields: [clinicaId], references: [id])
+  metaAccessToken   String?
+  /// Meta: Phone Number ID obtido no Meta Business Suite â†’ WhatsApp â†’ API Setup
+  metaPhoneNumberId String?
+  /// Meta: WhatsApp Business Account ID
+  metaWabaId        String?
+  /// Tipo de integraÃ§Ã£o: BAILEYS (padrÃ£o, via Evolution API) ou META_CLOUD (API oficial Meta)
+  tipoIntegracao    WaTipoIntegracao  @default(BAILEYS)
+  botIntegracao     BotIntegracao?
+  automacoes        WaAutomacao[]
+  conversas         WaConversa[]
+  clinica           Clinica           @relation(fields: [clinicaId], references: [id])
 
   @@index([clinicaId])
   @@index([tipoIntegracao])
@@ -682,55 +657,40 @@ model WaInstancia {
 }
 
 model BotIntegracao {
-  id             String      @id @default(cuid())
-  clinicaId      String
-  instanciaId    String?     @unique
-  
-  provedor       ProvedorBot @default(TYPEBOT)
-  
-  apiUrl         String?
-  flowId         String?
-  apiToken       String?
-  
-  variaveisGlobais Json      @default("{}") 
-  
+  id               String       @id @default(cuid())
+  clinicaId        String
+  instanciaId      String?      @unique
+  provedor         ProvedorBot  @default(TYPEBOT)
+  apiUrl           String?
+  flowId           String?
+  apiToken         String?
+  variaveisGlobais Json         @default("{}")
   triggerKeyword   String?
-  expireTime       Int         @default(20)
+  expireTime       Int          @default(20)
   unknownMessage   String?
-  
-  ativo          Boolean     @default(true)
-  criadoEm       DateTime    @default(now())
-  atualizadoEm   DateTime    @updatedAt
-
-  clinica        Clinica      @relation(fields: [clinicaId], references: [id])
-  instancia      WaInstancia? @relation(fields: [instanciaId], references: [id])
+  ativo            Boolean      @default(true)
+  criadoEm         DateTime     @default(now())
+  atualizadoEm     DateTime     @updatedAt
+  clinica          Clinica      @relation(fields: [clinicaId], references: [id])
+  instancia        WaInstancia? @relation(fields: [instanciaId], references: [id])
 
   @@index([clinicaId])
   @@map("bot_integracoes")
 }
 
-enum ProvedorBot {
-  TYPEBOT
-  DIALOGFLOW
-  N8N
-  DIFY
-}
-
 model WaAutomacao {
-  id          String      @id @default(cuid())
-  instanciaId String      @map("waInstanciaId")
-  instancia   WaInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
-
+  id             String          @id @default(cuid())
   tipo           WaTipoAutomacao
   ativo          Boolean         @default(false)
   n8nWorkflowId  String?
   n8nWebhookPath String?
+  configuracao   Json            @default("{}")
+  criadoEm       DateTime        @default(now())
+  atualizadoEm   DateTime        @updatedAt
+  clinicaId      String
   n8nWebhookUrl  String?
-
-  configuracao Json     @default("{}")
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-  clinicaId    String
+  instanciaId    String          @map("waInstanciaId")
+  instancia      WaInstancia     @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
 
   @@unique([instanciaId, tipo])
   @@index([instanciaId])
@@ -740,18 +700,17 @@ model WaAutomacao {
 model WaConversa {
   id               String           @id @default(cuid())
   instanciaId      String
-  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
   numeroWhatsapp   String
   pacienteId       String?
-  paciente         Paciente?        @relation(fields: [pacienteId], references: [id])
   estado           WaEstadoConversa @default(AGUARDA_INPUT)
   etapaFluxo       String?
   contexto         Json?
-  ultimaMensagemEm DateTime?        @map("ultima_mensagem_em")
-  expiraEm         DateTime?        @map("expira_em") // ExpiraÃ§Ã£o da sessÃ£o Intel
-  criadoEm         DateTime         @default(now()) @map("criado_em")
-
   clinicaId        String
+  criadoEm         DateTime         @default(now()) @map("criado_em")
+  expiraEm         DateTime?        @map("expira_em")
+  ultimaMensagemEm DateTime?        @map("ultima_mensagem_em")
+  instancia        WaInstancia      @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+  paciente         Paciente?        @relation(fields: [pacienteId], references: [id])
   mensagens        WaMensagem[]
 
   @@unique([instanciaId, numeroWhatsapp])
@@ -902,24 +861,21 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// â”€â”€â”€ migration_009_superadmin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 /// SessÃµes de impersonation: super admin entra como admin de uma clÃ­nica
 model ImpersonationSession {
-  id              String    @id @default(cuid())
-  superAdminId    String    // quem estÃ¡ a impersonar
+  id              String     @id @default(cuid())
+  superAdminId    String
   targetClinicaId String
   targetAdminId   String
-  token           String    @unique // SHA-256 do JWT raw token
-  criadoEm        DateTime  @default(now())
-  expiresAt       DateTime  // obrigatoriamente now() + 30min
-  terminadaEm     DateTime? // null = sessÃ£o ainda activa
+  token           String     @unique
+  criadoEm        DateTime   @default(now())
+  expiresAt       DateTime
+  terminadaEm     DateTime?
   ip              String
-  motivo          String    // obrigatÃ³rio â€” min 10 chars â€” para audit trail
-
-  superAdmin    Utilizador @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id])
-  targetAdmin   Utilizador @relation("ImpersonatedSessions", fields: [targetAdminId], references: [id])
-  targetClinica Clinica    @relation(fields: [targetClinicaId], references: [id])
+  motivo          String
+  superAdmin      Utilizador @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id])
+  targetAdmin     Utilizador @relation("ImpersonatedSessions", fields: [targetAdminId], references: [id])
+  targetClinica   Clinica    @relation(fields: [targetClinicaId], references: [id])
 
   @@index([superAdminId])
   @@index([targetClinicaId])
@@ -930,12 +886,12 @@ model ImpersonationSession {
 /// Eventos de sistema para observabilidade por tenant
 model SistemaEvento {
   id         String   @id @default(cuid())
-  clinicaId  String?  // null = evento global da plataforma
-  tipo       String   // API_ERROR | SLOW_QUERY | WEBHOOK_FAIL | PAYMENT_FAIL | LOGIN_FAIL | PLAN_LIMIT
-  severidade String   // INFO | WARN | ERROR | CRITICAL
+  clinicaId  String?
+  tipo       String
+  severidade String
   mensagem   String
-  metadata   Json?    // { endpoint, latencyMs, statusCode, ... }
-  criadoEm  DateTime  @default(now())
+  metadata   Json?
+  criadoEm   DateTime @default(now())
 
   @@index([clinicaId, criadoEm])
   @@index([tipo, severidade, criadoEm])
@@ -946,14 +902,479 @@ model SistemaEvento {
 /// Feature flags por plano ou por clÃ­nica especÃ­fica
 model FeatureFlag {
   id           String   @id @default(cuid())
-  codigo       String   @unique // ex: "whatsapp_bot", "ia_noshow"
+  codigo       String   @unique
   descricao    String
-  activoPara   String   // "ALL" | "BASICO" | "PRO" | "ENTERPRISE" | "CLINICA_IDS"
-  clinicaIds   String[] @default([]) // preenchido quando activoPara = "CLINICA_IDS"
+  activoPara   String
+  clinicaIds   String[] @default([])
   activo       Boolean  @default(false)
   atualizadoEm DateTime @updatedAt
 
   @@map("feature_flags")
+}
+
+model TipoTratamento {
+  id                   String                @id @default(cuid())
+  clinicaId            String
+  nome                 String
+  descricao            String?
+  duracaoMin           Int?
+  ativo                Boolean               @default(true)
+  criadoEm             DateTime              @default(now())
+  preco                Int                   @default(0)
+  contractServiceItems ContractServiceItem[]
+  planos               PlanoTratamento[]
+  itensFatura          ItemFatura[]          @relation("ItemFaturaTratamento")
+  clinica              Clinica               @relation(fields: [clinicaId], references: [id])
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("tipos_tratamento")
+}
+
+model TipoExameClinica {
+  id        String   @id @default(cuid())
+  clinicaId String
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  preco     Int      @default(0)
+  exames    Exame[]
+  itensFatura ItemFatura[] @relation("ItemFaturaExame")
+  clinica   Clinica  @relation(fields: [clinicaId], references: [id])
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("tipos_exame_clinica")
+}
+
+model PlanoTratamento {
+  id                  String             @id @default(cuid())
+  clinicaId           String
+  pacienteId          String
+  agendamentoOrigemId String?
+  medicoId            String
+  responsavelId       String?
+  tipoId              String
+  descricao           String?
+  estado              EstadoPlano        @default(ACTIVO)
+  totalSessoes        Int
+  frequenciaSemana    Int
+  dataInicio          DateTime
+  dataFimPrevista     DateTime
+  dataFimReal         DateTime?
+  observacoes         String?
+  criadoEm            DateTime           @default(now())
+  atualizadoEm        DateTime           @updatedAt
+  agendamentoOrigem   Agendamento?       @relation("AgendamentoPlanoTratamento", fields: [agendamentoOrigemId], references: [id])
+  clinica             Clinica            @relation(fields: [clinicaId], references: [id])
+  medico              Medico             @relation(fields: [medicoId], references: [id])
+  paciente            Paciente           @relation(fields: [pacienteId], references: [id])
+  tipoTratamento      TipoTratamento     @relation(fields: [tipoId], references: [id])
+  sessoes             SessaoTratamento[]
+
+  @@index([clinicaId, pacienteId])
+  @@index([clinicaId, estado])
+  @@map("plano_tratamento")
+}
+
+model SessaoTratamento {
+  id            String          @id @default(cuid())
+  clinicaId     String
+  planoId       String
+  agendamentoId String?         @unique
+  numeroSessao  Int
+  estado        EstadoSessao    @default(AGENDADO)
+  dataHora      DateTime
+  duracao       Int
+  notas         String?
+  criadoEm      DateTime        @default(now())
+  atualizadoEm  DateTime        @updatedAt
+  agendamento   Agendamento?    @relation(fields: [agendamentoId], references: [id])
+  clinica       Clinica         @relation(fields: [clinicaId], references: [id])
+  plano         PlanoTratamento @relation(fields: [planoId], references: [id], onDelete: Cascade)
+
+  @@index([clinicaId, planoId])
+  @@index([clinicaId, dataHora])
+  @@map("sessao_tratamento")
+}
+
+model SequenciaDocFiscal {
+  id            String              @id @default(cuid())
+  clinicaId     String
+  tipoDoc       TipoDocumentoFiscal
+  serie         String              @default("CPLS")
+  anoFiscal     Int
+  ultimoNumero  Int                 @default(0)
+  endTS         DateTime?
+  isContingency Boolean             @default(false)
+  isRegistered  Boolean             @default(false)
+  startTS       DateTime?
+  clinica       Clinica             @relation(fields: [clinicaId], references: [id])
+
+  @@unique([clinicaId, tipoDoc, serie, anoFiscal])
+  @@map("sequencia_doc_fiscal")
+}
+
+model FaturaSnapshot {
+  id                String       @id @default(cuid())
+  faturaId          String       @unique
+  emitenteNif       String
+  emitenteNome      String
+  emitenteEndereco  String
+  emitenteCidade    String?
+  emitenteProvincia String?
+  clienteNome       String
+  clienteNif        String       @default("999999990")
+  clienteEndereco   String?
+  clienteCountry    String       @default("AO")
+  regimeFiscal      RegimeFiscal
+  criadoEm          DateTime     @default(now())
+  serieDocFiscal    String       @default("CPLS")
+  fatura            Fatura       @relation(fields: [faturaId], references: [id])
+
+  @@map("fatura_snapshots")
+}
+
+model CategoriaProduto {
+  id           String    @id @default(cuid())
+  clinicaId    String
+  nome         String
+  descricao    String?
+  cor          String?
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  clinica      Clinica   @relation(fields: [clinicaId], references: [id])
+  produtos     Produto[]
+
+  @@unique([clinicaId, nome])
+  @@index([clinicaId])
+  @@map("categorias_produto")
+}
+
+model Produto {
+  id                   String                @id @default(cuid())
+  clinicaId            String
+  categoriaId          String
+  codigo               String?
+  nome                 String
+  descricao            String?
+  precoCusto           Int                   @default(0)
+  precoVenda           Int                   @default(0)
+  taxaIva              Float                 @default(14)
+  codigoIva            String                @default("IVA")
+  motivoIsencao        String?
+  tipo                 TipoProduto           @default(PRODUTO)
+  gerenciaEstoque      Boolean               @default(true)
+  estoqueMinimo        Int                   @default(0)
+  ativo                Boolean               @default(true)
+  criadoEm             DateTime              @default(now())
+  atualizadoEm         DateTime              @updatedAt
+  contractServiceItems ContractServiceItem[]
+  lotes                EstoqueLote[]
+  movimentacoes        MovimentacaoEstoque[]
+  itensFatura          ItemFatura[]          @relation("ItemFaturaProduto")
+  categoria            CategoriaProduto      @relation(fields: [categoriaId], references: [id])
+  clinica              Clinica               @relation(fields: [clinicaId], references: [id])
+
+  @@unique([clinicaId, codigo])
+  @@index([clinicaId])
+  @@index([categoriaId])
+  @@map("produtos")
+}
+
+model EstoqueLote {
+  id            String                @id @default(cuid())
+  clinicaId     String
+  produtoId     String
+  numeroLote    String
+  dataValidade  DateTime?
+  quantidade    Int                   @default(0)
+  criadoEm      DateTime              @default(now())
+  atualizadoEm  DateTime              @updatedAt
+  clinica       Clinica               @relation(fields: [clinicaId], references: [id])
+  produto       Produto               @relation(fields: [produtoId], references: [id])
+  movimentacoes MovimentacaoEstoque[]
+
+  @@index([clinicaId])
+  @@index([produtoId])
+  @@index([dataValidade])
+  @@map("estoque_lotes")
+}
+
+model MovimentacaoEstoque {
+  id           String           @id @default(cuid())
+  clinicaId    String
+  produtoId    String
+  loteId       String?
+  utilizadorId String?
+  tipo         TipoMovimentacao
+  quantidade   Int
+  motivo       String?
+  documentoRef String?
+  criadoEm     DateTime         @default(now())
+  clinica      Clinica          @relation(fields: [clinicaId], references: [id])
+  lote         EstoqueLote?     @relation(fields: [loteId], references: [id])
+  produto      Produto          @relation(fields: [produtoId], references: [id])
+
+  @@index([clinicaId])
+  @@index([produtoId])
+  @@index([loteId])
+  @@map("estoque_movimentacoes")
+}
+
+model Anamnese {
+  id            String       @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String?      @unique
+  especialidade String       @default("ODONTOLOGIA")
+  respostas     Json
+  criadoEm      DateTime     @default(now())
+  atualizadoEm  DateTime     @updatedAt
+  agendamento   Agendamento? @relation(fields: [agendamentoId], references: [id])
+  clinica       Clinica      @relation(fields: [clinicaId], references: [id])
+  medico        Medico       @relation(fields: [medicoId], references: [id])
+  paciente      Paciente     @relation(fields: [pacienteId], references: [id])
+
+  @@index([clinicaId, pacienteId])
+  @@map("anamneses")
+}
+
+model Odontograma {
+  id            String      @id @default(cuid())
+  clinicaId     String
+  pacienteId    String
+  medicoId      String
+  agendamentoId String      @unique
+  /// Array de { numeroDente, face, status, observacao? }
+  marcacoes     Json        @default("[]")
+  criadoEm      DateTime    @default(now())
+  atualizadoEm  DateTime    @updatedAt
+  agendamento   Agendamento @relation(fields: [agendamentoId], references: [id])
+  clinica       Clinica     @relation(fields: [clinicaId], references: [id])
+  medico        Medico      @relation(fields: [medicoId], references: [id])
+  paciente      Paciente    @relation(fields: [pacienteId], references: [id])
+
+  @@index([clinicaId, pacienteId])
+  @@map("odontogramas")
+}
+
+model AnamneseTemplate {
+  id              String                    @id @default(cuid())
+  clinicaId       String
+  especialidadeId String                    @unique
+  titulo          String
+  criadoEm        DateTime                  @default(now())
+  atualizadoEm    DateTime                  @updatedAt
+  questoes        AnamneseTemplateQuestao[]
+  clinica         Clinica                   @relation(fields: [clinicaId], references: [id])
+  especialidade   Especialidade             @relation(fields: [especialidadeId], references: [id])
+
+  @@unique([clinicaId, especialidadeId])
+  @@index([clinicaId])
+  @@map("anamnese_templates")
+}
+
+model AnamneseTemplateQuestao {
+  id           String           @id @default(cuid())
+  templateId   String
+  ordem        Int              @default(0)
+  pergunta     String
+  tipoResposta String
+  options      Json?
+  criadoEm     DateTime         @default(now())
+  atualizadoEm DateTime         @updatedAt
+  template     AnamneseTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("anamnese_template_questoes")
+}
+
+model Contract {
+  id               String                @id @default(cuid())
+  clinicaId        String
+  pacienteId       String
+  numero           String
+  titulo           String
+  status           ContractStatus        @default(DRAFT)
+  dataInicio       DateTime
+  dataFim          DateTime
+  moeda            String                @default("AOA")
+  valorTotal       Int                   @default(0)
+  valorEntrada     Int                   @default(0)
+  clausulaRescisao String?
+  observacoes      String?
+  version          Int                   @default(1)
+  criadoEm         DateTime              @default(now())
+  atualizadoEm     DateTime              @updatedAt
+  categoria        String                @default("GENERAL")
+  aditivos         ContractAmendment[]
+  clausulas        ContractClause[]
+  documentos       ContractDocument[]
+  eventos          ContractEvent[]
+  parcelas         ContractInstallment[]
+  planoPagamento   ContractPaymentPlan?
+  servicos         ContractServiceItem[]
+  assinaturas      ContractSignature[]
+  clinica          Clinica               @relation(fields: [clinicaId], references: [id])
+  paciente         Paciente              @relation(fields: [pacienteId], references: [id])
+
+  @@unique([clinicaId, numero])
+  @@index([clinicaId, status])
+  @@index([clinicaId, pacienteId])
+  @@map("contracts")
+}
+
+model ContractServiceItem {
+  id               String           @id @default(cuid())
+  contractId       String
+  descricao        String
+  quantidade       Int              @default(1)
+  precoUnitario    Int              @default(0)
+  desconto         Int              @default(0)
+  subtotal         Int              @default(0)
+  criadoEm         DateTime         @default(now())
+  atualizadoEm     DateTime         @updatedAt
+  itemType         ContractItemType @default(SERVICO)
+  produtoId        String?
+  tipoTratamentoId String?
+  contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  produto          Produto?         @relation(fields: [produtoId], references: [id])
+  tipoTratamento   TipoTratamento?  @relation(fields: [tipoTratamentoId], references: [id])
+
+  @@index([contractId])
+  @@index([produtoId])
+  @@index([tipoTratamentoId])
+  @@map("contract_service_items")
+}
+
+model ContractPaymentPlan {
+  id            String              @id @default(cuid())
+  contractId    String              @unique
+  tipo          ContractPaymentType
+  parcelas      Int                 @default(1)
+  periodicidade String?
+  diaVencimento Int?
+  jurosMora     Int                 @default(0)
+  multa         Int                 @default(0)
+  criadoEm      DateTime            @default(now())
+  atualizadoEm  DateTime            @updatedAt
+  contract      Contract            @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([tipo])
+  @@map("contract_payment_plans")
+}
+
+model ContractEvent {
+  id         String            @id @default(cuid())
+  contractId String
+  clinicaId  String
+  actorId    String?
+  type       ContractEventType
+  payload    Json?
+  criadoEm   DateTime          @default(now())
+  clinica    Clinica           @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  contract   Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, criadoEm])
+  @@index([clinicaId, criadoEm])
+  @@map("contract_events")
+}
+
+model ContractDocument {
+  id           String   @id @default(cuid())
+  contractId   String
+  clinicaId    String
+  nome         String
+  mimeType     String?
+  tamanhoBytes Int?
+  url          String
+  criadoEm     DateTime @default(now())
+  clinica      Clinica  @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, criadoEm])
+  @@index([clinicaId, criadoEm])
+  @@map("contract_documents")
+}
+
+model ContractInstallment {
+  id              String                    @id @default(cuid())
+  contractId      String
+  numero          Int
+  vencimento      DateTime
+  valor           Int
+  status          ContractInstallmentStatus @default(PENDING)
+  pagoEm          DateTime?
+  metodoPagamento String?
+  referencia      String?
+  criadoEm        DateTime                  @default(now())
+  atualizadoEm    DateTime                  @default(now()) @updatedAt
+  contract        Contract                  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, numero])
+  @@index([contractId, status])
+  @@map("contract_installments")
+}
+
+model ContractClause {
+  id           String   @id @default(cuid())
+  contractId   String
+  tipo         String
+  titulo       String
+  conteudo     String
+  ordem        Int      @default(0)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @default(now()) @updatedAt
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, ordem])
+  @@map("contract_clauses")
+}
+
+model ContractSignature {
+  id           String                  @id @default(cuid())
+  contractId   String
+  signerType   ContractSignerType
+  signerName   String
+  signerDoc    String?
+  status       ContractSignatureStatus @default(PENDING)
+  signedAt     DateTime?
+  provider     String?
+  evidenceJson Json?
+  criadoEm     DateTime                @default(now())
+  atualizadoEm DateTime                @default(now()) @updatedAt
+  contract     Contract                @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId, status])
+  @@map("contract_signatures")
+}
+
+model ContractAmendment {
+  id            String                  @id @default(cuid())
+  contractId    String
+  numero        Int
+  motivo        String
+  deltaJson     Json
+  status        ContractAmendmentStatus @default(DRAFT)
+  effectiveDate DateTime
+  criadoEm      DateTime                @default(now())
+  atualizadoEm  DateTime                @default(now()) @updatedAt
+  contract      Contract                @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, numero])
+  @@index([contractId, status])
+  @@map("contract_amendments")
+}
+
+enum ProvedorBot {
+  TYPEBOT
+  DIALOGFLOW
+  N8N
+  DIFY
 }
 
 enum Papel {
@@ -981,11 +1402,11 @@ enum EstadoAgendamento {
 }
 
 enum EstadoSubscricao {
-  TRIAL          // perÃ­odo experimental (14 dias por defeito)
-  ACTIVA         // paga e dentro da validade
-  GRACE_PERIOD   // expirou hÃ¡ menos de 7 dias â€” funcional com aviso
-  SUSPENSA       // expirou hÃ¡ mais de 7 dias â€” sÃ³ leitura
-  CANCELADA      // cancelada pelo admin ou pelo cliente
+  TRIAL
+  ACTIVA
+  GRACE_PERIOD
+  SUSPENSA
+  CANCELADA
 }
 
 enum TipoAgendamento {
@@ -1071,7 +1492,6 @@ enum WaTipoAutomacao {
   IA_ASSISTANT
 }
 
-
 enum WaEstadoConversa {
   AGUARDA_INPUT
   EM_FLUXO_MARCACAO
@@ -1125,143 +1545,6 @@ enum EstadoSessao {
   CANCELADO
 }
 
-model TipoTratamento {
-  id          String   @id @default(cuid())
-  clinicaId   String
-  nome        String   
-  descricao   String?
-  duracaoMin  Int?     
-  preco       Int      @default(0)
-  ativo       Boolean  @default(true)
-  criadoEm    DateTime @default(now())
-  
-  clinica     Clinica  @relation(fields: [clinicaId], references: [id])
-  planos      PlanoTratamento[]
-  contractServiceItems ContractServiceItem[]
-
-  @@unique([clinicaId, nome])
-  @@index([clinicaId])
-  @@map("tipos_tratamento")
-}
-
-model TipoExameClinica {
-  id          String   @id @default(cuid())
-  clinicaId   String
-  nome        String   
-  descricao   String?
-  preco       Int      @default(0)
-  ativo       Boolean  @default(true)
-  criadoEm    DateTime @default(now())
-  
-  clinica     Clinica  @relation(fields: [clinicaId], references: [id])
-  exames      Exame[]
-
-  @@unique([clinicaId, nome])
-  @@index([clinicaId])
-  @@map("tipos_exame_clinica")
-}
-
-model PlanoTratamento {
-  id              String      @id @default(cuid())
-  clinicaId       String
-  pacienteId      String
-  agendamentoOrigemId String?    
-  medicoId        String      
-  responsavelId   String?     
-  
-  tipoId          String      
-  descricao       String?     
-  estado          EstadoPlano @default(ACTIVO)
-  totalSessoes    Int         
-  frequenciaSemana Int        
-  dataInicio      DateTime
-  dataFimPrevista DateTime
-  dataFimReal     DateTime?   
-  observacoes     String?
-  
-  criadoEm       DateTime    @default(now())
-  atualizadoEm   DateTime    @updatedAt
-
-  clinica        Clinica          @relation(fields: [clinicaId], references: [id])
-  paciente       Paciente         @relation(fields: [pacienteId], references: [id])
-  medico         Medico           @relation(fields: [medicoId], references: [id])
-  agendamentoOrigem Agendamento?  @relation(name: "AgendamentoPlanoTratamento", fields: [agendamentoOrigemId], references: [id])
-  tipoTratamento TipoTratamento   @relation(fields: [tipoId], references: [id])
-  sessoes        SessaoTratamento[]
-
-  @@index([clinicaId, pacienteId])
-  @@index([clinicaId, estado])
-  @@map("plano_tratamento")
-}
-
-model SessaoTratamento {
-  id             String       @id @default(cuid())
-  clinicaId      String
-  planoId        String
-  agendamentoId  String?      @unique
-  numeroSessao   Int
-  estado         EstadoSessao @default(AGENDADO)
-  dataHora       DateTime
-  duracao        Int          
-  notas          String?      
-  
-  criadoEm       DateTime     @default(now())
-  atualizadoEm   DateTime     @updatedAt
-
-  clinica      Clinica          @relation(fields: [clinicaId], references: [id])
-  plano        PlanoTratamento  @relation(fields: [planoId], references: [id], onDelete: Cascade)
-  agendamento  Agendamento?     @relation(fields: [agendamentoId], references: [id])
-
-  @@index([clinicaId, planoId])
-  @@index([clinicaId, dataHora])
-  @@map("sessao_tratamento")
-}
-
-// â”€â”€â”€ SEQUÃŠNCIA DOCUMENTAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-model SequenciaDocFiscal {
-  id            String              @id @default(cuid())
-  clinicaId     String
-  tipoDoc       TipoDocumentoFiscal
-  serie         String              @default("CPLS")
-  anoFiscal     Int
-  ultimoNumero  Int                 @default(0)
-
-  // Metadados de Contingência
-  isContingency Boolean             @default(false)
-  startTS       DateTime?
-  endTS         DateTime?
-  isRegistered  Boolean             @default(false)
-
-  clinica       Clinica  @relation(fields: [clinicaId], references: [id])
-
-  @@unique([clinicaId, tipoDoc, serie, anoFiscal])
-  @@map("sequencia_doc_fiscal")
-}
-
-// â”€â”€â”€ SNAPSHOT FISCAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-model FaturaSnapshot {
-  id                 String   @id @default(cuid())
-  faturaId           String   @unique
-  emitenteNif        String
-  emitenteNome       String
-  emitenteEndereco   String
-  emitenteCidade     String?
-  emitenteProvincia  String?
-  clienteNome        String
-  clienteNif         String   @default("999999990")
-  clienteCountry     String   @default("AO")
-  clienteEndereco    String?
-  serieDocFiscal     String   @default("CPLS")
-  regimeFiscal       RegimeFiscal
-  criadoEm           DateTime @default(now())
-
-  fatura             Fatura   @relation(fields: [faturaId], references: [id])
-
-  @@map("fatura_snapshots")
-}
-
 enum TipoDocumentoFiscal {
   FA
   FT
@@ -1281,6 +1564,7 @@ enum TipoDocumentoFiscal {
   RA
   CS
   LD
+  VD
 }
 
 enum RegimeFiscal {
@@ -1289,97 +1573,12 @@ enum RegimeFiscal {
   EXUSA
 }
 
-// â”€â”€â”€ INVENTÃRIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-model CategoriaProduto {
-  id           String    @id @default(cuid())
-  clinicaId    String
-  nome         String
-  descricao    String?
-  cor          String?
-  ativo        Boolean   @default(true)
-  criadoEm     DateTime  @default(now())
-  atualizadoEm DateTime  @updatedAt
-
-  clinica      Clinica   @relation(fields: [clinicaId], references: [id])
-  produtos     Produto[]
-
-  @@unique([clinicaId, nome])
-  @@index([clinicaId])
-  @@map("categorias_produto")
-}
-
-model Produto {
-  id               String          @id @default(cuid())
-  clinicaId        String
-  categoriaId      String
-  codigo           String?         // SKU / ReferÃªncia
-  nome             String
-  descricao        String?
-  precoCusto       Int             @default(0)
-  precoVenda       Int             @default(0)
-  taxaIva          Float           @default(14)
-  codigoIva        String          @default("IVA")
-  motivoIsencao    String?
-  tipo             TipoProduto     @default(PRODUTO)
-  gerenciaEstoque  Boolean         @default(true)
-  estoqueMinimo    Int             @default(0)
-  ativo            Boolean         @default(true)
-  criadoEm         DateTime        @default(now())
-  atualizadoEm     DateTime        @updatedAt
-
-  clinica          Clinica         @relation(fields: [clinicaId], references: [id])
-  categoria        CategoriaProduto @relation(fields: [categoriaId], references: [id])
-  lotes            EstoqueLote[]
-  movimentacoes    MovimentacaoEstoque[]
-  contractServiceItems ContractServiceItem[]
-
-  @@unique([clinicaId, codigo])
-  @@index([clinicaId])
-  @@index([categoriaId])
-  @@map("produtos")
-}
-
-model EstoqueLote {
-  id               String          @id @default(cuid())
-  clinicaId        String
-  produtoId        String
-  numeroLote       String
-  dataValidade     DateTime?
-  quantidade       Int             @default(0)
-  criadoEm         DateTime        @default(now())
-  atualizadoEm     DateTime        @updatedAt
-
-  clinica          Clinica         @relation(fields: [clinicaId], references: [id])
-  produto          Produto         @relation(fields: [produtoId], references: [id])
-  movimentacoes    MovimentacaoEstoque[]
-
-  @@index([clinicaId])
-  @@index([produtoId])
-  @@index([dataValidade])
-  @@map("estoque_lotes")
-}
-
-model MovimentacaoEstoque {
-  id               String           @id @default(cuid())
-  clinicaId        String
-  produtoId        String
-  loteId           String?
-  utilizadorId     String?
-  tipo             TipoMovimentacao
-  quantidade       Int
-  motivo           String?
-  documentoRef     String?          // Ex: "FT 2026/001"
-  criadoEm         DateTime         @default(now())
-
-  clinica          Clinica          @relation(fields: [clinicaId], references: [id])
-  produto          Produto          @relation(fields: [produtoId], references: [id])
-  lote             EstoqueLote?     @relation(fields: [loteId], references: [id])
-
-  @@index([clinicaId])
-  @@index([produtoId])
-  @@index([loteId])
-  @@map("estoque_movimentacoes")
+enum TipoItemFatura {
+  PRODUTO
+  TRATAMENTO
+  EXAME
+  CONSULTA
+  SERVICO
 }
 
 enum TipoProduto {
@@ -1396,84 +1595,6 @@ enum TipoMovimentacao {
   TRANSFERENCIA
 }
 
-
-model Anamnese {
-  id            String   @id @default(cuid())
-  clinicaId     String
-  pacienteId    String
-  medicoId      String
-  agendamentoId String?  @unique
-  especialidade String   @default("ODONTOLOGIA")
-  respostas     Json     // { [questionId]: { value: any, observation?: string } }
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
-
-  clinica       Clinica      @relation(fields: [clinicaId], references: [id])
-  paciente      Paciente     @relation(fields: [pacienteId], references: [id])
-  medico        Medico       @relation(fields: [medicoId], references: [id])
-  agendamento   Agendamento? @relation(fields: [agendamentoId], references: [id])
-
-  @@index([clinicaId, pacienteId])
-  @@map("anamneses")
-}
-
-model Odontograma {
-  id            String   @id @default(cuid())
-  clinicaId     String
-  pacienteId    String
-  medicoId      String
-  agendamentoId String   @unique
-  /// Array de { numeroDente, face, status, observacao? }
-  marcacoes     Json     @default("[]")
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
-
-  clinica     Clinica     @relation(fields: [clinicaId], references: [id])
-  paciente    Paciente    @relation(fields: [pacienteId], references: [id])
-  medico      Medico      @relation(fields: [medicoId], references: [id])
-  agendamento Agendamento @relation(fields: [agendamentoId], references: [id])
-
-  @@index([clinicaId, pacienteId])
-  @@map("odontogramas")
-}
-
-// -------------------------------------------------
-// Anamnese Template models (per Especialidade)
-// -------------------------------------------------
-model AnamneseTemplate {
-  id               String                 @id @default(cuid())
-  clinicaId        String
-  especialidadeId  String                 @unique
-  titulo           String
-  criadoEm         DateTime               @default(now())
-  atualizadoEm     DateTime               @updatedAt
-  questoes         AnamneseTemplateQuestao[]
-  clinica          Clinica                @relation(fields: [clinicaId], references: [id])
-  especialidade    Especialidade          @relation(fields: [especialidadeId], references: [id])
-
-  @@unique([clinicaId, especialidadeId])
-  @@index([clinicaId])
-  @@map("anamnese_templates")
-}
-
-model AnamneseTemplateQuestao {
-  id               String                 @id @default(cuid())
-  templateId       String
-  ordem            Int                    @default(0)
-  pergunta         String
-  tipoResposta     String                 // "boolean", "select", "text", "date"
-  options          Json?                  // array of { value, label } when tipoResposta == "select"
-  criadoEm         DateTime               @default(now())
-  atualizadoEm     DateTime               @updatedAt
-  template         AnamneseTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@index([templateId])
-  @@map("anamnese_template_questoes")
-}
-
-// -------------------------------------------------
-// Contracts Module
-// -------------------------------------------------
 enum ContractStatus {
   DRAFT
   REVIEW
@@ -1528,190 +1649,4 @@ enum ContractAmendmentStatus {
   DRAFT
   APPLIED
   CANCELLED
-}
-
-model Contract {
-  id               String           @id @default(cuid())
-  clinicaId        String
-  pacienteId       String
-  numero           String
-  titulo           String
-  status           ContractStatus   @default(DRAFT)
-  dataInicio       DateTime
-  dataFim          DateTime
-  moeda            String           @default("AOA")
-  valorTotal       Int              @default(0)
-  valorEntrada     Int              @default(0)
-  clausulaRescisao String?
-  observacoes      String?
-  version          Int              @default(1)
-  categoria        String           @default("GENERAL")
-  criadoEm         DateTime         @default(now())
-  atualizadoEm     DateTime         @updatedAt
-
-  clinica          Clinica          @relation(fields: [clinicaId], references: [id])
-  paciente         Paciente         @relation(fields: [pacienteId], references: [id])
-  servicos         ContractServiceItem[]
-  planoPagamento   ContractPaymentPlan?
-  parcelas         ContractInstallment[]
-  clausulas        ContractClause[]
-  assinaturas      ContractSignature[]
-  aditivos         ContractAmendment[]
-  eventos          ContractEvent[]
-  documentos       ContractDocument[]
-
-  @@unique([clinicaId, numero])
-  @@index([clinicaId, status])
-  @@index([clinicaId, pacienteId])
-  @@map("contracts")
-}
-
-model ContractServiceItem {
-  id               String           @id @default(cuid())
-  contractId       String
-  itemType         ContractItemType @default(SERVICO)
-  produtoId        String?
-  tipoTratamentoId String?
-  descricao        String
-  quantidade       Int              @default(1)
-  precoUnitario    Int              @default(0)
-  desconto         Int              @default(0)
-  subtotal         Int              @default(0)
-  criadoEm         DateTime         @default(now())
-  atualizadoEm     DateTime         @updatedAt
-
-  contract         Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  produto          Produto?         @relation(fields: [produtoId], references: [id], onDelete: SetNull)
-  tipoTratamento   TipoTratamento?  @relation(fields: [tipoTratamentoId], references: [id], onDelete: SetNull)
-
-  @@index([contractId])
-  @@index([produtoId])
-  @@index([tipoTratamentoId])
-  @@map("contract_service_items")
-}
-
-model ContractPaymentPlan {
-  id             String              @id @default(cuid())
-  contractId     String              @unique
-  tipo           ContractPaymentType
-  parcelas       Int                 @default(1)
-  periodicidade  String?
-  diaVencimento  Int?
-  jurosMora      Int                 @default(0)
-  multa          Int                 @default(0)
-  criadoEm       DateTime            @default(now())
-  atualizadoEm   DateTime            @updatedAt
-
-  contract       Contract            @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([tipo])
-  @@map("contract_payment_plans")
-}
-
-model ContractEvent {
-  id          String            @id @default(cuid())
-  contractId  String
-  clinicaId   String
-  actorId     String?
-  type        ContractEventType
-  payload     Json?
-  criadoEm    DateTime          @default(now())
-
-  contract    Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  clinica     Clinica           @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
-
-  @@index([contractId, criadoEm])
-  @@index([clinicaId, criadoEm])
-  @@map("contract_events")
-}
-
-model ContractDocument {
-  id            String   @id @default(cuid())
-  contractId    String
-  clinicaId     String
-  nome          String
-  mimeType      String?
-  tamanhoBytes  Int?
-  url           String
-  criadoEm      DateTime @default(now())
-
-  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  clinica       Clinica  @relation(fields: [clinicaId], references: [id], onDelete: Cascade)
-
-  @@index([contractId, criadoEm])
-  @@index([clinicaId, criadoEm])
-  @@map("contract_documents")
-}
-
-model ContractInstallment {
-  id               String                    @id @default(cuid())
-  contractId       String
-  numero           Int
-  vencimento       DateTime
-  valor            Int
-  status           ContractInstallmentStatus @default(PENDING)
-  pagoEm           DateTime?
-  metodoPagamento  String?
-  referencia       String?
-  criadoEm         DateTime                  @default(now())
-  atualizadoEm     DateTime                  @default(now()) @updatedAt
-
-  contract         Contract                  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@unique([contractId, numero])
-  @@index([contractId, status])
-  @@map("contract_installments")
-}
-
-model ContractClause {
-  id          String   @id @default(cuid())
-  contractId  String
-  tipo        String
-  titulo      String
-  conteudo    String
-  ordem       Int      @default(0)
-  criadoEm    DateTime @default(now())
-  atualizadoEm DateTime @default(now()) @updatedAt
-
-  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([contractId, ordem])
-  @@map("contract_clauses")
-}
-
-model ContractSignature {
-  id           String                  @id @default(cuid())
-  contractId   String
-  signerType   ContractSignerType
-  signerName   String
-  signerDoc    String?
-  status       ContractSignatureStatus @default(PENDING)
-  signedAt     DateTime?
-  provider     String?
-  evidenceJson Json?
-  criadoEm     DateTime               @default(now())
-  atualizadoEm DateTime               @default(now()) @updatedAt
-
-  contract     Contract               @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([contractId, status])
-  @@map("contract_signatures")
-}
-
-model ContractAmendment {
-  id            String                   @id @default(cuid())
-  contractId    String
-  numero        Int
-  motivo        String
-  deltaJson     Json
-  status        ContractAmendmentStatus  @default(DRAFT)
-  effectiveDate DateTime
-  criadoEm      DateTime                 @default(now())
-  atualizadoEm  DateTime                 @default(now()) @updatedAt
-
-  contract      Contract                 @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@unique([contractId, numero])
-  @@index([contractId, status])
-  @@map("contract_amendments")
 }

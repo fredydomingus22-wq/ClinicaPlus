@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { subDays, startOfDay, endOfDay, eachDayOfInterval, format } from 'date-fns';
+import { estoqueCalculoService } from './estoque.calculo.service';
 
 export interface AnalyticsFilters {
   clinicaId: string;
@@ -81,31 +82,56 @@ export const analyticsEstoqueService = {
 
     const [produtos, movimentacoes, lotes] = await Promise.all([
       prisma.produto.findMany({
-        where: { clinicaId, ativo: true, ...(filters.categoriaId ? { categoriaId: filters.categoriaId } : {}) },
-        include: { categoria: true },
+        where: {
+          clinicaId,
+          ativo: true,
+          ...(filters.categoriaId ? { categoriaId: filters.categoriaId } : {}),
+        },
+        select: {
+          id: true,
+          tipo: true,
+          gerenciaEstoque: true,
+          estoqueMinimo: true,
+          precoCusto: true,
+        },
       }),
       prisma.movimentacaoEstoque.findMany({
-        where: { clinicaId, criadoEm: { gte: inicio, lte: fim }, ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}) },
+        where: {
+          clinicaId,
+          criadoEm: { gte: inicio, lte: fim },
+          ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}),
+        },
+        select: { tipo: true, quantidade: true },
       }),
       prisma.estoqueLote.findMany({
-        where: { clinicaId, quantidade: { gt: 0 }, ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}) },
-        include: { produto: true },
+        where: {
+          clinicaId,
+          quantidade: { gt: 0 },
+          ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}),
+        },
+        select: {
+          produtoId: true,
+          quantidade: true,
+          dataValidade: true,
+          produto: { select: { precoCusto: true } },
+        },
       }),
     ]);
 
     const totalProdutos = produtos.filter(p => p.tipo === 'PRODUTO').length;
     const totalServicos = produtos.filter(p => p.tipo === 'SERVICO').length;
 
-    // Valor total do estoque (soma: quantidade_lote * precoCusto)
-    const valorTotalEstoque = lotes.reduce((acc, l) => acc + l.quantidade * l.produto.precoCusto, 0);
+    // Valor total do estoque usando service centralizado
+    const produtoIds = produtos.map(p => p.id);
+    const valorEstoqueBatch = await estoqueCalculoService.calcularValorEstoqueBatch(clinicaId, produtoIds);
+    const valorTotalEstoque = Object.values(valorEstoqueBatch).reduce((a, b) => a + b, 0);
+
+    // Estoque atual por produto usando service centralizado
+    const estoqueBatch = await estoqueCalculoService.calcularEstoqueBatch(clinicaId, produtoIds);
 
     // Itens abaixo do mínimo
-    const estoqueAtualPorProduto = lotes.reduce<Record<string, number>>((acc, l) => {
-      acc[l.produtoId] = (acc[l.produtoId] || 0) + l.quantidade;
-      return acc;
-    }, {});
     const itensAbaixoMinimo = produtos.filter(
-      p => p.gerenciaEstoque && p.estoqueMinimo !== null && (estoqueAtualPorProduto[p.id] || 0) <= (p.estoqueMinimo ?? 0)
+      p => p.gerenciaEstoque && (estoqueBatch[p.id] || 0) <= p.estoqueMinimo
     ).length;
 
     // Validades críticas
@@ -126,12 +152,12 @@ export const analyticsEstoqueService = {
     // DSI: quantos dias o estoque cobre com o ritmo atual
     const diasPeriodo = Math.max(1, Math.ceil((fim.getTime() - inicio.getTime()) / 86400000));
     const consumoDiarioMedio = totalSaidasPeriodo / diasPeriodo;
-    const estoqueAggregado = Object.values(estoqueAtualPorProduto).reduce((a, b) => a + b, 0);
+    const estoqueAggregado = Object.values(estoqueBatch).reduce((a, b) => a + b, 0);
     const diasEstoque = consumoDiarioMedio > 0 ? parseFloat((estoqueAggregado / consumoDiarioMedio).toFixed(1)) : 999;
 
-    // Taxa de ruptura: % de produtos com estoque zero (dentre os que gerenciam estoque)
+    // Taxa de ruptura usando service centralizado
     const produtosComEstoque = produtos.filter(p => p.gerenciaEstoque);
-    const comRuptura = produtosComEstoque.filter(p => (estoqueAtualPorProduto[p.id] || 0) === 0).length;
+    const comRuptura = produtosComEstoque.filter(p => (estoqueBatch[p.id] || 0) === 0).length;
     const taxaRuptura = produtosComEstoque.length > 0
       ? parseFloat(((comRuptura / produtosComEstoque.length) * 100).toFixed(1))
       : 0;
@@ -164,7 +190,21 @@ export const analyticsEstoqueService = {
         criadoEm: { gte: inicio, lte: fim },
         ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}),
       },
-      include: { produto: { include: { categoria: true } } },
+      select: {
+        produtoId: true,
+        tipo: true,
+        quantidade: true,
+        produto: {
+          select: {
+            id: true,
+            nome: true,
+            codigo: true,
+            tipo: true,
+            precoVenda: true,
+            categoria: { select: { nome: true } },
+          },
+        },
+      },
     });
 
     // Agregar por produto
@@ -235,6 +275,7 @@ export const analyticsEstoqueService = {
         criadoEm: { gte: inicio, lte: fim },
         ...(filters.categoriaId ? { produto: { categoriaId: filters.categoriaId } } : {}),
       },
+      select: { tipo: true, quantidade: true, criadoEm: true },
       orderBy: { criadoEm: 'asc' },
     });
 
@@ -269,10 +310,10 @@ export const analyticsEstoqueService = {
   async getPrevisaoRuptura(clinicaId: string, diasHistorico = 30): Promise<PrevisaoRupturaItem[]> {
     const inicio = subDays(new Date(), diasHistorico);
 
-    const [produtos, movimentacoes, lotes] = await Promise.all([
+    const [produtos, movimentacoes] = await Promise.all([
       prisma.produto.findMany({
         where: { clinicaId, ativo: true, gerenciaEstoque: true },
-        include: { categoria: true },
+        select: { id: true, nome: true },
       }),
       prisma.movimentacaoEstoque.findMany({
         where: {
@@ -280,17 +321,13 @@ export const analyticsEstoqueService = {
           criadoEm: { gte: inicio },
           tipo: { in: ['SAIDA', 'VENDA'] },
         },
-      }),
-      prisma.estoqueLote.findMany({
-        where: { clinicaId, quantidade: { gt: 0 } },
+        select: { produtoId: true, quantidade: true },
       }),
     ]);
 
-    // Estoque atual por produto
-    const estoqueAtual: Record<string, number> = {};
-    for (const l of lotes) {
-      estoqueAtual[l.produtoId] = (estoqueAtual[l.produtoId] || 0) + l.quantidade;
-    }
+    // Estoque atual por produto usando service centralizado
+    const produtoIds = produtos.map(p => p.id);
+    const estoqueAtual = await estoqueCalculoService.calcularEstoqueBatch(clinicaId, produtoIds);
 
     // Consumo total no período por produto
     const consumoPeriodo: Record<string, number> = {};
@@ -349,14 +386,21 @@ export const analyticsEstoqueService = {
     const fim = dataFim ? new Date(dataFim) : new Date();
 
     const [categorias, lotes, movimentacoes] = await Promise.all([
-      prisma.categoriaProduto.findMany({ where: { clinicaId, ativo: true } }),
+      prisma.categoriaProduto.findMany({
+        where: { clinicaId, ativo: true },
+        select: { id: true, nome: true, cor: true },
+      }),
       prisma.estoqueLote.findMany({
         where: { clinicaId, quantidade: { gt: 0 } },
-        include: { produto: true },
+        select: {
+          produtoId: true,
+          quantidade: true,
+          produto: { select: { categoriaId: true, precoCusto: true } },
+        },
       }),
       prisma.movimentacaoEstoque.findMany({
         where: { clinicaId, criadoEm: { gte: inicio, lte: fim } },
-        include: { produto: true },
+        select: { produtoId: true },
       }),
     ]);
 
@@ -367,10 +411,11 @@ export const analyticsEstoqueService = {
     }
 
     const movPorCategoria: Record<string, number> = {};
-    for (const m of movimentacoes) {
-      const cid = m.produto.categoriaId;
-      movPorCategoria[cid] = (movPorCategoria[cid] || 0) + 1;
-    }
+    // TODO: Implement category-based movement counting when needed
+    // for (const m of movimentacoes) {
+    //   // Precisamos buscar a categoriaId do produto
+    //   // Para otimizar, podemos fazer uma query separada
+    // }
 
     // @ts-expect-error - Prisma groupBy return types are complex and can mismatch with strict TS
     const itensPorCategoria = await prisma.produto.groupBy({
@@ -382,6 +427,25 @@ export const analyticsEstoqueService = {
     const contagem: Record<string, number> = {};
     for (const r of itensPorCategoria) {
       contagem[r.categoriaId] = r._count.id;
+    }
+
+    // Buscar movimentações por categoria de forma otimizada
+    const produtoIds = movimentacoes.map(m => m.produtoId);
+    const produtosParaMov = await prisma.produto.findMany({
+      where: { id: { in: produtoIds } },
+      select: { id: true, categoriaId: true },
+    });
+
+    const produtoCategoriaMap: Record<string, string> = {};
+    for (const p of produtosParaMov) {
+      produtoCategoriaMap[p.id] = p.categoriaId;
+    }
+
+    for (const m of movimentacoes) {
+      const cid = produtoCategoriaMap[m.produtoId];
+      if (cid) {
+        movPorCategoria[cid] = (movPorCategoria[cid] || 0) + 1;
+      }
     }
 
     return categorias.map(c => ({

@@ -41,9 +41,12 @@ const AdminIntegracoes = React.lazy(() => import('./pages/admin/IntegracoesPage'
 const AdminServicosPrecos = React.lazy(() => import('./pages/admin/ServicosPrecosPage'));
 const AdminExames = React.lazy(() => import('./pages/admin/GestaoExamesPage'));
 const AdminTratamentos = React.lazy(() => import('./pages/admin/GestaoTratamentosPage'));
+const AdminFornecedores = React.lazy(() => import('./pages/admin/FornecedoresPage'));
+const AdminOdontogramas = React.lazy(() => import('./pages/admin/OdontogramasPage'));
 const AnamneseTemplatesManagementPage = React.lazy(() => import('./pages/AnamneseTemplatesManagementPage'));
 const AdminInventarioCatalogo = React.lazy(() => import('./pages/inventario/CatalogoPage'));
 const AdminInventarioDashboard = React.lazy(() => import('./pages/inventario/DashboardPage'));
+const AdminInventarioLotes = React.lazy(() => import('./pages/inventario/LotesPage'));
 const AdminRelatorios = React.lazy(() => import('./pages/financeiro/RelatoriosPage'));
 const AdminConsolaFiscal = React.lazy(() => import('./pages/financeiro/ConsolaFiscalPage'));
 const AdminAuditLog = React.lazy(() => import('./pages/admin/AuditLogPage'));
@@ -457,6 +460,10 @@ export const router = createBrowserRouter([
             element: <AdminEspecialidades />
           },
           {
+            path: '/admin/cadastros/fornecedores',
+            element: <AdminFornecedores />
+          },
+          {
             path: '/admin/perfil',
             element: <AdminPerfilPage />
           },
@@ -525,6 +532,10 @@ export const router = createBrowserRouter([
             element: <AdminTratamentos />
           },
           {
+            path: '/admin/odontogramas',
+            element: <AdminOdontogramas />
+          },
+          {
             path: '/admin/anamneses/templates',
             element: <AnamneseTemplatesManagementPage />
           },
@@ -539,6 +550,10 @@ export const router = createBrowserRouter([
           {
             path: '/admin/inventario/dashboard',
             element: <AdminInventarioDashboard />
+          },
+          {
+            path: '/admin/inventario/lotes/:id',
+            element: <AdminInventarioLotes />
           },
           {
             path: '/admin/contratos',

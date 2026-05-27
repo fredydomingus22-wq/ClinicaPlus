@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SelectionToggle = void 0;
+const jsx_runtime_1 = require("react/jsx-runtime");
+const Button_1 = require("./Button");
+const Textarea_1 = require("./Textarea");
+const Input_1 = require("./Input");
+const cn_1 = require("../utils/cn");
+const SelectionToggle = ({ label, value, onChange, type, comObservacao, labelObservacao, observacao, onObservacaoChange, error, disabled }) => {
+    const isBoolean = type === 'boolean';
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-lg hover:border-blue-200 transition-colors", children: [(0, jsx_runtime_1.jsxs)("div", { className: "flex flex-col md:flex-row md:items-center justify-between gap-4", children: [(0, jsx_runtime_1.jsx)("span", { className: "text-sm font-medium text-slate-700 leading-tight", children: label }), isBoolean && ((0, jsx_runtime_1.jsxs)("div", { className: "flex items-center gap-2 shrink-0", children: [(0, jsx_runtime_1.jsx)(Button_1.Button, { type: "button", variant: value === true ? 'primary' : 'outline', size: "sm", className: (0, cn_1.cn)("w-20 font-semibold", value === true ? "bg-blue-600 hover:bg-blue-700 border-transparent text-white" : "text-slate-600 hover:bg-slate-50"), onClick: () => onChange(true), disabled: disabled, children: "Sim" }), (0, jsx_runtime_1.jsx)(Button_1.Button, { type: "button", variant: value === false ? 'danger' : 'outline', size: "sm", className: (0, cn_1.cn)("w-20 font-semibold", value === false ? "bg-red-500 hover:bg-red-600 border-transparent text-white" : "text-slate-600 hover:bg-slate-50"), onClick: () => onChange(false), disabled: disabled, children: "N\u00E3o" })] })), type === 'text' && ((0, jsx_runtime_1.jsx)(Input_1.Input, { value: value || '', onChange: (e) => onChange(e.target.value), disabled: disabled, placeholder: "Descreva aqui...", className: "md:max-w-xs" })), type === 'date' && ((0, jsx_runtime_1.jsx)(Input_1.Input, { type: "date", value: value || '', onChange: (e) => onChange(e.target.value), disabled: disabled, className: "md:max-w-xs" }))] }), comObservacao && value === true && onObservacaoChange && ((0, jsx_runtime_1.jsxs)("div", { className: "mt-1 animate-in fade-in slide-in-from-top-1 duration-200", children: [(0, jsx_runtime_1.jsx)("label", { className: "text-xs font-medium text-slate-500 mb-1 block uppercase tracking-wider", children: labelObservacao || 'Observações' }), (0, jsx_runtime_1.jsx)(Textarea_1.Textarea, { value: observacao || '', onChange: (e) => onObservacaoChange(e.target.value), placeholder: "Informa\u00E7\u00F5es adicionais...", className: "min-h-[80px] text-sm", disabled: disabled })] })), error && ((0, jsx_runtime_1.jsx)("p", { className: "text-xs text-red-500 font-medium", children: error }))] }));
+};
+exports.SelectionToggle = SelectionToggle;
+//# sourceMappingURL=SelectionToggle.js.map

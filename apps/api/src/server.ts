@@ -13,9 +13,8 @@ import { apiKeyAuth } from './middleware/apiKeyAuth';
 import { auditLogger } from './middleware/auditLogger';
 import { globalRateLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/requestLogger';
-import { schedulerService } from './services/scheduler.service';
 import { createServer } from 'http';
-import { setupSocket } from './lib/socket';
+import { setupSocket, io as socketIo } from './lib/socket';
 import { prisma } from './lib/prisma';
 import { redis, redisSub } from './lib/redis';
 import { systemMetrics } from './lib/metrics';
@@ -58,6 +57,7 @@ import anamneseTemplatesRouter from './routes/anamneseTemplates';
 import odontogramasRouter from './routes/odontogramas';
 import { segurosRouter } from './routes/seguros';
 import contractsRouter from './routes/contracts';
+import pdfRouter from './routes/pdf';
 
 // Workers (BullMQ)
 import './workers/tratamento.worker';
@@ -118,6 +118,7 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(globalRateLimiter);
 
 // 3. Health check (stays before auth)
@@ -137,7 +138,7 @@ app.get('/health', async (_req, res) => {
     dbStatus = 'disconnected';
     logger.error({ err }, 'Health check: Database connection failed');
   }
-  
+
   let redisStatus = 'connected';
   try {
     // Redis check with 2s timeout
@@ -150,17 +151,33 @@ app.get('/health', async (_req, res) => {
     logger.error({ err }, 'Health check: Redis connection failed');
   }
 
+  // Check workers status via Redis
+  let workersStatus: string;
+  try {
+    const workerKeys = await redis.keys('bull:*:waiting');
+    if (workerKeys.length > 0) {
+      workersStatus = 'active';
+    } else {
+      workersStatus = 'idle';
+    }
+  } catch (err) {
+    workersStatus = 'error';
+    logger.error({ err }, 'Health check: Workers status check failed');
+  }
+
   const status = (dbStatus === 'connected' && redisStatus === 'connected') ? 'ok' : 'degraded';
 
-  res.status(status === 'ok' ? 200 : 207).json({ 
-    status, 
+  res.status(status === 'ok' ? 200 : 207).json({
+    status,
     database: dbStatus,
     redis: redisStatus,
+    workers: workersStatus,
     uptime: Math.floor((Date.now() - systemMetrics.startTime) / 1000),
     version: process.env['npm_package_version'] ?? '1.0.0',
     checks: {
       db: { status: dbStatus === 'connected' ? 'ok' : 'error', latencyMs: dbStatus === 'connected' ? latencyMs : undefined },
-      redis: { status: redisStatus === 'connected' ? 'ok' : 'error' }
+      redis: { status: redisStatus === 'connected' ? 'ok' : 'error' },
+      workers: { status: workersStatus === 'active' ? 'ok' : workersStatus === 'idle' ? 'ok' : 'error' }
     }
   });
 });
@@ -243,6 +260,10 @@ app.use('/api/anamneses', anamnesesRouter);
 app.use('/api/anamneseTemplates', anamneseTemplatesRouter);
 app.use('/api/odontogramas', odontogramasRouter);
 app.use('/api/contracts', contractsRouter);
+app.use('/api/pdf', pdfRouter);
+
+// Serve static files from local uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Global Error Handler
 app.use(errorHandler);
@@ -261,12 +282,6 @@ if (require.main === module) {
       },
       '🚀 ClinicaPlus API started'
     );
-    // Only start scheduler in production
-    if (config.NODE_ENV === 'production') {
-      schedulerService.start();
-    } else {
-      logger.info('Scheduler skipped (not in production)');
-    }
     
     // Verify Redis connection on startup
     redis.ping()
@@ -282,7 +297,19 @@ if (require.main === module) {
 const shutdown = async (signal: string): Promise<void> => {
   logger.info({ signal }, `Received ${signal} — shutting down gracefully`);
   try {
-    schedulerService.stop();
+    // Close HTTP server (stop accepting new connections)
+    httpServer.close((err) => {
+      if (err) {
+        logger.error({ err }, 'Error closing HTTP server');
+      }
+    });
+
+    // Close Socket.io (disconnect all clients)
+    if (socketIo) {
+      await socketIo.close();
+      logger.info('✅ Socket.io closed');
+    }
+
     await Promise.all([
       prisma.$disconnect(),
       redis.quit(),

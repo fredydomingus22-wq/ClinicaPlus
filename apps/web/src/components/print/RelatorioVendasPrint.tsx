@@ -93,7 +93,7 @@ export const RelatorioVendasPrint = forwardRef<HTMLDivElement, Props>(({ relator
               <td className="p-2 border border-gray-200 truncate max-w-[150px]">{f.paciente?.nome}</td>
               <td className="p-2 border border-gray-200 font-mono text-[7px]">{f.fiscalHash?.substring(0, 4)}-</td>
               <td className="p-2 border border-gray-200 text-right">{formatKwanza(f.subtotal)}</td>
-              <td className="p-2 border border-gray-200 text-right">0,00</td>
+              <td className="p-2 border border-gray-200 text-right">{formatKwanza(f.totalIva || 0)}</td>
               <td className="p-2 border border-gray-200 text-right font-bold">{formatKwanza(f.total)}</td>
               <td className="p-2 border border-gray-200 text-center uppercase font-bold text-[7px]">
                 <span className={f.estado === 'ANULADA' ? 'text-red-500' : 'text-green-600'}>{f.estado}</span>

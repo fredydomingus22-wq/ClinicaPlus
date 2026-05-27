@@ -179,12 +179,14 @@ export default function AgendamentosPage() {
         {error ? (
           <ErrorMessage error={error} />
         ) : (
-          <Table 
-            columns={columns}
-            data={data?.items || []}
-            isLoading={isLoading}
-            keyExtractor={(ag) => ag.id}
-          />
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table
+              columns={columns}
+              data={data?.items || []}
+              isLoading={isLoading}
+              keyExtractor={(ag) => ag.id}
+            />
+          </div>
         )}
 
         {/* Pagination placeholder */}

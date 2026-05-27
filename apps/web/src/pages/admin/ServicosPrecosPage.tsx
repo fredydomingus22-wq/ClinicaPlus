@@ -85,15 +85,15 @@ export default function ServicosPrecosPage() {
         }
       });
     } else {
-      criarTratamento(payload, { 
-        onSuccess: () => { 
-          toast.success('Tipo de tratamento guardado com sucesso!');
-          setIsModalOpen(false); 
-          reset(); 
+      criarTratamento(payload, {
+        onSuccess: () => {
+          toast.success('Tipo de procedimento guardado com sucesso!');
+          setIsModalOpen(false);
+          reset();
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (err: any) => {
-          toast.error(err?.response?.data?.error?.message || 'Erro ao guardar tratamento.');
+          toast.error(err?.response?.data?.error?.message || 'Erro ao guardar procedimento.');
         }
       });
     }
@@ -176,22 +176,22 @@ export default function ServicosPrecosPage() {
           >
             Exames
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('tratamentos')}
             className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'tratamentos' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
           >
-            Planos de Tratamento
+            Procedimentos
           </button>
         </div>
         <Button onClick={() => setIsModalOpen(true)} className="shadow-sm font-bold" size="sm">
-          <Plus className="w-4 h-4 mr-2" /> Novo {activeTab === 'exames' ? 'Exame' : 'Tratamento'}
+          <Plus className="w-4 h-4 mr-2" /> Novo {activeTab === 'exames' ? 'Exame' : 'Procedimentos'}
         </Button>
       </div>
 
 
 
-      <div className="bg-white">
-        <Table 
+      <div className="overflow-x-auto -mx-4 px-4 bg-white">
+        <Table
           columns={columns.filter(c => !c.hidden)}
           data={((activeTab === 'exames' ? exames : tratamentos) as ServicoItem[]) || []}
           isLoading={activeTab === 'exames' ? loadingExames : loadingTrats}
@@ -199,10 +199,10 @@ export default function ServicosPrecosPage() {
         />
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={`Adicionar Novo ${activeTab === 'exames' ? 'Tipo de Exame' : 'Tipo de Tratamento'}`}
+        title={`Adicionar Novo ${activeTab === 'exames' ? 'Tipo de Exame' : 'Tipo de Procedimentos'}`}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <Input 

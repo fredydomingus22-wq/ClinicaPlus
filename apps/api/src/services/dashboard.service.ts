@@ -105,8 +105,15 @@ export const dashboardService = {
           dataHora: { gte: startDate, lte: now },
           estado: { in: ['CONFIRMADO', 'CONCLUIDO'] },
         },
-        include: {
-          medico: { include: { especialidade: true } }
+        select: {
+          medico: {
+            select: {
+              preco: true,
+              especialidade: {
+                select: { nome: true }
+              }
+            }
+          }
         }
       }),
       // Agendamentos detalhados do periodo anterior (para tendencia de faturamento)
@@ -116,7 +123,11 @@ export const dashboardService = {
           dataHora: { gte: prevStartDate, lt: startDate },
           estado: { in: ['CONFIRMADO', 'CONCLUIDO'] },
         },
-        include: { medico: true }
+        select: {
+          medico: {
+            select: { preco: true }
+          }
+        }
       }),
       // Consultas totais no período (para ocupação)
       prisma.agendamento.count({

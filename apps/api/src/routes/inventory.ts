@@ -2,7 +2,12 @@ import { Router } from 'express';
 import { produtosService } from '../services/produtos.service';
 import { estoqueService } from '../services/estoque.service';
 import { analyticsEstoqueService, AnalyticsFilters } from '../services/analytics.estoque.service';
-import { TipoProduto } from '@clinicaplus/types';
+import { prisma } from '../lib/prisma';
+import { InventoryMapper } from '../dto/inventory.dto';
+import {
+  AnalyticsFiltersSchema,
+  ListProdutosSchema,
+} from '../schemas/inventory.schema';
 
 const router = Router();
 
@@ -10,26 +15,31 @@ const router = Router();
 
 /** GET /inventory/analytics/kpis?dataInicio=&dataFim=&categoriaId= */
 router.get('/analytics/kpis', async (req, res) => {
-  const { dataInicio, dataFim, categoriaId } = req.query;
-  const filters: AnalyticsFilters = { clinicaId: req.clinica.id };
-  if (dataInicio) filters.dataInicio = dataInicio as string;
-  if (dataFim) filters.dataFim = dataFim as string;
-  if (categoriaId) filters.categoriaId = categoriaId as string;
+  const filters = AnalyticsFiltersSchema.parse(req.query);
+  const analyticsFilters: AnalyticsFilters = {
+    clinicaId: req.clinica.id,
+    ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+    ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+    ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
+  };
 
-  const result = await analyticsEstoqueService.getKpis(filters);
+  const result = await analyticsEstoqueService.getKpis(analyticsFilters);
   res.json({ data: result });
 });
 
 /** GET /inventory/analytics/top-movimentados?dataInicio=&dataFim=&limite= */
 router.get('/analytics/top-movimentados', async (req, res) => {
-  const { dataInicio, dataFim, categoriaId, limite } = req.query;
-  const filters: AnalyticsFilters = { clinicaId: req.clinica.id };
-  if (dataInicio) filters.dataInicio = dataInicio as string;
-  if (dataFim) filters.dataFim = dataFim as string;
-  if (categoriaId) filters.categoriaId = categoriaId as string;
+  const filters = AnalyticsFiltersSchema.parse(req.query);
+  const { limite } = req.query;
+  const analyticsFilters: AnalyticsFilters = {
+    clinicaId: req.clinica.id,
+    ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+    ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+    ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
+  };
 
   const result = await analyticsEstoqueService.getTopMovimentados(
-    filters,
+    analyticsFilters,
     limite ? parseInt(limite as string, 10) : 20,
   );
   res.json({ data: result });
@@ -37,13 +47,15 @@ router.get('/analytics/top-movimentados', async (req, res) => {
 
 /** GET /inventory/analytics/tendencia-diaria?dataInicio=&dataFim= */
 router.get('/analytics/tendencia-diaria', async (req, res) => {
-  const { dataInicio, dataFim, categoriaId } = req.query;
-  const filters: AnalyticsFilters = { clinicaId: req.clinica.id };
-  if (dataInicio) filters.dataInicio = dataInicio as string;
-  if (dataFim) filters.dataFim = dataFim as string;
-  if (categoriaId) filters.categoriaId = categoriaId as string;
+  const filters = AnalyticsFiltersSchema.parse(req.query);
+  const analyticsFilters: AnalyticsFilters = {
+    clinicaId: req.clinica.id,
+    ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+    ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+    ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
+  };
 
-  const result = await analyticsEstoqueService.getTendenciaDiaria(filters);
+  const result = await analyticsEstoqueService.getTendenciaDiaria(analyticsFilters);
   res.json({ data: result });
 });
 
@@ -59,12 +71,15 @@ router.get('/analytics/previsao-ruptura', async (req, res) => {
 
 /** GET /inventory/analytics/categorias?dataInicio=&dataFim= */
 router.get('/analytics/categorias', async (req, res) => {
-  const { dataInicio, dataFim } = req.query;
-  const filters: AnalyticsFilters = { clinicaId: req.clinica.id };
-  if (dataInicio) filters.dataInicio = dataInicio as string;
-  if (dataFim) filters.dataFim = dataFim as string;
+  const filters = AnalyticsFiltersSchema.parse(req.query);
+  const analyticsFilters: AnalyticsFilters = {
+    clinicaId: req.clinica.id,
+    ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+    ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+    ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
+  };
 
-  const result = await analyticsEstoqueService.getDistribuicaoCategorias(filters);
+  const result = await analyticsEstoqueService.getDistribuicaoCategorias(analyticsFilters);
   res.json({ data: result });
 });
 
@@ -82,12 +97,8 @@ router.post('/categorias', async (req, res) => {
 
 // --- PRODUTOS ---
 router.get('/produtos', async (req, res) => {
-  const { categoriaId, tipo, busca } = req.query;
-  const result = await produtosService.listProdutos(req.clinica.id, {
-    categoriaId: categoriaId as string,
-    tipo: tipo as TipoProduto,
-    busca: busca as string,
-  });
+  const filters = ListProdutosSchema.parse(req.query);
+  const result = await produtosService.listProdutos(req.clinica.id, filters);
   res.json(result);
 });
 
@@ -110,6 +121,70 @@ router.put('/produtos/:id', async (req, res) => {
 router.get('/produtos/:id/lotes', async (req, res) => {
   const result = await estoqueService.listLotes(req.clinica.id, req.params['id']!);
   res.json(result);
+});
+
+router.get('/produtos/:id/movimentacoes', async (req, res) => {
+  const { page = '1', limit = '20' } = req.query;
+  const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+  const [movimentacoes, total] = await Promise.all([
+    prisma.movimentacaoEstoque.findMany({
+      where: {
+        clinicaId: req.clinica.id,
+        produtoId: req.params['id']!
+      },
+      select: {
+        id: true,
+        clinicaId: true,
+        produtoId: true,
+        loteId: true,
+        utilizadorId: true,
+        tipo: true,
+        quantidade: true,
+        motivo: true,
+        documentoRef: true,
+        criadoEm: true,
+        lote: {
+          select: {
+            id: true,
+            clinicaId: true,
+            produtoId: true,
+            numeroLote: true,
+            dataValidade: true,
+            quantidade: true,
+            criadoEm: true,
+            atualizadoEm: true,
+          },
+        },
+        produto: {
+          select: {
+            id: true,
+            nome: true,
+            codigo: true,
+          },
+        },
+      },
+      orderBy: { criadoEm: 'desc' },
+      skip,
+      take: parseInt(limit as string),
+    }),
+    prisma.movimentacaoEstoque.count({
+      where: {
+        clinicaId: req.clinica.id,
+        produtoId: req.params['id']!
+      },
+    }),
+  ]);
+
+  res.json({
+    data: movimentacoes.map(m => InventoryMapper.toMovimentacaoResponse(m)),
+    meta: {
+      total,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      totalPages: Math.ceil(total / parseInt(limit as string))
+    }
+  });
 });
 
 router.post('/lotes', async (req, res) => {

@@ -35,6 +35,20 @@ router.get('/paciente/:pacienteId', async (req: Request, res: Response, next: Ne
   }
 });
 
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { pacienteId, limit } = req.query;
+    const list = await OdontogramaService.list(
+      req.clinica!.id,
+      pacienteId as string | undefined,
+      limit ? parseInt(limit as string) : undefined,
+    );
+    res.json(list);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const odontograma = await OdontogramaService.getById(req.clinica!.id, req.params.id as string);

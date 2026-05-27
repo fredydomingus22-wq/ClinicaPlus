@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Bell, ChevronRight, Home } from 'lucide-react';
+import { Bell, ChevronRight, Home, Menu } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../stores/ui.store';
 import { UserMenu } from './UserMenu';
 import { NotificationsPanel } from './NotificationsPanel';
 import { useNotificacoes } from '../../hooks/useNotificacoes';
+import { TopNav } from './TopNav';
 
-export function TopBar() {
+interface TopBarProps {
+  onMobileMenuOpen?: () => void;
+}
+
+export function TopBar({ onMobileMenuOpen }: TopBarProps) {
   useUIStore();
   const { unreadCount } = useNotificacoes();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -17,6 +22,15 @@ export function TopBar() {
   return (
     <header className="h-14 bg-white border-b border-[#e5e5e5] flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
       <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+        {/* Mobile Hamburger Menu */}
+        <button
+          onClick={onMobileMenuOpen}
+          className="md:hidden p-2 -ml-2 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
         {/* Mobile Logo Branding */}
         <div className="md:hidden flex items-center mr-2">
           <div className="mr-2">
@@ -58,9 +72,14 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        {/* TopNav - Navigation Links */}
+        <TopNav />
+
+        <div className="hidden md:block h-5 w-px bg-[#e5e5e5] mx-1" />
+
         {/* Notifications */}
         <div className="relative">
-          <button 
+          <button
             onClick={() => setShowNotifications(!showNotifications)}
             className={`relative p-2 transition-colors ${showNotifications ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#737373] hover:bg-[#f5f5f5]'}`}
           >
@@ -71,10 +90,10 @@ export function TopBar() {
               </span>
             )}
           </button>
-          
-          <NotificationsPanel 
-            isOpen={showNotifications} 
-            onClose={() => setShowNotifications(false)} 
+
+          <NotificationsPanel
+            isOpen={showNotifications}
+            onClose={() => setShowNotifications(false)}
           />
         </div>
 

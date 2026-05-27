@@ -12,11 +12,13 @@ interface AnatomiaDenteSvgProps {
   onFaceClick: (numeroDente: number, face: DenteFace) => void;
 }
 
-function statusRaiz(marcacoes: OdontogramaMarcacao[], numeroDente: number): DenteStatus | undefined {
+function statusRaiz(marcacoes: OdontogramaMarcacao[] | undefined, numeroDente: number): DenteStatus | undefined {
+  if (!marcacoes) return undefined;
   return marcacoes.find((m) => m.numeroDente === numeroDente && m.face === DenteFace.R)?.status;
 }
 
-function statusCoroa(marcacoes: OdontogramaMarcacao[], numeroDente: number): DenteStatus | undefined {
+function statusCoroa(marcacoes: OdontogramaMarcacao[] | undefined, numeroDente: number): DenteStatus | undefined {
+  if (!marcacoes) return undefined;
   return marcacoes.find((m) => m.numeroDente === numeroDente && m.face === DenteFace.G)?.status;
 }
 

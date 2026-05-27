@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Save, Activity, MousePointerClick } from 'lucide-react';
+import { Save, Activity, X } from 'lucide-react';
+import { Odontogram } from 'react-odontogram';
+import 'react-odontogram/style.css';
 import {
   DenteFace,
   DenteStatus,
@@ -11,29 +13,49 @@ import {
   useCreateOdontograma,
   useUpdateOdontograma,
 } from '../../hooks/useOdontograma';
-import { OdontogramaSvg } from './odontograma/OdontogramaSvg';
 import { OdontogramLegend } from './odontograma/OdontogramLegend';
-import { ConditionSidePanel } from './odontograma/ConditionSidePanel';
+import { marcacoesToTeethConditions, teethIdToFdi } from './odontograma/odontogramConverter';
 import toast from 'react-hot-toast';
+
+const FACE_LABELS: Record<DenteFace, string> = {
+  V: 'Vestibular',
+  D: 'Distal',
+  M: 'Mesial',
+  L: 'Lingual/Palatina',
+  O: 'Oclusal/Incisal',
+  G: 'Coroa',
+  R: 'Raiz',
+};
+
+const STATUS_LABELS: Record<DenteStatus, string> = {
+  SAUDAVEL: 'Saudável',
+  CARIE: 'Cárie',
+  FRATURA: 'Fratura',
+  TRATAMENTO_CANAL: 'Trat. Canal',
+  CANAL_TRATADO: 'Canal Tratado',
+  TRATADO: 'Tratado',
+  AUSENTE: 'Ausente',
+  PROTESE: 'Prótese',
+  DESTRUICAO: 'Destruição',
+};
+
+const STATUS_COLORS: Record<DenteStatus, string> = {
+  SAUDAVEL: 'bg-neutral-100 text-neutral-700',
+  CARIE: 'bg-red-100 text-red-700',
+  FRATURA: 'bg-amber-100 text-amber-700',
+  TRATAMENTO_CANAL: 'bg-purple-100 text-purple-700',
+  CANAL_TRATADO: 'bg-violet-100 text-violet-700',
+  TRATADO: 'bg-blue-100 text-blue-700',
+  AUSENTE: 'bg-gray-100 text-gray-700',
+  PROTESE: 'bg-emerald-100 text-emerald-700',
+  DESTRUICAO: 'bg-gray-800 text-white',
+};
 
 interface OdontogramaTabProps {
   agendamentoId: string;
   pacienteId: string;
   medicoId: string;
   isReadOnly?: boolean;
-}
-
-function mergeMarcacao(
-  marcacoes: OdontogramaMarcacao[],
-  nova: OdontogramaMarcacao,
-): OdontogramaMarcacao[] {
-  const filtered = marcacoes.filter(
-    (m) => !(m.numeroDente === nova.numeroDente && m.face === nova.face),
-  );
-  if (nova.status === DenteStatus.SAUDAVEL) {
-    return filtered;
-  }
-  return [...filtered, nova];
 }
 
 export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
@@ -48,8 +70,7 @@ export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
 
   const [marcacoes, setMarcacoes] = useState<OdontogramaMarcacao[]>([]);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
-  const [activeDente, setActiveDente] = useState<number | null>(null);
-  const [activeFace, setActiveFace] = useState<DenteFace | null>(null);
+  const [selectedDente, setSelectedDente] = useState<number | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const isSavingRef = useRef(false);
   const pendingSaveRef = useRef(false);
@@ -128,29 +149,54 @@ export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
     }
   }, [debouncedMarcacoes, isReadOnly, isLoading, activeRecordId, loaded, performSave]);
 
-  const handleFaceClick = (numeroDente: number, face: DenteFace) => {
-    if (isReadOnly) return;
-    setActiveDente(numeroDente);
-    setActiveFace(face);
+  const handleUpdateMarcacao = (face: DenteFace, status: DenteStatus) => {
+    if (selectedDente == null) return;
+    
+    // Remover marcacao existente para esta face
+    const filtered = marcacoes.filter(
+      (m) => !(m.numeroDente === selectedDente && m.face === face),
+    );
+    
+    // Adicionar nova marcacao se não for SAUDAVEL
+    if (status !== DenteStatus.SAUDAVEL) {
+      filtered.push({
+        numeroDente: selectedDente,
+        face,
+        status,
+      });
+    }
+    
+    setMarcacoes(filtered);
   };
 
-  const handleStatusSelect = (status: DenteStatus) => {
-    if (activeDente == null || activeFace == null) return;
+  const handleDeleteMarcacao = (face: DenteFace) => {
+    if (selectedDente == null) return;
     setMarcacoes((prev) =>
-      mergeMarcacao(prev, {
-        numeroDente: activeDente,
-        face: activeFace,
-        status,
-      }),
+      prev.filter((m) => !(m.numeroDente === selectedDente && m.face === face)),
     );
   };
 
-  const clearSelection = () => {
-    setActiveDente(null);
-    setActiveFace(null);
+  const handleCloseModal = () => {
+    setSelectedDente(null);
+  };
+
+  const handleDenteClick = (selected: Array<{ id: string; notations: { fdi: string } }>) => {
+    if (isReadOnly || selected.length === 0) return;
+    // Pegar o último dente selecionado
+    const lastSelected = selected[selected.length - 1];
+    if (lastSelected) {
+      const numeroDente = parseInt(lastSelected.notations.fdi, 10);
+      setSelectedDente(numeroDente);
+    }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Converter marcacoes para formato do react-odontogram
+  const teethConditions = marcacoesToTeethConditions(marcacoes);
+  const teethWithConditions = marcacoes
+    .filter((m) => m.status !== 'SAUDAVEL')
+    .map((m) => `teeth-${m.numeroDente}`);
 
   if (isLoading) {
     return (
@@ -165,7 +211,7 @@ export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
           <Activity className="h-4 w-4 text-primary-500" />
-          Odontograma clínico (por faces)
+          Odontograma clínico
         </h3>
         {!isReadOnly && (
           <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-1">
@@ -179,34 +225,97 @@ export const OdontogramaTab: React.FC<OdontogramaTabProps> = ({
 
       <OdontogramLegend />
 
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        <div className="flex-1 min-w-0 w-full">
-          <OdontogramaSvg
-            marcacoes={marcacoes}
-            isReadOnly={isReadOnly}
-            activeDente={activeDente}
-            activeFace={activeFace}
-            onFaceClick={handleFaceClick}
-          />
+      <div className="flex gap-4">
+        <div className="flex-1 p-4 bg-white rounded-lg border border-neutral-200">
+          <div className="transform scale-50 origin-top">
+            <Odontogram
+              defaultSelected={teethWithConditions}
+              readOnly={isReadOnly}
+              notation="FDI"
+              showTooltip={true}
+              showLabels={true}
+              teethConditions={teethConditions}
+              theme="light"
+              onChange={handleDenteClick}
+              tooltip={{
+                placement: 'top',
+                content: (payload) => {
+                  const numeroDente = teethIdToFdi(payload?.id || '');
+                  const marcacoesDente = marcacoes.filter((m) => m.numeroDente === numeroDente);
+                  return (
+                    <div className="min-w-[140px]">
+                      <strong>Dente {payload?.notations?.fdi}</strong>
+                      {marcacoesDente.length > 0 && (
+                        <div className="mt-1 text-xs">
+                          {marcacoesDente.map((m, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                              <span className="font-medium">{m.face}:</span>
+                              <span>{m.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <small className="text-neutral-500">Universal: {payload?.notations?.universal}</small>
+                    </div>
+                  );
+                },
+              }}
+            />
+          </div>
         </div>
 
-        {!isReadOnly &&
-          (activeDente != null && activeFace != null ? (
-            <ConditionSidePanel
-              numeroDente={activeDente}
-              face={activeFace}
-              onSelect={handleStatusSelect}
-              onClose={clearSelection}
-            />
-          ) : (
-            <aside className="lg:w-52 shrink-0 border border-dashed border-neutral-200 rounded-lg p-4 bg-neutral-50/50 text-center">
-              <MousePointerClick className="h-8 w-8 text-neutral-300 mx-auto mb-2" />
-              <p className="text-xs text-neutral-500 leading-relaxed">
-                Clique numa <strong>face</strong> do círculo ou na <strong>raiz/coroa</strong>{' '}
-                anatómica para registar a condição clínica.
-              </p>
-            </aside>
-          ))}
+        {/* Painel lateral de detalhes */}
+        {selectedDente && (
+          <div className="w-72 p-4 bg-white rounded-lg border border-neutral-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-neutral-900">Dente {selectedDente}</h3>
+              <button
+                onClick={() => setSelectedDente(null)}
+                className="p-1 hover:bg-neutral-100 rounded transition-colors"
+              >
+                <X className="h-5 w-5 text-neutral-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {([DenteFace.V, DenteFace.D, DenteFace.M, DenteFace.L, DenteFace.O, DenteFace.G, DenteFace.R] as DenteFace[]).map((face) => {
+                const marcacao = marcacoes.find((m) => m.numeroDente === selectedDente && m.face === face);
+                return (
+                  <div key={face} className="flex items-center gap-2">
+                    <span className="w-20 text-xs font-medium text-neutral-700">
+                      {FACE_LABELS[face]}
+                    </span>
+                    {!isReadOnly ? (
+                      <select
+                        value={marcacao?.status || DenteStatus.SAUDAVEL}
+                        onChange={(e) => handleUpdateMarcacao(face, e.target.value as DenteStatus)}
+                        className="flex-1 px-2 py-1 border border-neutral-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        {Object.entries(STATUS_LABELS).map(([status, label]) => (
+                          <option key={status} value={status}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`flex-1 px-2 py-1 rounded text-xs ${STATUS_COLORS[marcacao?.status || DenteStatus.SAUDAVEL]}`}>
+                        {STATUS_LABELS[marcacao?.status || DenteStatus.SAUDAVEL]}
+                      </span>
+                    )}
+                    {marcacao && !isReadOnly && (
+                      <button
+                        onClick={() => handleDeleteMarcacao(face)}
+                        className="text-xs text-neutral-500 hover:text-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

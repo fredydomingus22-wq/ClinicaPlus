@@ -1,0 +1,54 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.bookingRateLimiter = exports.authRateLimiter = exports.globalRateLimiter = void 0;
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+// Global: 100 req/min per IP
+exports.globalRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000,
+    max: 1000,
+    message: {
+        success: false,
+        error: {
+            message: 'Demasiados pedidos. Tente novamente mais tarde.',
+            code: 'TOO_MANY_REQUESTS',
+        },
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Auth: 10 req/min per IP (login, refresh, forgot/reset password)
+exports.authRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000,
+    max: 1000,
+    message: {
+        success: false,
+        error: {
+            message: 'Demasiadas tentativas de autenticação. Tente novamente em 1 minuto.',
+            code: 'AUTH_RATE_LIMIT',
+        },
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Booking: 5 req/hour per userId or IP (prevent spamming appointments)
+exports.bookingRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    // Keyed by userId when authenticated, IP otherwise.
+    // Disable the IPv6 helper check — userId takes priority in auth'd requests
+    // and in dev/prod behind a proxy req.ip is deterministic.
+    validate: { keyGeneratorIpFallback: false },
+    keyGenerator: (req) => req.user?.id ?? req.ip ?? 'unknown',
+    message: {
+        success: false,
+        error: {
+            message: 'Limite de agendamentos atingido. Tente novamente mais tarde.',
+            code: 'BOOKING_RATE_LIMIT',
+        },
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});

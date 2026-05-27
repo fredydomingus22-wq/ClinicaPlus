@@ -26,8 +26,17 @@ export interface RelatorioReceitaData {
   }>;
 }
 
+export interface MapaFaturacaoData {
+  inicio: string;
+  fim: string;
+  faturas: FaturaDTO[];
+  totalFaturado: number;
+  totalIva: number;
+  totalDescontos: number;
+}
+
 export const relatoriosApi = {
-  getReceita: (params: { inicio?: string; fim?: string; agrupamento?: string; medicoId?: string; tipo?: string }) => {
+  getReceita: (params: { inicio?: string | undefined; fim?: string | undefined; agrupamento?: string | undefined; medicoId?: string | undefined; tipo?: string | undefined }) => {
     // Backend reads "agruparPor", not "agrupamento"
     const { agrupamento, ...rest } = params;
     return apiClient.get<{ success: boolean; data: RelatorioReceitaData }>('/relatorios/receita', {
@@ -35,7 +44,7 @@ export const relatoriosApi = {
     }).then(r => r.data.data);
   },
 
-  exportReceita: (params: { inicio?: string; fim?: string; medicoId?: string; tipo?: string }) =>
+  exportReceita: (params: { inicio?: string | undefined; fim?: string | undefined; medicoId?: string | undefined; tipo?: string | undefined }) =>
     apiClient.get('/relatorios/receita/export', { params, responseType: 'blob' })
       .then(r => {
         const url = window.URL.createObjectURL(new Blob([r.data]));
@@ -47,7 +56,7 @@ export const relatoriosApi = {
         link.remove();
       }),
 
-  getMapaFaturacao: (params: { inicio?: string; fim?: string; medicoId?: string }) =>
-    apiClient.get<{ success: boolean; data: FaturaDTO[] }>('/relatorios/mapa-faturacao', { params })
+  getMapaFaturacao: (params: { inicio?: string | undefined; fim?: string | undefined; medicoId?: string | undefined }) =>
+    apiClient.get<{ success: boolean; data: MapaFaturacaoData }>('/relatorios/mapa-faturacao', { params })
       .then(r => r.data.data),
 };

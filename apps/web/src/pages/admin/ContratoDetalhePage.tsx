@@ -1,12 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Card, Input, Modal, Select, Tabs, Textarea, toast } from '@clinicaplus/ui';
+import { FileText, Download, Eye, Upload, X, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { contractsApi } from '../../api/contracts';
 import { faturasApi } from '../../api/faturas';
 import { getApiErrorMessage } from '../../lib/errorUtils';
 
 const STATUS_FLOW = ['DRAFT', 'REVIEW', 'PENDING_SIGNATURE', 'ACTIVE', 'TERMINATED'];
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 export default function ContratoDetalhePage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +50,8 @@ export default function ContratoDetalhePage() {
   });
   const [confirmAction, setConfirmAction] = useState<'' | 'submit' | 'sign' | 'activate' | 'terminate' | 'renew'>('');
   const [lastReceiptInfo, setLastReceiptInfo] = useState<string>('');
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ['contract-detail', id],
@@ -703,57 +723,115 @@ export default function ContratoDetalhePage() {
       {activeTab === 'documentos' && (
         <Card className="space-y-3 p-3">
           <p className="text-sm font-semibold">Documentos</p>
-          <Input
-            type="file"
-            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file || !id) return;
-              try {
-                const up = await contractsApi.getDocumentUploadUrl(id, file.name);
-                if (up.provider === 'supabase') {
-                  const res = await fetch(up.uploadUrl, {
-                    method: 'PUT',
-                    body: file,
-                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                  });
-                  if (!res.ok) throw new Error('Falha no upload');
-                  await contractsApi.confirmDocumentUpload(id, {
-                    nome: file.name,
-                    path: up.path,
-                    provider: up.provider,
-                    mimeType: file.type,
-                    tamanhoBytes: file.size,
-                  });
-                } else {
-                  const base64Data = await fileToBase64(file);
-                  await contractsApi.confirmDocumentUpload(id, {
-                    nome: file.name,
-                    path: up.path,
-                    provider: up.provider,
-                    mimeType: file.type,
-                    tamanhoBytes: file.size,
-                    base64Data,
-                  });
+          
+          {/* Upload Area */}
+          <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors">
+            <input
+              type="file"
+              id="contract-file-upload"
+              className="hidden"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !id) return;
+                setUploadingFile(file.name);
+                try {
+                  const up = await contractsApi.getDocumentUploadUrl(id, file.name);
+                  if (up.provider === 'supabase') {
+                    const res = await fetch(up.uploadUrl, {
+                      method: 'PUT',
+                      body: file,
+                      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                    });
+                    if (!res.ok) throw new Error('Falha no upload');
+                    await contractsApi.confirmDocumentUpload(id, {
+                      nome: file.name,
+                      path: up.path,
+                      provider: up.provider,
+                      mimeType: file.type,
+                      tamanhoBytes: file.size,
+                    });
+                  } else {
+                    const base64Data = await fileToBase64(file);
+                    await contractsApi.confirmDocumentUpload(id, {
+                      nome: file.name,
+                      path: up.path,
+                      provider: up.provider,
+                      mimeType: file.type,
+                      tamanhoBytes: file.size,
+                      base64Data,
+                    });
+                  }
+                  toast.success('Documento carregado com sucesso');
+                  invalidate();
+                } catch (err: any) {
+                  toast.error(getApiErrorMessage(err) || 'Falha ao carregar documento');
+                } finally {
+                  setUploadingFile(null);
                 }
-                invalidate();
-              } catch (err: any) {
-                toast.error(getApiErrorMessage(err) || 'Falha ao carregar documento');
-              }
-            }}
-          />
+              }}
+            />
+            <label
+              htmlFor="contract-file-upload"
+              className="cursor-pointer flex flex-col items-center gap-2"
+            >
+              {uploadingFile ? (
+                <>
+                  <Loader2 className="h-8 w-8 text-primary-600 animate-spin" />
+                  <p className="text-sm text-neutral-600">A carregar {uploadingFile}...</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 text-neutral-400" />
+                  <p className="text-sm text-neutral-600">Clique ou arraste para carregar</p>
+                  <p className="text-xs text-neutral-400">PDF, DOC, DOCX, PNG, JPG (max 10MB)</p>
+                </>
+              )}
+            </label>
+          </div>
+
+          {/* Documents List */}
           <div className="space-y-2">
-            {documents.map((d) => (
-              <a
-                key={d.id}
-                href={(d.payload as any)?.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block border border-neutral-200 p-2 text-sm hover:bg-neutral-50"
-              >
-                {(d.payload as any)?.nome}
-              </a>
-            ))}
+            {documents.length === 0 && (
+              <p className="text-sm text-neutral-500 text-center py-4">Sem documentos carregados</p>
+            )}
+            {documents.map((d) => {
+              const payload = d.payload as any;
+              const isPdf = payload?.mimeType === 'application/pdf' || payload?.nome?.toLowerCase().endsWith('.pdf');
+              const fileSize = payload?.tamanhoBytes ? formatFileSize(payload.tamanhoBytes) : '-';
+              
+              return (
+                <div key={d.id} className="flex items-center justify-between border border-neutral-200 rounded-lg p-3 hover:bg-neutral-50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="h-5 w-5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{payload?.nome || 'Documento'}</p>
+                      <p className="text-xs text-neutral-500">{fileSize} · {new Date(d.criadoEm).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isPdf && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setPdfViewerUrl(payload?.url)}
+                        title="Visualizar in-app"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => window.open(payload?.url, '_blank')}
+                      title="Abrir em nova aba"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}
@@ -775,6 +853,24 @@ export default function ContratoDetalhePage() {
           </div>
         </Card>
       )}
+
+      {/* PDF Viewer Modal */}
+      <Modal
+        isOpen={Boolean(pdfViewerUrl)}
+        onClose={() => setPdfViewerUrl(null)}
+        title="Visualizar Documento"
+        size="xl"
+      >
+        {pdfViewerUrl && (
+          <div className="h-[600px] w-full">
+            <iframe
+              src={pdfViewerUrl}
+              className="w-full h-full border-0 rounded"
+              title="PDF Viewer"
+            />
+          </div>
+        )}
+      </Modal>
       <Modal
         isOpen={Boolean(confirmAction)}
         onClose={() => setConfirmAction('')}
@@ -812,13 +908,4 @@ function InfoBox({ label, value, full }: { label: string; value: string; full?: 
       <p className="font-semibold">{value}</p>
     </Card>
   );
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }

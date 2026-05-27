@@ -147,12 +147,14 @@ export default function PacientesPage() {
         {error ? (
           <ErrorMessage error={error} />
         ) : (
-          <Table<PacienteDTO> 
-            columns={columns}
-            data={data?.items || []}
-            isLoading={isLoading}
-            keyExtractor={(p) => p.id}
-          />
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table<PacienteDTO>
+              columns={columns}
+              data={data?.items || []}
+              isLoading={isLoading}
+              keyExtractor={(p) => p.id}
+            />
+          </div>
         )}
       </Card>
 

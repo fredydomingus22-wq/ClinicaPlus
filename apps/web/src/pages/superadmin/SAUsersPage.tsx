@@ -86,14 +86,14 @@ export function SAUsersPage() {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total', val: data?.total ?? '—', icon: Users },
-          { label: 'Activos', val: '—', icon: UserCheck },
-          { label: 'Suspensos', val: '—', icon: UserX },
-          { label: 'Clínicas cobertas', val: '—', icon: Building2 },
+          { label: 'Total', val: data?.total ?? '—', icon: Users, tooltip: 'Total de utilizadores' },
+          { label: 'Activos', val: '—', icon: UserCheck, tooltip: 'Utilizadores activos' },
+          { label: 'Suspensos', val: '—', icon: UserX, tooltip: 'Utilizadores suspensos' },
+          { label: 'Clínicas cobertas', val: '—', icon: Building2, tooltip: 'Clínicas cobertas' },
         ].map((s, i) => (
-          <div key={i} className="bg-sa-background/40 border border-sa-border rounded-2xl p-5 flex items-center gap-4">
+          <div key={i} className="bg-sa-background/40 border border-sa-border rounded-2xl p-5 flex items-center gap-4" title={s.tooltip}>
             <div className="p-2.5 rounded-xl bg-sa-primary/5 text-sa-primary">
-              <s.icon className="w-4 h-4" />
+              <s.icon className="w-4 h-4" aria-label={s.tooltip} />
             </div>
             <div>
               <p className="text-[9px] text-sa-text-dim font-bold uppercase tracking-[2px]">{s.label}</p>

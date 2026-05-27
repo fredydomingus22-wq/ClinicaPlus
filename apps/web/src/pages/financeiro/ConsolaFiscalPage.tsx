@@ -251,12 +251,13 @@ export default function ConsolaFiscalPage() {
               <ErrorMessage error={errorSeries} />
             ) : (
               <Card className="p-0 overflow-hidden">
-                <Table<AgtSerie>
-                  columns={[
-                    { header: 'Cód. Série', accessor: 'serieCode' },
-                    { header: 'Tipo Doc.', accessor: 'documentType' },
-                    { header: 'Qtd. Autorizada', accessor: 'authorizedQuantity' },
-                    { header: 'Disponível', accessor: 'availableQuantity' },
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <Table<AgtSerie>
+                    columns={[
+                      { header: 'Cód. Série', accessor: 'serieCode' },
+                      { header: 'Tipo Doc.', accessor: 'documentType' },
+                      { header: 'Qtd. Autorizada', accessor: 'authorizedQuantity' },
+                      { header: 'Disponível', accessor: 'availableQuantity' },
                     { 
                       header: 'Estado', 
                       accessor: (row) => (
@@ -270,6 +271,7 @@ export default function ConsolaFiscalPage() {
                   keyExtractor={(row) => row.id}
                   emptyContent={<EmptyState title="Nenhuma série encontrada" description="Nenhuma série encontrada na AGT." />}
                 />
+                </div>
               </Card>
             )}
           </div>
@@ -305,8 +307,9 @@ export default function ConsolaFiscalPage() {
               <ErrorMessage error={errorHist} />
             ) : (
               <Card className="p-0 overflow-hidden">
-                <Table<AgtHistoricoItem>
-                  columns={[
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <Table<AgtHistoricoItem>
+                    columns={[
                     { header: 'Data', accessor: (row) => new Date(row.submissionTimeStamp).toLocaleDateString() },
                     { header: 'Número', accessor: 'documentNo', className: 'font-mono' },
                     { header: 'NIF Cliente', accessor: 'customerTaxID' },
@@ -334,6 +337,7 @@ export default function ConsolaFiscalPage() {
                   keyExtractor={(row) => row.submissionUUID}
                   emptyContent={<EmptyState title="Sem histórico" description="Nenhum documento encontrado na AGT para este período." />}
                 />
+                </div>
               </Card>
             )}
           </div>

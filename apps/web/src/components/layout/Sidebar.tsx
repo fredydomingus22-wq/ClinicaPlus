@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../stores/ui.store';
 import { useAuthStore } from '../../stores/auth.store';
-import { getFlatNavItems, getParentGroupId } from '../../lib/navigation';
+import { NAV_CONFIG, getParentGroupId } from '../../lib/navigation';
 
 export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
@@ -16,10 +16,11 @@ export function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const papel = utilizador?.papel;
-  const links = getFlatNavItems(papel);
+  const links = papel ? NAV_CONFIG.filter(item => item.roles.includes(papel)) : [];
   
   // Determinar quais grupos devem estar expandidos baseado na rota atual
   React.useEffect(() => {
+    if (!papel) return;
     const currentPath = window.location.pathname;
     const parentGroupId = getParentGroupId(currentPath, papel);
     
@@ -44,10 +45,6 @@ export function Sidebar() {
     clear();
   };
 
-  // Separar itens em grupos e itens individuais
-  const groupedItems = links.filter(item => item.children && item.children.length > 0);
-  const individualItems = links.filter(item => !item.children || item.children.length === 0);
-
   return (
     <aside 
       className={`
@@ -69,28 +66,28 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto pt-4 px-2 space-y-0.5">
-        {/* Renderizar grupos colapsáveis */}
-        {groupedItems.map((group) => {
-          const isExpanded = expandedGroups.has(group.groupId || '');
-          const hasChildren = group.children && group.children.length > 0;
-          const isPlaceholder = group.to === '#';
+        {/* Renderizar todos os itens na ordem original */}
+        {links.map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          const isExpanded = expandedGroups.has(item.groupId || '');
+          const isPlaceholder = item.to === '#';
           
           return (
-            <div key={group.to}>
-              {/* Header do grupo */}
+            <div key={item.to}>
+              {/* Item com ou sem filhos */}
               {isPlaceholder ? (
                 <button
-                  onClick={() => hasChildren && toggleGroup(group.groupId || '')}
+                  onClick={() => hasChildren && toggleGroup(item.groupId || '')}
                   className={`
                     w-full flex items-center px-3 py-2 transition-colors duration-150 group font-medium text-[13px]
                     ${!hasChildren ? 'text-[#737373] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]' : 'text-[#1a1a1a]'}
                   `}
-                  title={!sidebarOpen ? group.label : undefined}
+                  title={!sidebarOpen ? item.label : undefined}
                 >
-                  <group.icon className={`h-4 w-4 shrink-0 transition-colors ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
+                  <item.icon className={`h-4 w-4 shrink-0 transition-colors ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
                   {sidebarOpen && (
                     <>
-                      <span className="text-[13px] truncate">{group.label}</span>
+                      <span className="text-[13px] truncate">{item.label}</span>
                       {hasChildren && (
                         <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                       )}
@@ -98,13 +95,13 @@ export function Sidebar() {
                   )}
                   {!sidebarOpen && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-[#1a1a1a] text-white text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 font-mono">
-                      {group.label}
+                      {item.label}
                     </div>
                   )}
                 </button>
               ) : (
                 <NavLink
-                  to={group.to}
+                  to={item.to}
                   className={({ isActive }) => `
                     flex items-center px-3 py-2 transition-colors duration-150 group font-medium text-[13px]
                     ${isActive 
@@ -112,12 +109,12 @@ export function Sidebar() {
                       : 'text-[#737373] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'
                     }
                   `}
-                  title={!sidebarOpen ? group.label : undefined}
+                  title={!sidebarOpen ? item.label : undefined}
                 >
-                  <group.icon className={`h-4 w-4 shrink-0 transition-colors ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
+                  <item.icon className={`h-4 w-4 shrink-0 transition-colors ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
                   {sidebarOpen && (
                     <>
-                      <span className="text-[13px] truncate flex-1">{group.label}</span>
+                      <span className="text-[13px] truncate flex-1">{item.label}</span>
                       {hasChildren && (
                         <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                       )}
@@ -125,16 +122,16 @@ export function Sidebar() {
                   )}
                   {!sidebarOpen && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-[#1a1a1a] text-white text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 font-mono">
-                      {group.label}
+                      {item.label}
                     </div>
                   )}
                 </NavLink>
               )}
               
-              {/* Filhos do grupo (expandidos/colapsados) */}
+              {/* Filhos do item (expandidos/colapsados) */}
               {sidebarOpen && isExpanded && hasChildren && (
                 <div className="ml-4 space-y-0.5">
-                  {group.children?.map((child) => {
+                  {item.children?.map((child) => {
                     const childHasChildren = child.children && child.children.length > 0;
                     const childIsExpanded = expandedGroups.has(child.groupId || '');
                     const childIsPlaceholder = child.to === '#';
@@ -203,30 +200,6 @@ export function Sidebar() {
             </div>
           );
         })}
-        
-        {/* Renderizar itens individuais */}
-        {individualItems.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) => `
-              flex items-center px-3 py-2 transition-colors duration-150 group font-medium text-[13px]
-              ${isActive 
-                ? 'bg-[#1a1a1a] text-white' 
-                : 'text-[#737373] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'
-              }
-            `}
-            title={!sidebarOpen ? link.label : undefined}
-          >
-            <link.icon className={`h-4 w-4 shrink-0 transition-colors ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
-            {sidebarOpen && <span className="text-[13px] truncate">{link.label}</span>}
-            {!sidebarOpen && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-[#1a1a1a] text-white text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 font-mono">
-                {link.label}
-              </div>
-            )}
-          </NavLink>
-        ))}
       </nav>
 
       {/* Footer Info & Logout */}

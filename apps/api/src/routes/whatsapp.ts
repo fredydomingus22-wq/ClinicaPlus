@@ -5,6 +5,7 @@ import { waWebhookService } from '../services/wa-webhook.service';
 import { waMetaWebhookService, MetaWebhookPayload } from '../services/wa-meta-webhook.service';
 import { waConversaService } from '../services/wa-conversa.service';
 import { waActividadeService } from '../services/wa-actividade.service';
+import { whatsappNotificationService } from '../services/whatsappNotification.service';
 import { requirePlan } from '../middleware/requirePlan';
 import { requirePermission } from '../middleware/requirePermission';
 import { verificarHmacEvolution } from '../middleware/verificarHmacEvolution';
@@ -561,6 +562,133 @@ router.post('/fluxo/enviar-lembrete', apiKeyAuth, requireScope('WRITE_AGENDAMENT
       .replace('{clinica}', '');
     await evolutionApi.enviarTexto(instanceName || instancia.evolutionName, telefone, texto);
     return res.json({ success: true });
+  } catch (error) { return next(error); }
+});
+
+// --- ENDPOINTS INTERNOS PARA WORKER (API Key Auth) ---
+
+// Enviar lembrete de agendamento (chamado pelo worker)
+router.post('/lembrete', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), async (req, res, next) => {
+  try {
+    const clinicaId = req.clinica.id;
+    const { agendamentoId, tipo } = req.body;
+    
+    const agendamento = await prisma.agendamento.findFirstOrThrow({
+      where: { id: agendamentoId, clinicaId },
+      include: { paciente: true, medico: true, clinica: true }
+    });
+
+    const instancia = await whatsappNotificationService.getActiveInstance(clinicaId);
+    if (!instancia) {
+      return res.status(404).json({ message: 'Instância WhatsApp não encontrada' });
+    }
+
+    const result = await whatsappNotificationService.sendAppointmentReminder(
+      agendamento.pacienteId,
+      clinicaId,
+      {
+        patientName: agendamento.paciente.nome,
+        appointmentDate: agendamento.dataHora,
+        appointmentTime: agendamento.dataHora.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+        doctorName: agendamento.medico?.nome || 'Médico',
+        specialty: 'Consulta',
+        clinicName: agendamento.clinica.nome,
+        clinicAddress: agendamento.clinica.endereco || '',
+        clinicPhone: agendamento.clinica.telefone || '',
+        hoursBefore: tipo === '24h' ? 24 : 2,
+      },
+      { instanceName: instancia, delay: 1000 }
+    );
+
+    return res.json(result);
+  } catch (error) { return next(error); }
+});
+
+// Enviar notificação de tratamento (chamado pelo worker)
+router.post('/tratamento-sessao', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), async (req, res, next) => {
+  try {
+    const clinicaId = req.clinica.id;
+    const { planoId } = req.body;
+    
+    const plano = await prisma.planoTratamento.findFirstOrThrow({
+      where: { id: planoId, clinicaId },
+      include: { 
+        paciente: true, 
+        medico: true, 
+        clinica: true, 
+        tipoTratamento: true,
+        sessoes: { orderBy: { dataHora: 'asc' } } 
+      }
+    });
+
+    const instancia = await whatsappNotificationService.getActiveInstance(clinicaId);
+    if (!instancia) {
+      return res.status(404).json({ message: 'Instância WhatsApp não encontrada' });
+    }
+
+    const proximaSessao = plano.sessoes[0];
+    if (!proximaSessao) {
+      return res.status(400).json({ message: 'Não há sessões agendadas' });
+    }
+
+    const sessoesConcluidas = plano.sessoes.filter((s: { estado: string }) => s.estado === 'CONCLUIDO').length;
+
+    const result = await whatsappNotificationService.sendTreatmentSession(
+      plano.pacienteId,
+      clinicaId,
+      {
+        patientName: plano.paciente.nome,
+        treatmentName: plano.tipoTratamento.nome,
+        treatmentDescription: plano.descricao || plano.tipoTratamento.descricao || '',
+        progress: (sessoesConcluidas / plano.totalSessoes) * 100,
+        nextSessionDate: proximaSessao.dataHora,
+        nextSessionTime: proximaSessao.dataHora.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+        doctorName: plano.medico?.nome || 'Médico',
+        totalSessions: plano.totalSessoes,
+        completedSessions: sessoesConcluidas,
+        clinicName: plano.clinica.nome,
+      },
+      { instanceName: instancia, delay: 1000 }
+    );
+
+    return res.json(result);
+  } catch (error) { return next(error); }
+});
+
+// Enviar lembrete de cobrança (chamado pelo worker)
+router.post('/cobranca-lembrete', apiKeyAuth, requireScope('WRITE_AGENDAMENTOS'), async (req, res, next) => {
+  try {
+    const clinicaId = req.clinica.id;
+    const { faturaId } = req.body;
+    
+    const fatura = await prisma.fatura.findFirstOrThrow({
+      where: { id: faturaId, clinicaId },
+      include: { paciente: true, clinica: true }
+    });
+
+    const instancia = await whatsappNotificationService.getActiveInstance(clinicaId);
+    if (!instancia) {
+      return res.status(404).json({ message: 'Instância WhatsApp não encontrada' });
+    }
+
+    const result = await whatsappNotificationService.sendPaymentReminder(
+      fatura.pacienteId,
+      clinicaId,
+      {
+        patientName: fatura.paciente.nome,
+        contractNumber: fatura.numeroFatura,
+        installmentNumber: 1,
+        totalInstallments: 1,
+        dueDate: fatura.dataVencimento || new Date(),
+        amount: fatura.total,
+        currency: fatura.moeda || 'AOA',
+        clinicName: fatura.clinica.nome,
+        paymentMethods: ['Transferência Bancária', 'Multicaixo', 'Dinheiro'],
+      },
+      { instanceName: instancia, delay: 1000 }
+    );
+
+    return res.json(result);
   } catch (error) { return next(error); }
 });
 

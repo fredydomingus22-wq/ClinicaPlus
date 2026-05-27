@@ -1,7 +1,23 @@
 import { z } from 'zod';
 import { EstadoFatura, TipoFatura, MetodoPagamento, EstadoSeguro, TipoDocumentoFiscal } from '../enums';
 
+export enum TipoItemFatura {
+  PRODUTO = 'PRODUTO',
+  TRATAMENTO = 'TRATAMENTO',
+  EXAME = 'EXAME',
+  CONSULTA = 'CONSULTA',
+  SERVICO = 'SERVICO',
+}
+
 export const ItemFaturaSchema = z.object({
+  tipoItem: z.nativeEnum(TipoItemFatura).default(TipoItemFatura.SERVICO),
+  
+  // Campos polimórficos
+  produtoId: z.string().optional(),
+  tratamentoId: z.string().optional(),
+  exameId: z.string().optional(),
+  medicoId: z.string().optional(),
+  
   descricao: z.string().min(1, 'Descrição é obrigatória'),
   quantidade: z.number().int().min(1).default(1),
   precoUnit: z.number().int().min(0),
@@ -9,7 +25,40 @@ export const ItemFaturaSchema = z.object({
   taxaIva: z.number().min(0).max(14).default(0),
   codigoIva: z.string().default('ISE'),
   motivoIsencao: z.string().optional(),
+}).refine(data => {
+  // Validação: pelo menos um ID deve corresponder ao tipoItem
+  if (data.tipoItem === TipoItemFatura.PRODUTO && !data.produtoId) {
+    return false;
+  }
+  if (data.tipoItem === TipoItemFatura.TRATAMENTO && !data.tratamentoId) {
+    return false;
+  }
+  if (data.tipoItem === TipoItemFatura.EXAME && !data.exameId) {
+    return false;
+  }
+  if (data.tipoItem === TipoItemFatura.CONSULTA && !data.medicoId) {
+    return false;
+  }
+  // SERVICO não requer ID
+  return true;
+}, {
+  message: "ID do item é obrigatório para o tipo selecionado",
 });
+
+export const ItemFacturavelSelectSchema = z.object({
+  id: z.string(),
+  tipo: z.nativeEnum(TipoItemFatura),
+  nome: z.string(),
+  codigo: z.string().nullable(),
+  preco: z.number(),
+  taxaIva: z.number(),
+  codigoIva: z.string(),
+  motivoIsencao: z.string().nullable(),
+  estoqueAtual: z.number().optional(), // Apenas para PRODUTO
+  gerenciaEstoque: z.boolean().optional(), // Apenas para PRODUTO
+});
+
+export type ItemFacturavelSelect = z.infer<typeof ItemFacturavelSelectSchema>;
 
 export const FaturaCreateSchema = z.object({
   agendamentoId: z.string().optional(),
@@ -66,6 +115,33 @@ export const SeguroUpdateSchema = z.object({
 export interface ItemFaturaDTO {
   id: string;
   faturaId: string;
+  tipoItem: TipoItemFatura;
+  
+  // Campos polimórficos
+  produtoId?: string;
+  tratamentoId?: string;
+  exameId?: string;
+  medicoId?: string;
+  
+  // Dados do item relacionado (opcional, para display)
+  produto?: {
+    id: string;
+    nome: string;
+    codigo: string | null;
+  };
+  tipoTratamento?: {
+    id: string;
+    nome: string;
+  };
+  tipoExame?: {
+    id: string;
+    nome: string;
+  };
+  medico?: {
+    id: string;
+    nome: string;
+  };
+  
   descricao: string;
   quantidade: number;
   precoUnit: number;

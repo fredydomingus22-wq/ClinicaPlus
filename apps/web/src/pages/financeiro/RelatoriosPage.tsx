@@ -67,13 +67,31 @@ export default function RelatoriosPage() {
     agrupamento: filters.periodo === 'trimestre' ? 'week' : 'day'
   } as RelatorioFilters);
 
+  const aggregatedSerie = React.useMemo(() => {
+    if (!data?.serie) return [];
+    const map = new Map<string, { periodo: string; receita: number; consultas: number }>();
+    for (const s of data.serie) {
+      const existing = map.get(s.periodo);
+      if (existing) {
+        existing.receita += s.receita;
+        existing.consultas += s.consultas;
+      } else {
+        map.set(s.periodo, {
+          periodo: s.periodo,
+          receita: s.receita,
+          consultas: s.consultas
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.periodo.localeCompare(b.periodo));
+  }, [data?.serie]);
+
   const exportMutation = useExportReceita();
   const { data: mapaData, refetch: fetchMapa, isFetching: isFetchingMapa } = useMapaFaturacao({
-    inicio: dateRange.inicio as string,
-    fim: dateRange.fim as string,
-    medicoId: filters.medicoId ? (filters.medicoId as string) : undefined
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as unknown as any);
+    inicio: dateRange.inicio,
+    fim: dateRange.fim,
+    medicoId: filters.medicoId || undefined
+  });
 
   const handleExport = async () => {
     if (clinica?.plano === Plano.BASICO) {
@@ -190,7 +208,7 @@ export default function RelatoriosPage() {
         ) : (
           <>
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <KPIItem 
                 label="Receita Real" 
                 value={formatKwanza(data?.totais.receita || 0)} 
@@ -235,8 +253,8 @@ export default function RelatoriosPage() {
                   </h3>
                 </div>
                 <div className="flex-1 flex items-end gap-2 pb-6 border-b border-neutral-100 relative">
-                  {data?.serie.map((s, i) => {
-                    const maxReceita = Math.max(...data.serie.map(x => x.receita), 1);
+                  {aggregatedSerie.map((s, i) => {
+                    const maxReceita = Math.max(...aggregatedSerie.map(x => x.receita), 1);
                     const height = (s.receita / maxReceita) * 100;
                     return (
                       <div key={i} className="flex-1 group relative flex flex-col items-center">
@@ -281,8 +299,7 @@ export default function RelatoriosPage() {
         <RelatorioVendasPrint 
           ref={reportPrintRef}
           clinica={clinica}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          relatorio={{ inicio: filters.inicio, fim: filters.fim, faturas: mapaData as unknown as any[], totalFaturado: 0, totalIva: 0, totalDescontos: 0 }}
+          relatorio={mapaData}
         />
       )}
     </PlanGate>

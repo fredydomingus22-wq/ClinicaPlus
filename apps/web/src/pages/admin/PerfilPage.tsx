@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '../../stores/auth.store';
 import { authApi } from '../../api/auth';
-import { useMutation } from '@tanstack/react-query';
+import { medicosApi } from '../../api/medicos';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   Card,
@@ -12,6 +13,8 @@ import {
   Badge,
   Avatar,
   Input,
+  Modal,
+  Select,
 } from '@clinicaplus/ui';
 import {
   User,
@@ -25,11 +28,14 @@ import {
   History,
   ShieldAlert,
   Loader2,
-  Activity
+  Activity,
+  Stethoscope,
+  Clock
 } from 'lucide-react';
 import { getInitials } from '@clinicaplus/utils';
-import { UtilizadorUpdateInput } from '@clinicaplus/types';
+import { UtilizadorUpdateInput, MedicoCreateInput } from '@clinicaplus/types';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
+import { useEspecialidades } from '../../hooks/useEspecialidades';
 import { ImageUploader } from '../../components/shared/ImageUploader';
 import { apiClient } from '../../api/client';
 
@@ -86,6 +92,18 @@ export default function AdminPerfilPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [isMedicoModalOpen, setIsMedicoModalOpen] = useState(false);
+
+  // Check if admin is already configured as a médico
+  const { data: medicoData, isLoading: isLoadingMedico } = useQuery({
+    queryKey: ['admin-medico', utilizador?.id],
+    queryFn: () => medicosApi.getMe(),
+    enabled: Boolean(utilizador?.id && utilizador?.papel === 'ADMIN'),
+    retry: false,
+  });
+
+  const isAlreadyMedico = Boolean(medicoData);
+  const isAdmin = utilizador?.papel === 'ADMIN';
 
   // ── Audit Logs ─────────────────────────────────────────────────────────────
   const { data: auditData, isLoading: isLoadingAudit } = useAuditLogs({
@@ -149,6 +167,26 @@ export default function AdminPerfilPage() {
     onError: (err: unknown) => {
       const error = err as ApiErrorResponse;
       toast.error(error.response?.data?.error?.message || 'Erro ao atualizar o perfil.');
+    },
+  });
+
+  const { data: especialidadesData } = useEspecialidades({ ativo: true, limit: 100 });
+  const especialidadesOptions = (especialidadesData?.items || []).map((e: any) => ({ 
+    value: e.id, 
+    label: e.nome 
+  }));
+
+  const setupAsMedico = useMutation({
+    mutationFn: (data: MedicoCreateInput) => medicosApi.setupAsMedico(data),
+    onSuccess: () => {
+      toast.success('Configurado como médico com sucesso!');
+      setIsMedicoModalOpen(false);
+      // Refetch medico data
+      window.location.reload();
+    },
+    onError: (err: unknown) => {
+      const error = err as ApiErrorResponse;
+      toast.error(error.response?.data?.error?.message || 'Erro ao configurar como médico.');
     },
   });
 
@@ -319,6 +357,44 @@ export default function AdminPerfilPage() {
                     </p>
                   </div>
                 )}
+
+                {isAdmin && !isAlreadyMedico && !isLoadingMedico && (
+                  <div className="p-4 bg-primary-50 border border-primary-100 rounded-xl flex gap-3 text-primary-700">
+                    <Stethoscope className="w-5 h-5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold leading-relaxed">
+                        Configurar como Médico/Especialista
+                      </p>
+                      <p className="text-[10px] text-primary-600 mt-1">
+                        Atende pacientes e gere a sua própria agenda de consultas.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => setIsMedicoModalOpen(true)}
+                    >
+                      Configurar
+                    </Button>
+                  </div>
+                )}
+
+                {isAdmin && isAlreadyMedico && (
+                  <div className="p-4 bg-success-50 border border-success-100 rounded-xl flex gap-3 text-success-700">
+                    <Stethoscope className="w-5 h-5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold leading-relaxed">
+                        Configurado como Médico
+                      </p>
+                      <p className="text-[10px] text-success-600 mt-1">
+                        Especialidade: {medicoData?.especialidade?.nome || 'N/A'}
+                      </p>
+                    </div>
+                    <Badge variant="success" className="text-[10px] font-bold uppercase">
+                      Ativo
+                    </Badge>
+                  </div>
+                )}
               </Card>
             )}
 
@@ -486,6 +562,130 @@ export default function AdminPerfilPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal para configurar como médico */}
+      <Modal
+        isOpen={isMedicoModalOpen}
+        onClose={() => setIsMedicoModalOpen(false)}
+        title="Configurar como Médico/Especialista"
+        size="lg"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const data: MedicoCreateInput = {
+              nome: utilizador?.nome || '',
+              especialidadeId: formData.get('especialidadeId') as string,
+              ordem: formData.get('ordem') as string || undefined,
+              telefoneDireto: formData.get('telefoneDireto') as string || undefined,
+              duracaoConsulta: Number(formData.get('duracaoConsulta')) || 30,
+              preco: Number(formData.get('preco')) || 0,
+              ativo: true,
+              horario: {
+                segunda: { ativo: true, inicio: '08:00', fim: '17:00' },
+                terca: { ativo: true, inicio: '08:00', fim: '17:00' },
+                quarta: { ativo: true, inicio: '08:00', fim: '17:00' },
+                quinta: { ativo: true, inicio: '08:00', fim: '17:00' },
+                sexta: { ativo: true, inicio: '08:00', fim: '17:00' },
+                sabado: { ativo: false, inicio: '', fim: '' },
+                domingo: { ativo: false, inicio: '', fim: '' },
+              },
+            };
+            setupAsMedico.mutate(data);
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+              Nome
+            </label>
+            <Input
+              name="nome"
+              value={utilizador?.nome || ''}
+              readOnly
+              className="bg-neutral-50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+              Especialidade *
+            </label>
+            <Select
+              name="especialidadeId"
+              placeholder="Selecione uma especialidade"
+              options={especialidadesOptions}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+                Nº Ordem Médica
+              </label>
+              <Input name="ordem" placeholder="Opcional" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+                Telefone Direto
+              </label>
+              <Input name="telefoneDireto" placeholder="Opcional" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+                Preço Consulta (Kz)
+              </label>
+              <Input
+                name="preco"
+                type="number"
+                defaultValue="0"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-600 uppercase tracking-widest">
+                Duração (min)
+              </label>
+              <Select
+                name="duracaoConsulta"
+                options={[
+                  { value: '15', label: '15 min' },
+                  { value: '20', label: '20 min' },
+                  { value: '30', label: '30 min' },
+                  { value: '45', label: '45 min' },
+                  { value: '60', label: '1 hora' },
+                ]}
+                defaultValue="30"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-primary-50 border border-primary-100 rounded-lg flex gap-2 text-primary-700">
+            <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+            <p className="text-xs">
+              Horário padrão será configurado automaticamente (Seg-Sex 08:00-17:00). Pode ajustar depois no perfil de médico.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsMedicoModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" loading={setupAsMedico.isPending}>
+              Configurar como Médico
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

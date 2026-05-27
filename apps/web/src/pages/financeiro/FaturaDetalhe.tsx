@@ -28,7 +28,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { formatKwanza } from '@clinicaplus/utils';
-import { EstadoFatura, MetodoPagamento, PagamentoCreateSchema, type PagamentoCreateInput, type ItemFaturaDTO, EstadoSeguro, TipoFatura } from '@clinicaplus/types';
+import { EstadoFatura, MetodoPagamento, PagamentoCreateSchema, type PagamentoCreateInput, type ItemFaturaDTO, EstadoSeguro, TipoFatura, TipoItemFatura } from '@clinicaplus/types';
 import { FaturaStatusBadge } from '../../components/financeiro/FaturaStatusBadge';
 import { FaturaPrint } from '../../components/print/FaturaPrint';
 import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
@@ -118,6 +118,7 @@ export default function FaturaDetalhe() {
         id: fatura.id, 
         motivo: ndDescricao,
         itens: [{
+          tipoItem: TipoItemFatura.SERVICO,
           descricao: ndDescricao,
           quantidade: ndQuantidade,
           precoUnit: ndPrecoUnit,
@@ -241,12 +242,13 @@ export default function FaturaDetalhe() {
             </Card>
 
             <Card className="p-0 overflow-hidden">
-              <Table 
-                columns={[
-                  { header: 'Descrição', accessor: 'descricao' },
-                  { header: 'Qtd', accessor: 'quantidade', className: 'text-center' },
-                  { header: 'Preço', accessor: (i: ItemFaturaDTO) => formatKwanza(i.precoUnit), className: 'text-right' },
-                  { header: 'Imposto', accessor: (i: ItemFaturaDTO) => <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-600 font-bold">{i.codigoIva || 'IVA'}</span>, className: 'text-center' },
+              <div className="overflow-x-auto -mx-4 px-4">
+                <Table
+                  columns={[
+                    { header: 'Descrição', accessor: 'descricao' },
+                    { header: 'Qtd', accessor: 'quantidade', className: 'text-center' },
+                    { header: 'Preço', accessor: (i: ItemFaturaDTO) => formatKwanza(i.precoUnit), className: 'text-right' },
+                    { header: 'Imposto', accessor: (i: ItemFaturaDTO) => <span className="text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-600 font-bold">{i.codigoIva || 'IVA'}</span>, className: 'text-center' },
                   { header: 'Taxa', accessor: (i: ItemFaturaDTO) => `${i.taxaIva}%`, className: 'text-center' },
                   { header: 'V. Imposto', accessor: (i: ItemFaturaDTO) => formatKwanza(Math.round(((i.precoUnit * i.quantidade) - (i.desconto || 0)) * (i.taxaIva / 100))), className: 'text-right' },
                   { header: 'Desconto', accessor: (i: ItemFaturaDTO) => i.desconto > 0 ? `-${formatKwanza(i.desconto)}` : '---', className: 'text-right' },
@@ -255,6 +257,7 @@ export default function FaturaDetalhe() {
                 data={fatura.itens || []}
                 keyExtractor={(i) => i.id}
               />
+              </div>
               <div className="p-6 bg-neutral-50 border-t border-neutral-100">
                  <div className="flex justify-end">
                     <div className="w-64 space-y-2">

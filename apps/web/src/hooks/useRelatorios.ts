@@ -2,11 +2,11 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { relatoriosApi } from '../api/relatorios';
 
 export interface RelatorioFilters {
-  inicio?: string;
-  fim?: string;
-  agrupamento?: string;
-  medicoId?: string;
-  tipo?: string;
+  inicio?: string | undefined;
+  fim?: string | undefined;
+  agrupamento?: string | undefined;
+  medicoId?: string | undefined;
+  tipo?: string | undefined;
 }
 
 export const relatoriosKeys = {

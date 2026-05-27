@@ -30,6 +30,21 @@ faturasRouter.get('/', requirePermission('fatura', 'read'), async (req: Request,
   } catch (err) { next(err); }
 });
 
+faturasRouter.get('/itens-facturaveis', requirePermission('fatura', 'read'), async (req: Request, res: Response, next) => {
+  try {
+    const clinicaId = req.clinica.id;
+    const { busca, tipo } = req.query;
+
+    const itens = await faturasService.listItensFacturaveis(
+      clinicaId,
+      busca as string,
+      tipo as any
+    );
+
+    res.json({ success: true, data: itens });
+  } catch (err) { next(err); }
+});
+
 faturasRouter.get('/:id', requirePermission('fatura', 'read'), async (req: Request, res: Response, next) => {
   try {
     const clinicaId = req.clinica.id;

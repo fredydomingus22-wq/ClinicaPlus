@@ -1,5 +1,4 @@
 node_modules
-dist
 .env
 .env.local
 .env.*.local
@@ -46,3 +45,6 @@ ENV/
 env/
 
 kit-agent/
+
+# Local uploads directory
+uploads/

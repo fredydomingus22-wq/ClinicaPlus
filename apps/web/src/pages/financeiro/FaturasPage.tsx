@@ -241,12 +241,14 @@ export default function FaturasPage() {
             <ErrorMessage error={error} />
           </div>
         ) : (
-          <Table
-            columns={columns}
-            data={data?.items || []}
-            isLoading={isLoading}
-            keyExtractor={(f) => f.id}
-          />
+          <div className="overflow-x-auto -mx-4 px-4">
+            <Table
+              columns={columns}
+              data={data?.items || []}
+              isLoading={isLoading}
+              keyExtractor={(f) => f.id}
+            />
+          </div>
         )}
 
         <div className="p-4 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">

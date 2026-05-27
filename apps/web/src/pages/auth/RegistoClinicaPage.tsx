@@ -107,6 +107,7 @@ export const RegistoClinicaPage = () => {
                     {...register('clinicaNome')}
                   />
                 </div>
+                <p className="text-xs text-slate-500">Nome oficial da sua clínica para faturação</p>
                 {errors.clinicaNome && <p className="text-[13px] text-red-500 font-medium">{errors.clinicaNome.message}</p>}
               </div>
 

@@ -1,0 +1,1 @@
+import{o as e,r as t}from"./createLucideIcon-CzUAGpqk.js";import{ut as n}from"./index-BtCfFw4t.js";var r=e(t(),1);function i(e,t){let i=n();(0,r.useEffect)(()=>{if(i)return i.on(e,t),()=>{i.off(e,t)}},[i,e,t])}export{i as t};

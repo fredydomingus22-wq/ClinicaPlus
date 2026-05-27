@@ -1,7 +1,10 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal, Input, Button, Textarea } from '@clinicaplus/ui';
 import { useInventory } from '../../hooks/useInventory';
+import { CreateCategoriaSchema, type CreateCategoriaInput } from '../../schemas/inventory.schema';
+import type { CategoriaResponse } from '../../types/inventory.types';
 
 interface CategoryQuickCreateProps {
   isOpen: boolean;
@@ -12,18 +15,17 @@ interface CategoryQuickCreateProps {
 export const CategoryQuickCreate: React.FC<CategoryQuickCreateProps> = ({ isOpen, onClose, onSuccess }) => {
   const { useCreateCategoria } = useInventory();
   const { mutate: create, isPending } = useCreateCategoria();
-  
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateCategoriaInput>({
+    resolver: zodResolver(CreateCategoriaSchema) as any,
     defaultValues: {
       nome: '',
-      descricao: '',
-      cor: '#3b82f6',
     }
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CreateCategoriaInput) => {
     create(data, {
-      onSuccess: (newCat: any) => {
+      onSuccess: (newCat: CategoriaResponse) => {
         onSuccess?.(newCat.id);
         reset();
         onClose();
@@ -40,9 +42,9 @@ export const CategoryQuickCreate: React.FC<CategoryQuickCreateProps> = ({ isOpen
           {...register('nome', { required: 'Nome é obrigatório' })}
           error={errors.nome?.message}
         />
-        <Textarea 
-          label="Descrição" 
-          placeholder="Opcional..." 
+        <Textarea
+          label="Descrição"
+          placeholder="Opcional..."
           {...register('descricao')}
         />
         <div className="flex gap-3 pt-2">

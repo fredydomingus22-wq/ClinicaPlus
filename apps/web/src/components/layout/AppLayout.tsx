@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { TopNav } from './TopNav';
+import { MobileDrawer } from './MobileDrawer';
 import { useUIStore } from '../../stores/ui.store';
 import { useAuthStore } from '../../stores/auth.store';
 import { Outlet, NavLink } from 'react-router-dom';
@@ -21,6 +21,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { notifications, dismissNotification } = useUIStore();
   const { utilizador } = useAuthStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const bottomLinks = getNavItems(utilizador?.papel)
     .filter((item: NavItem) => item.priority)
@@ -36,8 +37,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative print:block print:h-auto print:overflow-visible">
-        <TopBar />
-        <TopNav />
+        <TopBar onMobileMenuOpen={() => setMobileMenuOpen(true)} />
         <SubscricaoStatusBanner />
         
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 bg-[#fafafa] pb-24 md:pb-10 print:block print:h-auto print:overflow-visible print:p-0 print:bg-none">
@@ -119,6 +119,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         ))}
       </div>
+
+      {/* Mobile Drawer */}
+      <MobileDrawer isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
     </div>
   );
 }
