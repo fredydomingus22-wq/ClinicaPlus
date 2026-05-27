@@ -73,7 +73,7 @@ export class SaftService {
     header.ele('TaxEntity').txt('Global');
     header.ele('ProductCompanyTaxID').txt('54173354'); // NIF da empresa desenvolvedora (exemplo)
     header.ele('SoftwareValidationNumber').txt(process.env.AGT_VALIDATION_NUMBER || '0/AGT/2020');
-    header.ele('ProductID').txt('ClinicaPlus'); // Deve corresponder ao programa validado pela AGT
+    header.ele('ProductID').txt('ClinicaPlus/ClinicaPlus-Software-Lda'); // Formato: Nome da aplicação/Nome da empresa produtora
     header.ele('ProductVersion').txt('1.0.0');
 
     // MasterFiles
@@ -91,9 +91,9 @@ export class SaftService {
       const customer = masterFiles.ele('Customer');
       customer.ele('CustomerID').txt(id);
       customer.ele('AccountID').txt('Desconhecido');
-      // CustomerTaxID deve ter 9 dígitos
-      const nif = paciente?.nif || '999999999';
-      customer.ele('CustomerTaxID').txt(nif.substring(0, 9));
+      // CustomerTaxID deve ter 10-15 dígitos (SAFAOAngolaVatNumber)
+      const nif = paciente?.nif || '9999999999';
+      customer.ele('CustomerTaxID').txt(nif.substring(0, Math.min(15, Math.max(10, nif.length))));
       customer.ele('CompanyName').txt(paciente?.nome || 'Consumidor Final');
       
       const billingAddress = customer.ele('BillingAddress');
@@ -161,6 +161,13 @@ export class SaftService {
       const invoice = salesInvoices.ele('Invoice');
       invoice.ele('InvoiceNo').txt(fatura.numeroFatura);
       
+      // DocumentStatus - PRIMEIRO conforme schema XSD
+      const status = invoice.ele('DocumentStatus');
+      status.ele('InvoiceStatus').txt('N'); 
+      status.ele('InvoiceStatusDate').txt(format(fatura.dataEmissao!, "yyyy-MM-dd'T'HH:mm:ss"));
+      status.ele('SourceID').txt('1'); // SourceID obrigatório dentro de DocumentStatus
+      status.ele('SourceBilling').txt('P'); // Software Produzido Internamente/Próprio
+      
       // Hash para SAF-T: usar os primeiros 8 caracteres do hash fiscal (formato esperado pelo validador AGT)
       const hashValue = fatura.fiscalHash || '';
       invoice.ele('Hash').txt(hashValue.substring(0, 8));
@@ -168,25 +175,19 @@ export class SaftService {
       invoice.ele('Period').txt(format(fatura.dataEmissao!, 'MM'));
       invoice.ele('InvoiceDate').txt(format(fatura.dataEmissao!, 'yyyy-MM-dd'));
       invoice.ele('InvoiceType').txt(fatura.tipoDocFiscal);
-      invoice.ele('SystemEntryDate').txt(format(fatura.criadoEm, "yyyy-MM-dd'T'HH:mm:ss"));
-      invoice.ele('CustomerID').txt(fatura.pacienteId);
       
-      // SpecialRegimes - ordem conforme schema
+      // SpecialRegimes - type SpecialRegimes conforme schema
       const specialRegimes = invoice.ele('SpecialRegimes');
       specialRegimes.ele('SpecialRegime').txt('0'); // 0 = Sem regime especial
       specialRegimes.ele('SelfBillingIndicator').txt('0'); // 0 = Não é autofaturação
       specialRegimes.ele('CashVATSchemeIndicator').txt('0'); // 0 = Não está no regime de caixa
       specialRegimes.ele('ThirdPartiesBillingIndicator').txt('0'); // 0 = Não é faturação por terceiros
       
-      // SourceID no nível da Invoice
+      // SourceID no nível da Invoice (DEPOIS de SpecialRegimes)
       invoice.ele('SourceID').txt('1');
       
-      // DocumentStatus - ordem conforme schema
-      const status = invoice.ele('DocumentStatus');
-      status.ele('InvoiceStatus').txt('N'); 
-      status.ele('InvoiceStatusDate').txt(format(fatura.dataEmissao!, "yyyy-MM-dd'T'HH:mm:ss"));
-      status.ele('SourceID').txt('1'); // SourceID também obrigatório dentro de DocumentStatus
-      status.ele('SourceBilling').txt('P'); // Software Produzido Internamente/Próprio
+      invoice.ele('SystemEntryDate').txt(format(fatura.criadoEm, "yyyy-MM-dd'T'HH:mm:ss"));
+      invoice.ele('CustomerID').txt(fatura.pacienteId);
 
       // Referência a documento original (obrigatório para NC)
       if (fatura.tipoDocFiscal === 'NC' && fatura.faturaOriginalId) {
