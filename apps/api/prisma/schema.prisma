@@ -32,7 +32,6 @@ model Clinica {
   nif                  String?
   razaoSocial          String?
   regimeFiscal         RegimeFiscal           @default(GERAL)
-  agtApiToken          String?
   serieDocFiscal       String                 @default("CPLS")
   agtPrivateKey        String?
   agtPublicKey         String?
