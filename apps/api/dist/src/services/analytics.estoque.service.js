@@ -309,10 +309,11 @@ exports.analyticsEstoqueService = {
             valorPorCategoria[cid] = (valorPorCategoria[cid] || 0) + l.quantidade * l.produto.precoCusto;
         }
         const movPorCategoria = {};
-        for (const m of movimentacoes) {
-            // Precisamos buscar a categoriaId do produto
-            // Para otimizar, podemos fazer uma query separada
-        }
+        // TODO: Implement category-based movement counting when needed
+        // for (const m of movimentacoes) {
+        //   // Precisamos buscar a categoriaId do produto
+        //   // Para otimizar, podemos fazer uma query separada
+        // }
         // @ts-expect-error - Prisma groupBy return types are complex and can mismatch with strict TS
         const itensPorCategoria = await prisma_1.prisma.produto.groupBy({
             by: ['categoriaId'],

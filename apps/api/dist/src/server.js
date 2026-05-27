@@ -113,6 +113,7 @@ app.use((0, cors_1.default)({
 }));
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use(rateLimiter_1.globalRateLimiter);
 // 3. Health check (stays before auth)
 app.get('/health', async (_req, res) => {
@@ -145,10 +146,15 @@ app.get('/health', async (_req, res) => {
         logger_1.logger.error({ err }, 'Health check: Redis connection failed');
     }
     // Check workers status via Redis
-    let workersStatus = 'unknown';
+    let workersStatus;
     try {
         const workerKeys = await redis_1.redis.keys('bull:*:waiting');
-        workersStatus = workerKeys.length > 0 ? 'active' : 'idle';
+        if (workerKeys.length > 0) {
+            workersStatus = 'active';
+        }
+        else {
+            workersStatus = 'idle';
+        }
     }
     catch (err) {
         workersStatus = 'error';
@@ -241,6 +247,8 @@ app.use('/api/anamneseTemplates', anamneseTemplates_1.default);
 app.use('/api/odontogramas', odontogramas_1.default);
 app.use('/api/contracts', contracts_1.default);
 app.use('/api/pdf', pdf_1.default);
+// Serve static files from local uploads directory
+app.use('/uploads', express_1.default.static('uploads'));
 // Global Error Handler
 app.use(errorHandler_1.errorHandler);
 const PORT = config_1.config.PORT || 3001;

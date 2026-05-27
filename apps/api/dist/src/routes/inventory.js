@@ -14,7 +14,9 @@ router.get('/analytics/kpis', async (req, res) => {
     const filters = inventory_schema_1.AnalyticsFiltersSchema.parse(req.query);
     const analyticsFilters = {
         clinicaId: req.clinica.id,
-        ...filters,
+        ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+        ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+        ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
     };
     const result = await analytics_estoque_service_1.analyticsEstoqueService.getKpis(analyticsFilters);
     res.json({ data: result });
@@ -25,7 +27,9 @@ router.get('/analytics/top-movimentados', async (req, res) => {
     const { limite } = req.query;
     const analyticsFilters = {
         clinicaId: req.clinica.id,
-        ...filters,
+        ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+        ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+        ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
     };
     const result = await analytics_estoque_service_1.analyticsEstoqueService.getTopMovimentados(analyticsFilters, limite ? parseInt(limite, 10) : 20);
     res.json({ data: result });
@@ -35,7 +39,9 @@ router.get('/analytics/tendencia-diaria', async (req, res) => {
     const filters = inventory_schema_1.AnalyticsFiltersSchema.parse(req.query);
     const analyticsFilters = {
         clinicaId: req.clinica.id,
-        ...filters,
+        ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+        ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+        ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
     };
     const result = await analytics_estoque_service_1.analyticsEstoqueService.getTendenciaDiaria(analyticsFilters);
     res.json({ data: result });
@@ -51,7 +57,9 @@ router.get('/analytics/categorias', async (req, res) => {
     const filters = inventory_schema_1.AnalyticsFiltersSchema.parse(req.query);
     const analyticsFilters = {
         clinicaId: req.clinica.id,
-        ...filters,
+        ...(filters.dataInicio && { dataInicio: filters.dataInicio.toISOString() }),
+        ...(filters.dataFim && { dataFim: filters.dataFim.toISOString() }),
+        ...(filters.categoriaId && { categoriaId: filters.categoriaId }),
     };
     const result = await analytics_estoque_service_1.analyticsEstoqueService.getDistribuicaoCategorias(analyticsFilters);
     res.json({ data: result });

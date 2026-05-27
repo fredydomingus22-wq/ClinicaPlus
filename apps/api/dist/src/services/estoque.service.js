@@ -51,7 +51,7 @@ async function invalidateEstoqueCache(clinicaId, produtoId) {
             await redis.del(...keys);
         }
     }
-    catch (error) {
+    catch {
         // Silenciosamente falhar se o cache não estiver disponível
     }
 }

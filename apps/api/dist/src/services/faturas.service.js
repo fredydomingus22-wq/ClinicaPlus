@@ -50,7 +50,7 @@ const AgtApiClient_1 = require("./fiscal/AgtApiClient");
 const SequenciaService_1 = require("./fiscal/SequenciaService");
 const queues_1 = require("../lib/queues");
 const secretCrypto_1 = require("../lib/secretCrypto");
-const estoqueCalculo_service_1 = require("./estoqueCalculo.service");
+const estoque_calculo_service_1 = require("./estoque.calculo.service");
 // Opcional: Extrair para FaturaNumberService se ficar mais complexo
 exports.faturasService = {
     async create(data, clinicaId, criadoPor) {
@@ -84,7 +84,7 @@ exports.faturasService = {
                     throw new AppError_1.AppError('Produto não encontrado', 404);
                 // Validar estoque se gerenciaEstoque
                 if (produto.gerenciaEstoque) {
-                    const estoqueAtual = await estoqueCalculo_service_1.estoqueCalculoService.calcularEstoqueProduto(clinicaId, produto.id);
+                    const estoqueAtual = await estoque_calculo_service_1.estoqueCalculoService.calcularEstoqueProduto(clinicaId, produto.id);
                     if (estoqueAtual < item.quantidade) {
                         throw new AppError_1.AppError(`Estoque insuficiente para ${produto.nome}. Disponível: ${estoqueAtual}`, 400);
                     }
@@ -142,7 +142,39 @@ exports.faturasService = {
         }));
         const tipoDoc = (data.tipoDocFiscal || types_2.TipoDocumentoFiscal.FT);
         const { formatado: numeroFatura } = await (0, SequenciaService_1.proximoNumero)(prisma_1.prisma, clinicaId, tipoDoc);
-        const { subtotal, totalDesconto, totalIva, total, itensCalculados } = (0, utils_1.calcularFatura)(itensProcessados, clinica.regimeFiscal);
+        // Filtrar apenas campos necessários para cálculo
+        const itensParaCalculo = itensProcessados.map(item => ({
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            precoUnit: item.precoUnit,
+            desconto: item.desconto,
+            taxaIva: item.taxaIva,
+            codigoIva: item.codigoIva,
+            motivoIsencao: item.motivoIsencao || undefined,
+        }));
+        const { subtotal, totalDesconto, totalIva, total, itensCalculados } = (0, utils_1.calcularFatura)(itensParaCalculo, clinica.regimeFiscal);
+        // Merge dos itens calculados com os campos polimórficos originais
+        const itensParaCriar = itensProcessados.map((item, index) => {
+            const calculado = itensCalculados[index];
+            if (!calculado) {
+                throw new AppError_1.AppError('Erro ao calcular item da fatura', 500);
+            }
+            return {
+                tipoItem: item.tipoItem || types_1.TipoItemFatura.SERVICO,
+                produtoId: item.produtoId || null,
+                tratamentoId: item.tratamentoId || null,
+                exameId: item.exameId || null,
+                medicoId: item.medicoId || null,
+                descricao: item.descricao || 'Item sem descrição',
+                quantidade: item.quantidade,
+                precoUnit: item.precoUnit,
+                desconto: item.desconto,
+                taxaIva: calculado.taxaIva,
+                codigoIva: calculado.codigoIva,
+                motivoIsencao: (item.motivoIsencao || null),
+                total: calculado.total
+            };
+        });
         const fatura = await prisma_1.prisma.fatura.create({
             data: {
                 clinicaId,
@@ -164,21 +196,7 @@ exports.faturasService = {
                 dataVencimento: data.dataVencimento ? new Date(data.dataVencimento) : null,
                 moeda: 'AOA',
                 itens: {
-                    create: itensCalculados.map(item => ({
-                        tipoItem: item.tipoItem || types_1.TipoItemFatura.SERVICO,
-                        produtoId: item.produtoId || null,
-                        tratamentoId: item.tratamentoId || null,
-                        exameId: item.exameId || null,
-                        medicoId: item.medicoId || null,
-                        descricao: item.descricao || 'Item sem descrição',
-                        quantidade: item.quantidade,
-                        precoUnit: item.precoUnit,
-                        desconto: item.desconto,
-                        taxaIva: item.taxaIva,
-                        codigoIva: item.codigoIva,
-                        motivoIsencao: (item.motivoIsencao || null),
-                        total: item.total
-                    }))
+                    create: itensParaCriar
                 }
             },
             include: {
@@ -230,7 +248,7 @@ exports.faturasService = {
                 orderBy: { nome: 'asc' },
             });
             const produtoIds = produtos.map(p => p.id);
-            const estoqueBatch = await estoqueCalculo_service_1.estoqueCalculoService.calcularEstoqueBatch(clinicaId, produtoIds);
+            const estoqueBatch = await estoque_calculo_service_1.estoqueCalculoService.calcularEstoqueBatch(clinicaId, produtoIds);
             itens.push(...produtos.map(p => ({
                 id: p.id,
                 tipo: types_1.TipoItemFatura.PRODUTO,
@@ -491,8 +509,7 @@ exports.faturasService = {
             for (const item of faturaActualizada.itens) {
                 if (item.tipoItem === types_1.TipoItemFatura.PRODUTO && item.produtoId) {
                     // Buscar lote FIFO
-                    const { encontrarLoteFIFO } = await Promise.resolve().then(() => __importStar(require('./estoqueCalculo.service')));
-                    const loteId = await encontrarLoteFIFO(clinicaId, item.produtoId, item.quantidade);
+                    const loteId = await estoque_calculo_service_1.estoqueCalculoService.encontrarLoteFIFO(clinicaId, item.produtoId, item.quantidade);
                     if (loteId) {
                         // Atualizar quantidade do lote
                         await tx.estoqueLote.update({
@@ -1100,6 +1117,11 @@ function toFaturaDTO(fatura) {
             itens: f.itens?.map((i) => ({
                 id: i.id,
                 faturaId: f.id,
+                tipoItem: i.tipoItem || types_1.TipoItemFatura.SERVICO,
+                produtoId: i.produtoId || undefined,
+                tratamentoId: i.tratamentoId || undefined,
+                exameId: i.exameId || undefined,
+                medicoId: i.medicoId || undefined,
                 descricao: i.descricao,
                 quantidade: i.quantidade,
                 precoUnit: i.precoUnit,

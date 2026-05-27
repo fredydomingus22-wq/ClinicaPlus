@@ -32,6 +32,17 @@ exports.faturasRouter.get('/', (0, requirePermission_1.requirePermission)('fatur
         next(err);
     }
 });
+exports.faturasRouter.get('/itens-facturaveis', (0, requirePermission_1.requirePermission)('fatura', 'read'), async (req, res, next) => {
+    try {
+        const clinicaId = req.clinica.id;
+        const { busca, tipo } = req.query;
+        const itens = await faturas_service_1.faturasService.listItensFacturaveis(clinicaId, busca, tipo);
+        res.json({ success: true, data: itens });
+    }
+    catch (err) {
+        next(err);
+    }
+});
 exports.faturasRouter.get('/:id', (0, requirePermission_1.requirePermission)('fatura', 'read'), async (req, res, next) => {
     try {
         const clinicaId = req.clinica.id;
@@ -40,17 +51,6 @@ exports.faturasRouter.get('/:id', (0, requirePermission_1.requirePermission)('fa
             return; // Type guard
         const fatura = await faturas_service_1.faturasService.getOne(faturaId, clinicaId);
         res.json({ success: true, data: fatura });
-    }
-    catch (err) {
-        next(err);
-    }
-});
-exports.faturasRouter.get('/itens-facturaveis', (0, requirePermission_1.requirePermission)('fatura', 'read'), async (req, res, next) => {
-    try {
-        const clinicaId = req.clinica.id;
-        const { busca, tipo } = req.query;
-        const itens = await faturas_service_1.faturasService.listItensFacturaveis(clinicaId, busca, tipo);
-        res.json({ success: true, data: itens });
     }
     catch (err) {
         next(err);

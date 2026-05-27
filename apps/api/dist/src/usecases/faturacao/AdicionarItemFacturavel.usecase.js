@@ -4,7 +4,7 @@ exports.AdicionarItemFacturavelUseCase = void 0;
 const types_1 = require("@clinicaplus/types");
 const ItemFaturaFactory_1 = require("../../domain/faturacao/ItemFaturaFactory");
 const EstoqueDeductionService_1 = require("../../domain/estoque/EstoqueDeductionService");
-const errors_1 = require("../../lib/errors");
+const AppError_1 = require("../../lib/AppError");
 class AdicionarItemFacturavelUseCase {
     constructor(prisma, estoqueCalculoService) {
         this.prisma = prisma;
@@ -26,7 +26,7 @@ class AdicionarItemFacturavelUseCase {
                     },
                 });
                 if (!produto)
-                    throw new errors_1.AppError('Produto não encontrado', 404);
+                    throw new AppError_1.AppError('Produto não encontrado', 404);
                 const estoqueAtual = await this.estoqueCalculoService.calcularEstoqueProduto(clinicaId, itemId);
                 EstoqueDeductionService_1.EstoqueDeductionService.validarDisponibilidade(produto, estoqueAtual, quantidade);
                 return ItemFaturaFactory_1.ItemFaturaFactory.criarFromProduto(produto, quantidade, precoOverride);
@@ -37,7 +37,7 @@ class AdicionarItemFacturavelUseCase {
                     select: { id: true, nome: true, preco: true },
                 });
                 if (!tratamento)
-                    throw new errors_1.AppError('Tratamento não encontrado', 404);
+                    throw new AppError_1.AppError('Tratamento não encontrado', 404);
                 return ItemFaturaFactory_1.ItemFaturaFactory.criarFromTratamento(tratamento, quantidade, precoOverride);
             }
             case types_1.TipoItemFatura.EXAME: {
@@ -46,7 +46,7 @@ class AdicionarItemFacturavelUseCase {
                     select: { id: true, nome: true, preco: true },
                 });
                 if (!exame)
-                    throw new errors_1.AppError('Exame não encontrado', 404);
+                    throw new AppError_1.AppError('Exame não encontrado', 404);
                 return ItemFaturaFactory_1.ItemFaturaFactory.criarFromExame(exame, quantidade, precoOverride);
             }
             case types_1.TipoItemFatura.CONSULTA: {
@@ -55,11 +55,11 @@ class AdicionarItemFacturavelUseCase {
                     select: { id: true, nome: true, preco: true },
                 });
                 if (!medico)
-                    throw new errors_1.AppError('Médico não encontrado', 404);
+                    throw new AppError_1.AppError('Médico não encontrado', 404);
                 return ItemFaturaFactory_1.ItemFaturaFactory.criarFromConsulta(medico, quantidade, precoOverride);
             }
             default:
-                throw new errors_1.AppError('Tipo de item inválido', 400);
+                throw new AppError_1.AppError('Tipo de item inválido', 400);
         }
     }
 }

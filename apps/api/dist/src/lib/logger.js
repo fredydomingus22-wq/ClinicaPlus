@@ -17,7 +17,7 @@ const transport = isLocalDev
  * Redacts sensitive headers automatically.
  */
 exports.logger = (0, pino_1.default)({
-    level: config_1.config.NODE_ENV === 'production' ? 'warn' : 'debug',
+    level: config_1.config.NODE_ENV === 'production' ? 'info' : 'debug',
     base: {
         service: 'clinicaplus-api',
         env: config_1.config.NODE_ENV,

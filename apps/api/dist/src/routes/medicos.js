@@ -85,6 +85,27 @@ router.get('/:id/slots', async (req, res, next) => {
         return next(err);
     }
 });
+/**
+ * POST /medicos/setup-as-medico
+ * Auth: ADMIN — allows an admin to configure themselves as a médico
+ * Creates a Medico record linked to the admin's utilizadorId
+ */
+router.post('/setup-as-medico', (0, requireRole_1.requireRole)([client_1.Papel.ADMIN]), async (req, res, next) => {
+    try {
+        const body = types_1.MedicoCreateSchema.parse(req.body);
+        // Force utilizadorId to be the logged-in admin's ID
+        const data = {
+            ...body,
+            utilizadorId: req.user.id,
+            email: undefined, // Don't create new user, use existing
+        };
+        const medico = await medicos_service_1.medicosService.create(data, req.clinica.id);
+        return res.status(201).json({ success: true, data: medico });
+    }
+    catch (err) {
+        return next(err);
+    }
+});
 router.post('/', (0, requireRole_1.requireRole)([client_1.Papel.ADMIN]), async (req, res, next) => {
     try {
         const body = types_1.MedicoCreateSchema.parse(req.body);

@@ -24,7 +24,7 @@ async function getFromCache(key) {
         const cached = await redis_1.redis.get(key);
         return cached ? JSON.parse(cached) : null;
     }
-    catch (error) {
+    catch {
         // Silenciosamente falhar se o cache não estiver disponível
         return null;
     }
@@ -36,22 +36,7 @@ async function setCache(key, value) {
     try {
         await redis_1.redis.setex(key, CACHE_TTL, JSON.stringify(value));
     }
-    catch (error) {
-        // Silenciosamente falhar se o cache não estiver disponível
-    }
-}
-/**
- * Helper para invalidar cache de um produto
- */
-async function invalidateProdutoCache(clinicaId, produtoId) {
-    try {
-        const pattern = `estoque:*:${clinicaId}:${produtoId}*`;
-        const keys = await redis_1.redis.keys(pattern);
-        if (keys.length > 0) {
-            await redis_1.redis.del(...keys);
-        }
-    }
-    catch (error) {
+    catch {
         // Silenciosamente falhar se o cache não estiver disponível
     }
 }

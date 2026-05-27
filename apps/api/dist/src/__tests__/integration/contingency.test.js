@@ -29,7 +29,7 @@ const types_1 = require("@clinicaplus/types");
             retencaoFonte: 0,
             retrodatar: false,
             itens: [
-                { descricao: 'Consulta Geral', quantidade: 1, precoUnit: 15000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
+                { tipoItem: types_1.TipoItemFatura.SERVICO, descricao: 'Consulta Geral', quantidade: 1, precoUnit: 15000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
             ],
         }, ctx.clinica.id, ctx.admin.id);
         // Mockar erro de timeout de rede na AGT
@@ -83,7 +83,7 @@ const types_1 = require("@clinicaplus/types");
             retencaoFonte: 0,
             retrodatar: false,
             itens: [
-                { descricao: 'Exame de Sangue', quantidade: 1, precoUnit: 8000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
+                { tipoItem: types_1.TipoItemFatura.SERVICO, descricao: 'Exame de Sangue', quantidade: 1, precoUnit: 8000, desconto: 0, taxaIva: 0, codigoIva: 'ISE' },
             ],
         }, ctx.clinica.id, ctx.admin.id);
         // Espionar para garantir que não tenta enviar em tempo real para a AGT
