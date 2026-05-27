@@ -73,7 +73,7 @@ export class SaftService {
     header.ele('TaxEntity').txt('Global');
     header.ele('ProductCompanyTaxID').txt('54173354'); // NIF da empresa desenvolvedora (exemplo)
     header.ele('SoftwareValidationNumber').txt(process.env.AGT_VALIDATION_NUMBER || '0/AGT/2020');
-    header.ele('ProductID').txt('ClinicaPlus SaaS');
+    header.ele('ProductID').txt('ClinicaPlus'); // Deve corresponder ao programa validado pela AGT
     header.ele('ProductVersion').txt('1.0.0');
 
     // MasterFiles
@@ -91,7 +91,9 @@ export class SaftService {
       const customer = masterFiles.ele('Customer');
       customer.ele('CustomerID').txt(id);
       customer.ele('AccountID').txt('Desconhecido');
-      customer.ele('CustomerTaxID').txt(paciente?.nif || '999999999');
+      // CustomerTaxID deve ter 9 dígitos
+      const nif = paciente?.nif || '999999999';
+      customer.ele('CustomerTaxID').txt(nif.substring(0, 9));
       customer.ele('CompanyName').txt(paciente?.nome || 'Consumidor Final');
       
       const billingAddress = customer.ele('BillingAddress');
@@ -169,16 +171,21 @@ export class SaftService {
       invoice.ele('SystemEntryDate').txt(format(fatura.criadoEm, "yyyy-MM-dd'T'HH:mm:ss"));
       invoice.ele('CustomerID').txt(fatura.pacienteId);
       
-      // SourceID é obrigatório no nível da Invoice (não dentro de DocumentStatus)
-      invoice.ele('SourceID').txt('1');
-      
-      // SpecialRegimes é obrigatório
+      // SpecialRegimes - ordem conforme schema
       const specialRegimes = invoice.ele('SpecialRegimes');
       specialRegimes.ele('SpecialRegime').txt('0'); // 0 = Sem regime especial
+      specialRegimes.ele('SelfBillingIndicator').txt('0'); // 0 = Não é autofaturação
+      specialRegimes.ele('CashVATSchemeIndicator').txt('0'); // 0 = Não está no regime de caixa
+      specialRegimes.ele('ThirdPartiesBillingIndicator').txt('0'); // 0 = Não é faturação por terceiros
       
+      // SourceID no nível da Invoice
+      invoice.ele('SourceID').txt('1');
+      
+      // DocumentStatus - ordem conforme schema
       const status = invoice.ele('DocumentStatus');
       status.ele('InvoiceStatus').txt('N'); 
       status.ele('InvoiceStatusDate').txt(format(fatura.dataEmissao!, "yyyy-MM-dd'T'HH:mm:ss"));
+      status.ele('SourceID').txt('1'); // SourceID também obrigatório dentro de DocumentStatus
       status.ele('SourceBilling').txt('P'); // Software Produzido Internamente/Próprio
 
       // Referência a documento original (obrigatório para NC)
@@ -229,15 +236,17 @@ export class SaftService {
         }
       }
 
-      // Calcular TaxPayable a partir das linhas (para garantir consistência)
+      // Calcular totais a partir das linhas (para garantir consistência)
+      const calculatedNetTotal = fatura.itens.reduce((sum, item) => sum + item.total, 0);
       const calculatedTaxPayable = fatura.itens.reduce((sum, item) => {
         return sum + (item.total * (item.taxaIva / 100));
       }, 0);
+      const calculatedGrossTotal = calculatedNetTotal + calculatedTaxPayable;
       
       const totals = invoice.ele('DocumentTotals');
       totals.ele('TaxPayable').txt(calculatedTaxPayable.toFixed(2));
-      totals.ele('NetTotal').txt(fatura.subtotal.toFixed(2));
-      totals.ele('GrossTotal').txt(fatura.total.toFixed(2));
+      totals.ele('NetTotal').txt(calculatedNetTotal.toFixed(2));
+      totals.ele('GrossTotal').txt(calculatedGrossTotal.toFixed(2));
     }
 
     return root.end({ prettyPrint: true });
