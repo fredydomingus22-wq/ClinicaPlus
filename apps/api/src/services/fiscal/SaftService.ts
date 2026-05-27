@@ -50,9 +50,9 @@ export class SaftService {
         'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance'
       });
 
-    // Header
+    // Header - ordem conforme schema oficial SAF-T AO v1.01_01
     const header = root.ele('Header');
-    header.ele('AuditFileSchemaVersion').txt('1.01_01');
+    header.ele('AuditFileVersion').txt('1.01_01');
     header.ele('CompanyID').txt(clinica.nif);
     header.ele('TaxRegistrationNumber').txt(clinica.nif);
     header.ele('TaxAccountingBasis').txt('F'); // Faturação
@@ -71,12 +71,10 @@ export class SaftService {
     header.ele('CurrencyCode').txt('AOA');
     header.ele('DateCreated').txt(format(new Date(), 'yyyy-MM-dd'));
     header.ele('TaxEntity').txt('Global');
-    header.ele('ProductCompanyID').txt('ClinicaPlus-Software-Lda');
+    header.ele('ProductCompanyTaxID').txt('54173354'); // NIF da empresa desenvolvedora (exemplo)
+    header.ele('SoftwareValidationNumber').txt(process.env.AGT_VALIDATION_NUMBER || '0/AGT/2020');
     header.ele('ProductID').txt('ClinicaPlus SaaS');
     header.ele('ProductVersion').txt('1.0.0');
-    // Em modo SaaS, o número de certificado é global do ClinicaPlus
-    const softwareCertificate = process.env.AGT_SOFTWARE_CERTIFICATE || process.env.AGT_VALIDATION_NUMBER || '0';
-    header.ele('SoftwareCertificateNumber').txt(softwareCertificate);
 
     // MasterFiles
     const masterFiles = root.ele('MasterFiles');
@@ -161,19 +159,27 @@ export class SaftService {
       const invoice = salesInvoices.ele('Invoice');
       invoice.ele('InvoiceNo').txt(fatura.numeroFatura);
       
-      const status = invoice.ele('DocumentStatus');
-      status.ele('InvoiceStatus').txt('N'); 
-      status.ele('InvoiceStatusDate').txt(format(fatura.dataEmissao!, "yyyy-MM-dd'T'HH:mm:ss"));
-      status.ele('SourceID').txt('1');
-      status.ele('SourceBilling').txt('P'); // Software Produzido Internamente/Próprio
-
-      invoice.ele('Hash').txt(fatura.fiscalHash || '');
+      // Hash para SAF-T: usar os primeiros 8 caracteres do hash fiscal (formato esperado pelo validador AGT)
+      const hashValue = fatura.fiscalHash || '';
+      invoice.ele('Hash').txt(hashValue.substring(0, 8));
       invoice.ele('HashControl').txt(fatura.hashControl || '1');
       invoice.ele('Period').txt(format(fatura.dataEmissao!, 'MM'));
       invoice.ele('InvoiceDate').txt(format(fatura.dataEmissao!, 'yyyy-MM-dd'));
       invoice.ele('InvoiceType').txt(fatura.tipoDocFiscal);
       invoice.ele('SystemEntryDate').txt(format(fatura.criadoEm, "yyyy-MM-dd'T'HH:mm:ss"));
       invoice.ele('CustomerID').txt(fatura.pacienteId);
+      
+      // SourceID é obrigatório no nível da Invoice (não dentro de DocumentStatus)
+      invoice.ele('SourceID').txt('1');
+      
+      // SpecialRegimes é obrigatório
+      const specialRegimes = invoice.ele('SpecialRegimes');
+      specialRegimes.ele('SpecialRegime').txt('0'); // 0 = Sem regime especial
+      
+      const status = invoice.ele('DocumentStatus');
+      status.ele('InvoiceStatus').txt('N'); 
+      status.ele('InvoiceStatusDate').txt(format(fatura.dataEmissao!, "yyyy-MM-dd'T'HH:mm:ss"));
+      status.ele('SourceBilling').txt('P'); // Software Produzido Internamente/Próprio
 
       // Referência a documento original (obrigatório para NC)
       if (fatura.tipoDocFiscal === 'NC' && fatura.faturaOriginalId) {
@@ -200,11 +206,14 @@ export class SaftService {
         line.ele('TaxPointDate').txt(format(fatura.dataEmissao!, 'yyyy-MM-dd'));
         line.ele('Description').txt(item.descricao);
         
-        // Se for Crédito (NC), o valor entra como CreditAmount
+        // Para SAF-T AO, sempre usar DebitAmount para valores positivos
+        // Notas de crédito devem ter CreditAmount para indicar valor negativo
         if (fatura.tipoDocFiscal === 'NC') {
           line.ele('CreditAmount').txt(Math.abs(item.total).toFixed(2));
+          line.ele('DebitAmount').txt('0.00');
         } else {
           line.ele('DebitAmount').txt(item.total.toFixed(2));
+          line.ele('CreditAmount').txt('0.00');
         }
         
         const tax = line.ele('Tax');
@@ -220,8 +229,13 @@ export class SaftService {
         }
       }
 
+      // Calcular TaxPayable a partir das linhas (para garantir consistência)
+      const calculatedTaxPayable = fatura.itens.reduce((sum, item) => {
+        return sum + (item.total * (item.taxaIva / 100));
+      }, 0);
+      
       const totals = invoice.ele('DocumentTotals');
-      totals.ele('TaxPayable').txt(fatura.totalIva.toFixed(2));
+      totals.ele('TaxPayable').txt(calculatedTaxPayable.toFixed(2));
       totals.ele('NetTotal').txt(fatura.subtotal.toFixed(2));
       totals.ele('GrossTotal').txt(fatura.total.toFixed(2));
     }
