@@ -17,7 +17,7 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/webhook\//, /\.[a-z]+$/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/webhook\//, /\.[a-z]+$/, /^\/assets\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
