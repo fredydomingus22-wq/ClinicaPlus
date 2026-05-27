@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const supabase_js_1 = require("@supabase/supabase-js");
-const config_1 = require("../src/lib/config");
+const config_1 = require("../lib/config");
 /**
  * Script de automação para configurar buckets Supabase Storage
  *
  * Uso:
- * pnpm tsx apps/api/scripts/setup-storage.ts
+ * pnpm tsx apps/api/src/scripts/setup-storage.ts
  *
  * Este script:
  * 1. Verifica se os buckets necessários existem

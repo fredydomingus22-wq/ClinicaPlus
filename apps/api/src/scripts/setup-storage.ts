@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../src/lib/config';
+import { config } from '../lib/config';
 
 /**
  * Script de automação para configurar buckets Supabase Storage
  * 
  * Uso:
- * pnpm tsx apps/api/scripts/setup-storage.ts
+ * pnpm tsx apps/api/src/scripts/setup-storage.ts
  * 
  * Este script:
  * 1. Verifica se os buckets necessários existem
