@@ -71,10 +71,10 @@ export class SaftService {
     header.ele('CurrencyCode').txt('AOA');
     header.ele('DateCreated').txt(format(new Date(), 'yyyy-MM-dd'));
     header.ele('TaxEntity').txt('Global');
-    header.ele('ProductCompanyTaxID').txt('54173354'); // NIF da empresa desenvolvedora (exemplo)
-    header.ele('SoftwareValidationNumber').txt(process.env.AGT_VALIDATION_NUMBER || '0/AGT/2020');
-    header.ele('ProductID').txt('ClinicaPlus/ClinicaPlus-Software-Lda'); // Formato: Nome da aplicação/Nome da empresa produtora
-    header.ele('ProductVersion').txt('1.0.0');
+    header.ele('ProductCompanyTaxID').txt(process.env.AGT_PRODUCT_COMPANY_TAX_ID || clinica.configuracao?.agtProductCompanyTaxId || '');
+    header.ele('SoftwareValidationNumber').txt(process.env.AGT_VALIDATION_NUMBER || clinica.configuracao?.agtSoftwareValidationNumber || '0/AGT/2020');
+    header.ele('ProductID').txt(process.env.AGT_PRODUCT_ID || clinica.configuracao?.agtProductId || 'ClinicaPlus/ClinicaPlus-Software-Lda');
+    header.ele('ProductVersion').txt(process.env.AGT_PRODUCT_VERSION || clinica.configuracao?.agtProductVersion || '1.0.0');
 
     // MasterFiles
     const masterFiles = root.ele('MasterFiles');
