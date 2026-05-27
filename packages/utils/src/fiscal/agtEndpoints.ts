@@ -10,9 +10,8 @@ export type AgtEndpointName =
   | 'validarDocumento';
 
 export function getAgtOrigin(env: AgtEnv): string {
-  return env === 'sandbox'
-    ? 'https://sifphml.minfin.gov.ao'
-    : 'https://sifp.minfin.gov.ao';
+  // Hardcoded para homologação (sandbox)
+  return 'https://sifphml.minfin.gov.ao';
 }
 
 /**
