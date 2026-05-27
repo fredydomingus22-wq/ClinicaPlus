@@ -65,6 +65,7 @@ COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/apps/api/scripts ./apps/api/scripts
 COPY --from=builder /app/apps/api/tsconfig.json ./apps/api/
+COPY --from=builder /app/apps/api/scripts/tsconfig.json ./apps/api/scripts/
 COPY --from=builder /app/tsconfig.base.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/package.json ./
