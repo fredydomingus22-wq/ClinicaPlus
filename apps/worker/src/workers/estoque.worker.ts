@@ -30,9 +30,9 @@ interface AnalyticsJob {
 
 // Job Names
 export const ESTOQUE_JOB_NAMES = {
-  ESTOQUE_MINIMO: 'estoque:minimo',
-  VALIDADE_PROXIMA: 'estoque:validade-proxima',
-  ANALYTICS: 'estoque:analytics',
+  ESTOQUE_MINIMO: 'estoque-minimo',
+  VALIDADE_PROXIMA: 'estoque-validade-proxima',
+  ANALYTICS: 'estoque-analytics',
 } as const;
 
 /**
@@ -42,7 +42,7 @@ export const estoqueMinimoWorker = new Worker<EstoqueMinimoJob>(
   ESTOQUE_JOB_NAMES.ESTOQUE_MINIMO,
   async (job: Job<EstoqueMinimoJob>) => {
     const { clinicaId } = job.data;
-    const lockKey = `estoque:minimo:${clinicaId}`;
+    const lockKey = `estoque-minimo-${clinicaId}`;
 
     logger.info({ clinicaId, jobId: job.id }, '⚙️ Processando job de estoque mínimo');
 
@@ -114,7 +114,7 @@ export const validadeProximaWorker = new Worker<ValidadeProximaJob>(
   ESTOQUE_JOB_NAMES.VALIDADE_PROXIMA,
   async (job: Job<ValidadeProximaJob>) => {
     const { clinicaId, dias = 30 } = job.data;
-    const lockKey = `estoque:validade-proxima:${clinicaId}`;
+    const lockKey = `estoque-validade-proxima-${clinicaId}`;
 
     logger.info({ clinicaId, dias, jobId: job.id }, '⚙️ Processando job de validade próxima');
 
@@ -187,7 +187,7 @@ export const analyticsWorker = new Worker<AnalyticsJob>(
   ESTOQUE_JOB_NAMES.ANALYTICS,
   async (job: Job<AnalyticsJob>) => {
     const { clinicaId, dataInicio, dataFim } = job.data;
-    const lockKey = `estoque:analytics:${clinicaId}`;
+    const lockKey = `estoque-analytics-${clinicaId}`;
 
     logger.info({ clinicaId, jobId: job.id }, '⚙️ Processando job de analytics');
 

@@ -15,7 +15,7 @@ export const tratamentoWorker = new Worker<TratamentoGerarSessoesJob>(
   JobNames.TRATAMENTO_GERAR_SESSOES,
   async (job: Job<TratamentoGerarSessoesJob>) => {
     const { planoId, clinicaId } = job.data;
-    const lockKey = `tratamento:gerar-sessoes:${planoId}`;
+    const lockKey = `tratamento-gerar-sessoes-${planoId}`;
 
     logger.info({ planoId, clinicaId, jobId: job.id }, '⚙️ Processando job de geração de sessões');
 
