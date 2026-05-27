@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../src/lib/config.js';
+import { config } from '../src/lib/config';
 
 /**
  * Script de automação para configurar buckets Supabase Storage
