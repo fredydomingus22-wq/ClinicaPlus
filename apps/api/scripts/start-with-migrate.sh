@@ -13,7 +13,7 @@ fi
 
 if [ "${STORAGE_PROVIDER:-local}" = "supabase" ]; then
   echo "[boot] STORAGE_PROVIDER=supabase -> running storage setup..."
-  pnpm exec ts-node scripts/setup-storage.ts || echo "[boot] Storage setup failed, continuing..."
+  pnpm exec ts-node --project scripts/tsconfig.json scripts/setup-storage.ts || echo "[boot] Storage setup failed, continuing..."
 else
   echo "[boot] STORAGE_PROVIDER is not supabase -> skipping storage setup."
 fi
