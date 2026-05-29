@@ -17,12 +17,12 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
   useEffect(() => {
     const generateQR = async () => {
       try {
-        const docNo = (pagamento?.numeroRecibo || fatura.numeroFatura || '').replace(/ /g, '%20');
+        const docNo = encodeURIComponent(pagamento?.numeroRecibo || fatura.numeroFatura || '').replace(/%2F/g, '/');
         const url = `https://quiosqueagt.minfin.gov.ao/facturacao-eletronica/consultar-fe?emissor=${clinica.nif}&document=${docNo}`;
         
         const canvas = document.createElement('canvas');
         await QRCode.toCanvas(canvas, url, {
-          margin: 1,
+          margin: 4,
           width: 350,
           errorCorrectionLevel: 'M',
           version: 4
@@ -425,7 +425,7 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
             <div className="flex flex-col items-center mt-2">
               {qrCodeData && (
                 <div className="border border-gray-200 p-1 bg-white">
-                  <img src={qrCodeData} alt="QR Code AGT" className="w-32 h-32" />
+                  <img src={qrCodeData} alt="QR Code AGT" className="w-[350px] h-[350px]" />
                 </div>
               )}
               <span className="text-[6pt] text-gray-400 mt-1 uppercase font-mono tracking-widest">Verificar Doc. AGT</span>

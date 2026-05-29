@@ -16,6 +16,7 @@ import {
   resolveAgtTenantKeys,
 } from '@clinicaplus/utils/server';
 import { decryptSecret } from '../../lib/secretCrypto';
+import { buildAgtFailurePayload, isAgtBusinessFailure, mapAgtSeriesItems } from './agtResponse';
 
 function isTimeoutError(error: unknown): boolean {
   return !!(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'ECONNABORTED');
@@ -307,7 +308,7 @@ export const fiscalController = {
 
       const taxRegistrationNumber = clinica.nif;
       const request = {
-        schemaVersion: '1.0',
+        schemaVersion: '1.2',
         taxRegistrationNumber,
         submissionTimeStamp: new Date().toISOString(),
         establishmentNumber: 'SEDE',
@@ -323,18 +324,24 @@ export const fiscalController = {
       const response = await agtApiClient.listarSeries(request as any, agtApiToken || '');
 
       // Log para debug da resposta da AGT
-      logger.info({ response, documentStatusList: response.documentStatusList, resultCode: response.resultCode }, 'Resposta da AGT ao listar séries');
+      logger.info(
+        {
+          response,
+          documentStatusList: response.documentStatusList,
+          seriesInfo: (response as any).seriesInfo,
+          resultCode: response.resultCode
+        },
+        'Resposta da AGT ao listar séries'
+      );
+
+      if (isAgtBusinessFailure(response, ['1'])) {
+        const payload = buildAgtFailurePayload(response, 'A AGT recusou o pedido de listagem de séries');
+        logger.warn({ clinicaId, payload }, 'AGT devolveu erro ao listar séries');
+        return res.status(422).json(payload);
+      }
 
       // Mapear resposta da AGT para formato esperado pelo frontend
-      // A AGT retorna documentStatusList com status de documentos, não seriesInfo
-      const items = (response.documentStatusList || []).map((doc: any) => ({
-        id: doc.documentNo || doc.requestID,
-        serieCode: doc.documentNo?.split('-')[0] || 'N/A',
-        documentType: doc.documentNo?.split('-')[1] || 'FT',
-        authorizedQuantity: 0, // AGT não fornece este campo em listarSeries
-        availableQuantity: 0, // AGT não fornece este campo em listarSeries
-        status: doc.documentStatus === 'A' ? 'ACTIVE' : 'EXPIRED'
-      }));
+      const items = mapAgtSeriesItems(response as any);
 
       logger.info({ itemsCount: items.length, items }, 'Items mapeados para o frontend');
 
@@ -426,6 +433,12 @@ export const fiscalController = {
         'Payload AGT para solicitar sÃ©rie preparado'
       );
       const response = await agtApiClient.solicitarSerie(request as any, agtApiToken || '');
+
+      if (isAgtBusinessFailure(response, [1, '1'])) {
+        const payload = buildAgtFailurePayload(response, 'A AGT recusou o pedido de nova série');
+        logger.warn({ clinicaId, submissionUUID, payload }, 'AGT devolveu erro ao solicitar série');
+        return res.status(422).json(payload);
+      }
 
       logger.info({ clinicaId, submissionUUID, resultCode: response.resultCode }, 'SÃ©rie solicitada Ã  AGT com sucesso');
       return res.json(response);
@@ -565,7 +578,7 @@ export const fiscalController = {
         schemaVersion: '1.2',
         submissionUUID,
         taxRegistrationNumber,
-        invoiceNo: numero,
+        documentNo: numero,
         submissionTimeStamp: new Date().toISOString(),
         softwareInfo: {
           softwareInfoDetail,

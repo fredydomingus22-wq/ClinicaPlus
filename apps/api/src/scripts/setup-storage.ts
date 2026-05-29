@@ -18,6 +18,19 @@ const REQUIRED_BUCKETS = [
   { name: config.SUPABASE_LAUDOS_BUCKET, public: false },
 ];
 
+async function callStorageRpc(
+  supabase: any,
+  functionName: string,
+  args: Record<string, unknown>,
+  fallbackMessage: string
+) {
+  try {
+    return await supabase.rpc(functionName, args);
+  } catch {
+    return { data: null, error: { message: fallbackMessage } };
+  }
+}
+
 /**
  * Configura políticas RLS para os buckets
  */
@@ -29,14 +42,14 @@ async function setupRLSPolicies(supabase: any) {
   console.log(`\n📝 Configurando políticas para bucket "${publicBucket}"...`);
 
   // Permitir uploads públicos (INSERT)
-  const { error: insertError } = await supabase.rpc('create_policy', {
+  const { error: insertError } = await callStorageRpc(supabase, 'create_policy', {
     policy_name: 'Allow public uploads',
     table_name: 'objects',
     policy_action: 'INSERT',
     policy_definition: `bucket_id = '${publicBucket}'`,
     policy_to: 'anon, authenticated',
     policy_check: `bucket_id = '${publicBucket}'`
-  }).catch(() => ({ error: { message: 'RPC não disponível, usando SQL direto' } }));
+  }, 'RPC não disponível, usando SQL direto');
 
   if (insertError && insertError.message.includes('RPC não disponível')) {
     // Fallback: Executar SQL direto via exec
@@ -47,7 +60,7 @@ async function setupRLSPolicies(supabase: any) {
       TO anon, authenticated
       WITH CHECK (bucket_id = '${publicBucket}');
     `;
-    const { error: sqlError } = await supabase.rpc('exec_sql', { sql }).catch(() => ({ error: { message: 'SQL exec não disponível' } }));
+    const { error: sqlError } = await callStorageRpc(supabase, 'exec_sql', { sql }, 'SQL exec não disponível');
     
     if (sqlError && !sqlError.message.includes('SQL exec não disponível')) {
       console.warn('⚠️  Não foi possível criar política de upload via SQL:', sqlError.message);
@@ -61,14 +74,14 @@ async function setupRLSPolicies(supabase: any) {
   }
 
   // Permitir downloads públicos (SELECT)
-  const { error: selectError } = await supabase.rpc('create_policy', {
+  const { error: selectError } = await callStorageRpc(supabase, 'create_policy', {
     policy_name: 'Allow public downloads',
     table_name: 'objects',
     policy_action: 'SELECT',
     policy_definition: `bucket_id = '${publicBucket}'`,
     policy_to: 'anon, authenticated',
     policy_using: `bucket_id = '${publicBucket}'`
-  }).catch(() => ({ error: { message: 'RPC não disponível' } }));
+  }, 'RPC não disponível');
 
   if (selectError && selectError.message.includes('RPC não disponível')) {
     const sql = `
@@ -78,7 +91,7 @@ async function setupRLSPolicies(supabase: any) {
       TO anon, authenticated
       USING (bucket_id = '${publicBucket}');
     `;
-    const { error: sqlError } = await supabase.rpc('exec_sql', { sql }).catch(() => ({ error: { message: 'SQL exec não disponível' } }));
+    const { error: sqlError } = await callStorageRpc(supabase, 'exec_sql', { sql }, 'SQL exec não disponível');
     
     if (sqlError && !sqlError.message.includes('SQL exec não disponível')) {
       console.warn('⚠️  Não foi possível criar política de download via SQL:', sqlError.message);
@@ -103,8 +116,12 @@ async function setupRLSPolicies(supabase: any) {
     WITH CHECK (bucket_id = '${privateBucket}');
   `;
   
-  const { error: privateUploadError } = await supabase.rpc('exec_sql', { sql: privateUploadSql })
-    .catch(() => ({ error: { message: 'SQL exec não disponível' } }));
+  const { error: privateUploadError } = await callStorageRpc(
+    supabase,
+    'exec_sql',
+    { sql: privateUploadSql },
+    'SQL exec não disponível'
+  );
   
   if (privateUploadError && !privateUploadError.message.includes('SQL exec não disponível')) {
     console.warn('⚠️  Não foi possível criar política de upload privado:', privateUploadError.message);
@@ -121,8 +138,12 @@ async function setupRLSPolicies(supabase: any) {
     USING (bucket_id = '${privateBucket}');
   `;
   
-  const { error: privateDownloadError } = await supabase.rpc('exec_sql', { sql: privateDownloadSql })
-    .catch(() => ({ error: { message: 'SQL exec não disponível' } }));
+  const { error: privateDownloadError } = await callStorageRpc(
+    supabase,
+    'exec_sql',
+    { sql: privateDownloadSql },
+    'SQL exec não disponível'
+  );
   
   if (privateDownloadError && !privateDownloadError.message.includes('SQL exec não disponível')) {
     console.warn('⚠️  Não foi possível criar política de download privado:', privateDownloadError.message);

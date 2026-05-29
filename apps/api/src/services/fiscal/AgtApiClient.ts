@@ -1,5 +1,6 @@
 import {
   AgtApiClient as BaseAgtApiClient,
+  getAgtOrigin,
   requireAgtBasicAuthFromEnv,
   resolveAgtEnvFromProcessEnv,
   type AgtEnv,
@@ -15,6 +16,15 @@ export class AgtApiClient extends BaseAgtApiClient {
     const env: AgtEnv = resolveAgtEnvFromProcessEnv();
     const isMock = process.env.AGT_MOCK === 'true' || process.env.NODE_ENV === 'test';
     super({ env, logger, isMock });
+    logger.info(
+      {
+        agtEnv: env,
+        agtOrigin: getAgtOrigin(env),
+        agtMock: isMock,
+        nodeEnv: process.env.NODE_ENV,
+      },
+      'AGT client configured'
+    );
   }
 
   /**

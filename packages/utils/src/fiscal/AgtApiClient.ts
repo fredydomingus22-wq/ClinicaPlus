@@ -176,7 +176,7 @@ export class AgtApiClient {
   public async consultarFactura(request: AgtConsultRequest, apiToken: string): Promise<AgtConsultResponse> {
     const mockEnabled = this.isMock || process.env.AGT_MOCK === 'true';
     if (mockEnabled) {
-      const documentNo = request.invoiceNo || request.documentNo || '';
+      const documentNo = request.documentNo || request.invoiceNo || '';
       return {
         documentNo,
         documentStatus: 'V',
@@ -212,7 +212,7 @@ export class AgtApiClient {
       });
       return response.data;
     } catch (error) {
-      if (this.logger) this.logger.error({ error, documentNo: request.invoiceNo || request.documentNo }, `Erro ao consultar fatura na AGT`);
+      if (this.logger) this.logger.error({ error, documentNo: request.documentNo || request.invoiceNo }, `Erro ao consultar fatura na AGT`);
       this.mapAxiosError(error);
     }
   }

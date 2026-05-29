@@ -10,8 +10,9 @@ export type AgtEndpointName =
   | 'validarDocumento';
 
 export function getAgtOrigin(env: AgtEnv): string {
-  // Hardcoded para homologação (sandbox)
-  return 'https://sifphml.minfin.gov.ao';
+  return env === 'production'
+    ? 'https://sifp.minfin.gov.ao'
+    : 'https://sifphml.minfin.gov.ao';
 }
 
 /**
@@ -27,4 +28,3 @@ export function getAgtEndpointPath(env: AgtEnv, endpoint: AgtEndpointName): stri
 export function getAgtEndpointUrl(env: AgtEnv, endpoint: AgtEndpointName): string {
   return `${getAgtOrigin(env)}${getAgtEndpointPath(env, endpoint)}`;
 }
-

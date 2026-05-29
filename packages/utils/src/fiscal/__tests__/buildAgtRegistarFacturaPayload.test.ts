@@ -74,7 +74,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
     });
     const ftLine = ftPayload.documents[0]!.lines[0]!;
     expect(ftLine.creditAmount).toBe(500);
-    expect(ftLine.debitAmount).toBe(0);
+    expect(ftLine.debitAmount).toBeUndefined();
     expect(ftLine.taxes[0]?.taxContribution).toBe(70);
 
     const ncPayload = buildAgtRegistarFacturaPayload(
@@ -91,7 +91,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
     );
     const ncLine = ncPayload.documents[0]!.lines[0]!;
     expect(ncLine.debitAmount).toBe(500);
-    expect(ncLine.creditAmount).toBe(0);
+    expect(ncLine.creditAmount).toBeUndefined();
   });
 
   it('inclui withholdingTaxList quando há retenção', () => {
