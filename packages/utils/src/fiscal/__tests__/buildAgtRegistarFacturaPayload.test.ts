@@ -7,6 +7,12 @@ import {
   type AgtFaturaRegistoInput,
 } from '../buildAgtRegistarFacturaPayload';
 
+function decodeJwsPayload<T>(jws: string): T {
+  const payload = jws.split('.')[1];
+  if (!payload) throw new Error('JWS payload ausente');
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as T;
+}
+
 describe('buildAgtRegistarFacturaPayload', () => {
   let certService: CertificationService;
   const baseInput: AgtFaturaRegistoInput = {
@@ -131,6 +137,7 @@ describe('buildAgtRegistarFacturaPayload', () => {
     expect(payload.numberOfEntries).toBe(1);
     expect(payload.documents[0]?.jwsDocumentSignature.split('.')).toHaveLength(3);
     expect(payload.softwareInfo.jwsSoftwareSignature.split('.')).toHaveLength(3);
+    expect(decodeJwsPayload(payload.softwareInfo.jwsSoftwareSignature)).toEqual(payload.softwareInfo.softwareInfoDetail);
     expect(payload.documents[0]?.documentDate).toBe('2025-11-04');
     expect(payload.documents[0]?.lines[0]?.unitOfMeasure).toBe('UN');
     expect(payload.documents[0]?.systemEntryDate).toContain('T');
