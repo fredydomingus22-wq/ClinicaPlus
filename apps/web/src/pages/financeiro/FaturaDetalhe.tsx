@@ -67,8 +67,15 @@ export default function FaturaDetalhe() {
   const [ndPrecoUnit, setNdPrecoUnit] = useState(0);
   const [ndQuantidade, setNdQuantidade] = useState(1);
 
-  const handlePrint = () => {
-    window.print();
+  const [layoutImpressao, setLayoutImpressao] = useState<'A4' | 'TALAO'>('A4');
+  const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+
+  const handlePrintMode = (mode: 'A4' | 'TALAO') => {
+    setLayoutImpressao(mode);
+    setIsPrintMenuOpen(false);
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   const insurancePayment = useMemo(() => {
@@ -175,9 +182,30 @@ export default function FaturaDetalhe() {
             </button>
           </div>
 
-           <Button variant="secondary" title="Imprimir" onClick={handlePrint} disabled={fatura.estado === EstadoFatura.RASCUNHO}>
-            <Printer className="h-4 w-4 mr-2" /> Imprimir
-          </Button>
+          <div className="relative">
+            <Button variant="secondary" title="Imprimir" onClick={() => setIsPrintMenuOpen(!isPrintMenuOpen)} disabled={fatura.estado === EstadoFatura.RASCUNHO}>
+              <Printer className="h-4 w-4 mr-2" /> Imprimir
+            </Button>
+            {isPrintMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsPrintMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 py-1">
+                  <button 
+                    onClick={() => handlePrintMode('A4')}
+                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
+                  >
+                    <span>Imprimir em A4</span>
+                  </button>
+                  <button 
+                    onClick={() => handlePrintMode('TALAO')}
+                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium border-t border-neutral-100"
+                  >
+                    <span>Imprimir em Talão (80mm)</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {fatura.estado === EstadoFatura.RASCUNHO && (
             <Button onClick={handleEmitir} loading={emitirMutation.isPending}>
               <CheckCircle2 className="h-4 w-4 mr-2" /> Emitir Fatura
@@ -202,11 +230,25 @@ export default function FaturaDetalhe() {
       </div>
 
       {activeTab === 'preview' && fatura.estado !== EstadoFatura.RASCUNHO ? (
-        <div className="max-w-4xl mx-auto bg-neutral-800 p-8 rounded-2xl shadow-2xl overflow-hidden border-4 border-neutral-700">
-           <div className="bg-white rounded shadow-lg transform origin-top scale-[0.85] -mb-[15%]">
-             <FaturaPrint fatura={fatura} clinica={clinica!} isPreview />
-           </div>
-           <p className="text-center text-neutral-400 text-xs mt-4">Documento conforme legislação angolana. Use o botão imprimir para exportar em PDF ou papel.</p>
+        <div className="max-w-4xl mx-auto bg-neutral-800 p-8 rounded-2xl shadow-2xl overflow-hidden border-4 border-neutral-700 text-center space-y-4">
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setLayoutImpressao('A4')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${layoutImpressao === 'A4' ? 'bg-white text-primary-600 shadow-sm' : 'text-neutral-400 hover:text-neutral-200'}`}
+            >
+              Formato A4
+            </button>
+            <button
+              onClick={() => setLayoutImpressao('TALAO')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${layoutImpressao === 'TALAO' ? 'bg-white text-primary-600 shadow-sm' : 'text-neutral-400 hover:text-neutral-200'}`}
+            >
+              Formato Talão (80mm)
+            </button>
+          </div>
+          <div className={`bg-white rounded shadow-lg mx-auto ${layoutImpressao === 'A4' ? 'transform origin-top scale-[0.85] -mb-[15%]' : 'max-w-[80mm] p-2'}`}>
+            <FaturaPrint fatura={fatura} clinica={clinica!} isPreview layoutMode={layoutImpressao} />
+          </div>
+          <p className="text-center text-neutral-400 text-xs mt-4">Documento conforme legislação angolana. Use o botão imprimir para exportar em PDF ou papel.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -522,7 +564,7 @@ export default function FaturaDetalhe() {
       {/* Hidden Print Component via Portal */}
       {clinica && fatura && createPortal(
         <div className="fatura-print-portal hidden no-print:hidden print:block">
-          <FaturaPrint fatura={fatura} clinica={clinica} />
+          <FaturaPrint fatura={fatura} clinica={clinica} layoutMode={layoutImpressao} />
         </div>,
         document.body
       )}
