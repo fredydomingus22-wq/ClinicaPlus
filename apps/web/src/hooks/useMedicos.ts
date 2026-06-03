@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { medicosApi } from '../api/medicos';
+import { getApiErrorMessage } from '../lib/errorUtils';
 import type { MedicoListQuery, MedicoUpdateInput, MedicoSelfUpdateInput } from '@clinicaplus/types';
 
 export const medicosKeys = {
@@ -77,8 +78,7 @@ export function useCreateMedico() {
       toast.success('Médico registado com sucesso!');
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { message?: string } }; message: string };
-      toast.error('Erro ao registar médico: ' + (error.response?.data?.message || error.message));
+      toast.error('Erro ao registar médico: ' + getApiErrorMessage(err));
     }
   });
 }
@@ -94,8 +94,7 @@ export function useUpdateMedico() {
       toast.success('Dados do médico actualizados!');
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { message?: string } }; message: string };
-      toast.error('Erro ao actualizar médico: ' + (error.response?.data?.message || error.message));
+      toast.error('Erro ao actualizar médico: ' + getApiErrorMessage(err));
     }
   });
 }

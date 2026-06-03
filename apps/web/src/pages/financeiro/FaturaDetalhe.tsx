@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
+import { getApiErrorMessage } from '../../lib/errorUtils';
 import { useFatura, useEmitirFatura, useAnularFatura, useNotaDebito, useRegistarPagamento, useSubmeterSeguro, useRegistarRespostaSeguro } from '../../hooks/useFaturas';
 import { useClinicaMe } from '../../hooks/useClinicas';
 import { 
@@ -133,12 +134,7 @@ export default function FaturaDetalhe() {
       setNdPrecoUnit(0);
       toast.success('Nota de Débito (Complementar) gerada e emitida.');
     } catch (err: unknown) {
-      let msg = 'Erro ao gerar nota de débito.';
-      if (err && typeof err === 'object' && 'response' in (err as object)) {
-        const error = err as { response?: { data?: { message?: string } } };
-        msg = error.response?.data?.message || msg;
-      }
-      toast.error(msg);
+      toast.error('Erro ao gerar nota de débito: ' + getApiErrorMessage(err));
     }
   };
 
@@ -566,12 +562,7 @@ function PagamentoModal({ isOpen, onClose, faturaId, valorPendente, seguradoras 
       reset();
       onClose();
     } catch (err: unknown) {
-      let msg = 'Erro ao registar pagamento.';
-      if (err && typeof err === 'object' && 'response' in (err as object)) {
-        const error = err as { response?: { data?: { message?: string } } };
-        msg = error.response?.data?.message || msg;
-      }
-      toast.error(msg);
+      toast.error('Erro ao registar pagamento: ' + getApiErrorMessage(err));
     }
   };
 

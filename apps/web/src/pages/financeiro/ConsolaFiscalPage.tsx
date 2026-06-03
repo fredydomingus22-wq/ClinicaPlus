@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getApiErrorMessage } from '../../lib/errorUtils';
 import { 
   Card, 
   Button, 
@@ -75,8 +76,7 @@ export default function ConsolaFiscalPage() {
       });
       toast.success('Solicitação de série enviada com sucesso!');
     } catch (err: unknown) {
-      const error = err as any;
-      toast.error(error.response?.data?.error || 'Erro ao solicitar série');
+      toast.error('Erro ao solicitar série: ' + getApiErrorMessage(err));
     }
   };
 
@@ -98,8 +98,7 @@ export default function ConsolaFiscalPage() {
       
       toast.success('Ficheiro SAF-T (AO) exportado com sucesso!');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      toast.error('Erro ao exportar ficheiro SAF-T.');
+      toast.error('Erro ao exportar ficheiro SAF-T: ' + getApiErrorMessage(err));
     }
   };
 
@@ -112,8 +111,7 @@ export default function ConsolaFiscalPage() {
       await validarDocMutation.mutateAsync(faturaIdParaValidar);
       toast.success('Validação processada. Consulte o log (Network) para detalhes completos.');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      toast.error('Ocorreu um erro ao validar documento. Verifique se o ID existe.');
+      toast.error('Erro ao validar documento: ' + getApiErrorMessage(err));
     }
   };
 
@@ -125,8 +123,8 @@ export default function ConsolaFiscalPage() {
       } else {
         toast.error(`Falha na cadeia. ${response.falhas.length} problemas encontrados.`);
       }
-    } catch {
-      toast.error('Falha ao processar auditoria.');
+    } catch (err: unknown) {
+      toast.error('Falha ao processar auditoria: ' + getApiErrorMessage(err));
     }
   };
 
@@ -139,11 +137,7 @@ export default function ConsolaFiscalPage() {
       await consultarFaturaAgtMutation.mutateAsync(numeroFaturaConsulta);
       toast.success('Documento obtido da AGT.');
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      toast.error(
-        error.response?.data?.error ||
-          'Erro na consulta. O documento pode não existir na AGT ou o NIF difere.',
-      );
+      toast.error('Erro na consulta à AGT: ' + getApiErrorMessage(err));
     }
   };
 
@@ -487,7 +481,7 @@ export default function ConsolaFiscalPage() {
                       </div>
                     </div>
                     <p className="mt-2 text-sm text-danger-700">
-                      {(consultarFaturaAgtMutation.error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Falha ao consultar documento na AGT.'}
+                      {getApiErrorMessage(consultarFaturaAgtMutation.error, 'Falha ao consultar documento na AGT.')}
                     </p>
                   </Card>
                 )}
