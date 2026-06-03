@@ -5,6 +5,16 @@ import { App } from './App';
 import { queryClient, idbPersister } from './lib/queryClient';
 import './index.css';
 
+// Tratar erros de carregamento dinâmico de chunks (ex: após novo deploy no Vercel)
+window.addEventListener('vite:preloadError', () => {
+  const lastReload = window.sessionStorage.getItem('last-chunk-reload');
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+    window.sessionStorage.setItem('last-chunk-reload', String(now));
+    window.location.reload();
+  }
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PersistQueryClientProvider

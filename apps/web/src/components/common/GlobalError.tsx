@@ -14,6 +14,24 @@ export function GlobalError() {
   const error = useRouteError();
   const navigate = useNavigate();
 
+  const isChunkLoadError = 
+    error && 
+    (
+      (error instanceof Error && error.message.includes('Failed to fetch dynamically imported module')) ||
+      (typeof error === 'object' && 'message' in error && String((error as any).message).includes('Failed to fetch dynamically imported module')) ||
+      (String(error).includes('Failed to fetch dynamically imported module'))
+    );
+
+  if (isChunkLoadError) {
+    const lastReload = window.sessionStorage.getItem('last-chunk-reload');
+    const now = Date.now();
+    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+      window.sessionStorage.setItem('last-chunk-reload', String(now));
+      window.location.reload();
+    }
+    return null;
+  }
+
   let title = "Ocorreu um erro inesperado";
   let message = "Pedimos desculpa pelo incómodo. A nossa equipa foi notificada e estamos a trabalhar na resolução.";
   let status = "500";

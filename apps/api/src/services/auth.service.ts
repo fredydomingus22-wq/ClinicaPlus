@@ -154,12 +154,33 @@ export const authService = {
       where: { token: rawToken } 
     });
 
-    // Reuse detection: token was already used — revoke all sessions for this user
+    // Deteção de reutilização de token com janela de tolerância de 30s para requisições concorrentes/abas
     if (stored?.usedAt) {
-      await prisma.refreshToken.deleteMany({ 
-        where: { utilizadorId: stored.utilizadorId } 
-      });
-      throw new AppError('Token de atualização inválido ou reutilizado', 401, 'TOKEN_REUSE_DETECTED');
+      const GRACE_PERIOD_MS = 30 * 1000; // 30 segundos
+      const tempoDecorrido = Date.now() - stored.usedAt.getTime();
+      
+      if (tempoDecorrido < GRACE_PERIOD_MS) {
+        const user = await prisma.utilizador.findUniqueOrThrow({ 
+          where: { id: stored.utilizadorId },
+          include: {
+            paciente: true,
+            medico: {
+              include: { especialidade: true }
+            },
+          }
+        });
+        
+        if (!user.ativo) {
+          throw new AppError('Utilizador inativo', 401, 'USER_INACTIVE');
+        }
+        
+        return authService._issueTokens(user as UtilizadorWithRelations);
+      } else {
+        await prisma.refreshToken.deleteMany({ 
+          where: { utilizadorId: stored.utilizadorId } 
+        });
+        throw new AppError('Token de atualização inválido ou reutilizado', 401, 'TOKEN_REUSE_DETECTED');
+      }
     }
 
     if (!stored || stored.expiresAt < new Date()) {
