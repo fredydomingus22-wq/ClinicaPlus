@@ -3,7 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { toast as hotToast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { authApi } from './api/auth';
+import { refreshSession } from './api/client';
 import { useAuthStore } from './stores/auth.store';
 import { useSocket } from './hooks/useSocket';
 import { router } from './router';
@@ -30,7 +30,7 @@ function FullPageSpinner() {
  * Handles initial session restoration from the refresh cookie.
  */
 export function App() {
-  const { isRestoring, setSession, setRestoring } = useAuthStore();
+  const { isRestoring, setRestoring } = useAuthStore();
   const socket = useSocket();
   const queryClient = useQueryClient();
   
@@ -51,17 +51,14 @@ export function App() {
 
   useEffect(() => {
     // Attempt to restore session on mount
-    authApi.refresh()
-      .then((data) => {
-        setSession(data.accessToken, data.utilizador);
-      })
+    refreshSession()
       .catch(() => {
         // No active session or refresh failed, user needs to login
       })
       .finally(() => {
         setRestoring(false);
       });
-  }, [setSession, setRestoring]);
+  }, [setRestoring]);
 
   useEffect(() => {
     const handler = (event: Event) => {

@@ -83,11 +83,9 @@ function buildDocumentLine(item, index, tipoDocFiscal) {
     const debitTypes = new Set(['NC', 'RE']);
     if (debitTypes.has(tipoDocFiscal)) {
         line.debitAmount = netAmount;
-        line.creditAmount = 0;
     }
     else {
         line.creditAmount = netAmount;
-        line.debitAmount = 0;
     }
     return line;
 }

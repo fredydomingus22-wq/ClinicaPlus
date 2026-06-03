@@ -115,14 +115,26 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
         @media print {
-          body * { visibility: hidden; }
+          body > *:not(.fatura-print-portal) {
+            display: none !important;
+          }
+          #root {
+            display: none !important;
+          }
+          .fatura-print-portal {
+            display: block !important;
+            visibility: visible !important;
+          }
           html, body { 
             height: auto !important; 
             overflow: visible !important; 
             margin: 0 !important;
             padding: 0 !important;
+            background: white !important;
           }
-          .fatura-print-wrapper, .fatura-print-wrapper * { visibility: visible; }
+          .fatura-print-wrapper, .fatura-print-wrapper * { 
+            visibility: visible !important; 
+          }
           .fatura-print-wrapper {
             display: block !important;
             position: relative !important;
@@ -137,6 +149,17 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
             margin: 10mm;
           }
           .no-print { display: none !important; }
+          .avoid-break {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
         }
 
         .fatura-print-wrapper {
@@ -174,7 +197,7 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
         .agt-border-box {
           border: 1px solid #000;
           border-radius: 0;
-          padding: 12px 16px;
+          padding: 8px 12px;
         }
 
         .table-agt {
@@ -224,7 +247,7 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
 
       <div className="relative z-10 w-full">
         {/* Top Header Section: Reverted to Professional 2-Column Layout */}
-        <div className="grid grid-cols-[1fr,auto] gap-4 mb-8 items-end border-b-2 border-neutral-900 pb-4">
+        <div className="grid grid-cols-[1fr,auto] gap-4 mb-4 items-end border-b-2 border-neutral-900 pb-2 avoid-break">
           <div className="flex items-center gap-4">
             {clinica.logotipoUrl ? (
               <img src={clinica.logotipoUrl} alt="Logo" className="w-20 h-20 object-contain" />
@@ -255,14 +278,12 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
         </div>
 
         {/* Info Boxes: Left (Clinic regime) vs Right (Client details) */}
-        <div className="grid grid-cols-2 gap-8 mb-8 items-start">
-          <div className="space-y-3">
-             <div className="agt-border-box">
-                <h3 className="text-[7.5pt] font-bold uppercase text-neutral-400 mb-2 tracking-widest border-b border-neutral-100 pb-1">Dados da Entidade</h3>
-                <p className="text-[8.5pt]"><span className="font-bold">Regime Fiscal:</span> {clinica.regimeFiscal || 'GERAL'}</p>
-                <p className="text-[8.5pt]"><span className="font-bold">Email:</span> {clinica.email}</p>
-                {clinica.agtSoftwareCert && <p className="text-[8pt] text-neutral-500 mt-1 italic">Software Certificado nº {clinica.agtSoftwareCert}</p>}
-             </div>
+        <div className="grid grid-cols-2 gap-4 mb-4 items-start avoid-break">
+          <div className="agt-border-box">
+             <h3 className="text-[7.5pt] font-bold uppercase text-neutral-400 mb-2 tracking-widest border-b border-neutral-100 pb-1">Dados da Entidade</h3>
+             <p className="text-[8.5pt]"><span className="font-bold">Regime Fiscal:</span> {clinica.regimeFiscal || 'GERAL'}</p>
+             <p className="text-[8.5pt]"><span className="font-bold">Email:</span> {clinica.email}</p>
+             {clinica.agtSoftwareCert && <p className="text-[8pt] text-neutral-500 mt-1 italic">Software Certificado nº {clinica.agtSoftwareCert}</p>}
           </div>
           
           <div className="agt-border-box bg-neutral-50/50">
@@ -279,24 +300,24 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
         </div>
 
         {/* Numero and Data */}
-        <div className="mb-6 flex justify-between items-end bg-neutral-900 p-4 text-white shadow-lg">
+        <div className="mb-4 flex justify-between items-end bg-neutral-900 p-3 text-white avoid-break">
           <div>
-            <h2 className="text-[14pt] font-black uppercase tracking-tighter">
+            <h2 className="text-[12pt] font-black uppercase tracking-tighter">
               {pagamento ? (pagamento.numeroRecibo?.startsWith('RE') ? 'Recibo de Estorno' : 'Recibo') : (fatura.tipoDocFiscal || 'Factura')} nº {pagamento?.numeroRecibo || fatura.numeroFatura || '000AB.2026/0000001'}
             </h2>
-            <p className="text-[9pt] font-medium opacity-80">
+            <p className="text-[8.5pt] font-medium opacity-80">
               Data e Hora de Emissão: {formatDate(pagamento?.criadoEm || fatura.dataEmissao || fatura.criadoEm)} às {new Date(pagamento?.criadoEm || fatura.criadoEm).toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}
             </p>
           </div>
           {fatura.dataVencimento && !pagamento && (
             <div className="text-right">
-              <p className="text-[8pt] uppercase font-bold opacity-60">Data Vencimento</p>
-              <p className="text-[11pt] font-black">{formatDate(fatura.dataVencimento)}</p>
+              <p className="text-[7.5pt] uppercase font-bold opacity-60">Data Vencimento</p>
+              <p className="text-[10pt] font-black">{formatDate(fatura.dataVencimento)}</p>
             </div>
           )}
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           {/* Se for Recibo, mostrar detalhes do pagamento */}
           {pagamento ? (
             <div className="agt-border-box mb-6 bg-blue-50/30 border-blue-100">
@@ -350,12 +371,11 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
           )}
         </div>
 
-        {/* Blocos de Totais Inferiores */}
-        <div className="grid grid-cols-[1.2fr,1fr] gap-10 mt-6 items-start">
-          <div className="space-y-6">
+        {/* Blocos d        <div className="grid grid-cols-[1.2fr,1fr] gap-6 mt-4 items-start avoid-break">
+          <div className="space-y-4">
             <div>
               <h3 className="text-[7.5pt] font-bold mb-1">Totais retidos na fonte ou cativados pelo adquirente</h3>
-              <p className="text-[6.5pt] text-gray-500 mb-2">(valores informativos não integrados no total do documento)</p>
+              <p className="text-[6.5pt] text-gray-500 mb-1">(valores informativos não integrados no total do documento)</p>
               <table className="table-agt !mt-0 table-fixed">
                 <thead>
                   <tr>
@@ -366,12 +386,16 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
                   </tr>
                 </thead>
                 <tbody>
-                  {retencaoFonteCalculada > 0 && (
+                  {retencaoFonteCalculada > 0 ? (
                     <tr className="text-[7.5pt]">
                       <td className="text-center">Retenção</td>
                       <td className="text-center">II / IRT</td>
                       <td className="text-center">6.50%</td>
                       <td className="text-right px-2 font-mono">{formatKwanza(retencaoFonteCalculada).replace('Kz', '')}</td>
+                    </tr>
+                  ) : (
+                    <tr className="text-[7.5pt] text-gray-400 text-center">
+                      <td colSpan={4} className="py-1">Nenhuma retenção aplicada</td>
                     </tr>
                   )}
                 </tbody>
@@ -389,56 +413,50 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
                 </thead>
                 <tbody>
                   {impostosAgrupados.map((grupo, idx) => (
-                    <tr key={idx}>
+                    <tr key={idx} className="text-[7.5pt]">
                       <td className="text-left px-2">IVA {grupo.taxaIva}%</td>
                       <td className="text-right px-2 font-mono">{formatKwanza(grupo.valorImposto).replace('Kz', '')}</td>
                     </tr>
                   ))}
-                  {impostosAgrupados.length === 0 && <tr><td></td><td></td></tr>}
+                  {impostosAgrupados.length === 0 && (
+                    <tr className="text-[7.5pt] text-gray-400 text-center">
+                      <td colSpan={2} className="py-1">Isento de IVA</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="pt-4 flex flex-col items-end">
-            <div className="text-right space-y-1 mb-4 w-full">
-              <h4 className="text-[9pt] font-bold uppercase tracking-tight">Valores em Kwanzas</h4>
+          <div className="pt-2 flex flex-col items-end">
+            <div className="text-right space-y-1 w-full">
+              <h4 className="text-[8.5pt] font-bold uppercase tracking-tight mb-2 border-b-2 border-neutral-900 pb-1">Valores em Kwanzas</h4>
               <div className="flex justify-between items-end border-b border-gray-100 py-1">
                 <span className="text-gray-600 text-[8pt]">Totais sem impostos</span>
-                <span className="font-mono text-[9pt]">{formatKwanza(fatura.subtotal).replace('Kz', '')}</span>
+                <span className="font-mono text-[8.5pt]">{formatKwanza(fatura.subtotal).replace('Kz', '')}</span>
               </div>
               <div className="flex justify-between items-end border-b border-gray-100 py-1">
                 <span className="text-gray-600 text-[8pt]">Valor de impostos</span>
-                <span className="font-mono text-[9pt]">{formatKwanza(totalImpostoCalculado).replace('Kz', '')}</span>
+                <span className="font-mono text-[8.5pt]">{formatKwanza(totalImpostoCalculado).replace('Kz', '')}</span>
               </div>
               <div className="flex justify-between items-end border-b border-gray-100 py-1">
                 <span className="text-gray-600 text-[8pt]">Valor de descontos</span>
-                <span className="font-mono text-[9pt]">{formatKwanza(fatura.desconto).replace('Kz', '')}</span>
+                <span className="font-mono text-[8.5pt]">{formatKwanza(fatura.desconto).replace('Kz', '')}</span>
               </div>
               <div className="flex justify-between items-end bg-gray-100 p-2 mt-2">
-                <span className="font-bold text-[9pt]">Valor total a pagar</span>
-                <span className="font-bold font-mono text-[11pt]">{formatKwanza(fatura.total)}</span>
+                <span className="font-bold text-[8.5pt]">Valor total a pagar</span>
+                <span className="font-bold font-mono text-[10pt]">{formatKwanza(fatura.total)}</span>
               </div>
-            </div>
-
-            {/* QR CODE SECTION */}
-            <div className="flex flex-col items-center mt-2">
-              {qrCodeData && (
-                <div className="border border-gray-200 p-1 bg-white">
-                  <img src={qrCodeData} alt="QR Code AGT" className="w-[350px] h-[350px]" />
-                </div>
-              )}
-              <span className="text-[6pt] text-gray-400 mt-1 uppercase font-mono tracking-widest">Verificar Doc. AGT</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-gray-100 pt-3">
+        <div className="mt-4 border-t border-gray-100 pt-2 avoid-break">
           <p className="text-[7.5pt]"><span className="font-bold text-gray-400 uppercase tracking-wide">Valor por Extenso:</span> {fatura.total > 0 ? numberToWords(fatura.total) : 'Zero Kwanzas'}</p>
         </div>
 
         {/* Rodapé e Frases Legais */}
-        <div className="mt-10 text-[7pt] text-gray-700 leading-relaxed space-y-0.5">
+        <div className="mt-6 text-[7pt] text-gray-700 leading-relaxed space-y-0.5 avoid-break">
           {fiscalHash && (
             <p className="font-mono text-[7pt] text-gray-600">
               Hash ({hashControl}): {fiscalHashTruncado}
@@ -453,11 +471,20 @@ export const FaturaPrint = forwardRef<HTMLDivElement, Props>(({ fatura, clinica,
           <p className="text-gray-400">Os bens/serviços foram colocados à disposição do adquirente na data e local deste documento.</p>
           
           <div className="mt-4 flex justify-between items-end border-t border-gray-200 pt-2">
-            <div className="max-w-[400px]">
-              {fatura.notas && <p><span className="font-bold">Observações:</span> {fatura.notas}</p>}
-              <p className="text-[6.5pt] text-gray-400 mt-2 uppercase tracking-tight">DOCUMENTO EMITIDO PELO PORTAL DO CONTRIBUINTE - ClinicaPlus</p>
+            <div className="max-w-[500px]">
+              {fatura.notas && <p className="mb-1"><span className="font-bold">Observações:</span> {fatura.notas}</p>}
+              <p className="text-[6.5pt] text-gray-400 uppercase tracking-tight">DOCUMENTO EMITIDO PELO PORTAL DO CONTRIBUINTE - ClinicaPlus</p>
               <p className="text-[6.5pt] text-gray-400 uppercase tracking-widest">EM {new Date().toLocaleString('pt-AO')}</p>
             </div>
+            {/* QR CODE SECTION */}
+            {qrCodeData && (
+              <div className="flex flex-col items-center ml-4 shrink-0">
+                <div className="border border-gray-200 p-0.5 bg-white">
+                  <img src={qrCodeData} alt="QR Code AGT" className="w-20 h-20" />
+                </div>
+                <span className="text-[5pt] text-gray-400 mt-0.5 uppercase font-mono tracking-widest">Verificar Doc. AGT</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

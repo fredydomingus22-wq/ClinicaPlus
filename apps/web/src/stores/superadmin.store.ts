@@ -1,6 +1,6 @@
-/* eslint-disable no-restricted-globals */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getSessionStorage } from '../lib/browserStorage';
 
 export interface ImpersonationData {
   token: string;
@@ -41,7 +41,7 @@ export const useSuperAdminStore = create<SuperAdminStore>()(
     }),
     {
       name: 'superadmin-storage',
-      storage: createJSONStorage(() => sessionStorage), // Usar sessionStorage para isolar impersonation
+      storage: createJSONStorage(getSessionStorage), // Usar sessionStorage para isolar impersonation
     }
   )
 );

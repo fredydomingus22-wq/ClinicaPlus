@@ -4,8 +4,9 @@ exports.getAgtOrigin = getAgtOrigin;
 exports.getAgtEndpointPath = getAgtEndpointPath;
 exports.getAgtEndpointUrl = getAgtEndpointUrl;
 function getAgtOrigin(env) {
-    // Hardcoded para homologação (sandbox)
-    return 'https://sifphml.minfin.gov.ao';
+    return env === 'production'
+        ? 'https://sifp.minfin.gov.ao'
+        : 'https://sifphml.minfin.gov.ao';
 }
 /**
  * Resolve o path completo do endpoint conforme a documentação AGT (DS.120).

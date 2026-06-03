@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { UtilizadorDTO } from '@clinicaplus/types';
+import { getSessionStorage } from '../lib/browserStorage';
 
 interface AuthState {
   accessToken: string | null;
@@ -31,7 +32,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'clinicaplus-auth',
-      storage: createJSONStorage(() => sessionStorage), // sessionStorage for security (cleared on browser close)
+      storage: createJSONStorage(getSessionStorage), // sessionStorage for security (cleared on browser close)
       partialize: (state) => ({ 
         accessToken: state.accessToken, 
         utilizador: state.utilizador 

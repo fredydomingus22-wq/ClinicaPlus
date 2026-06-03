@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { useFatura, useEmitirFatura, useAnularFatura, useNotaDebito, useRegistarPagamento, useSubmeterSeguro, useRegistarRespostaSeguro } from '../../hooks/useFaturas';
 import { useClinicaMe } from '../../hooks/useClinicas';
@@ -522,10 +523,13 @@ export default function FaturaDetalhe() {
         </div>
       </Modal>
 
-      {/* Hidden Print Component */}
-      <div className="hidden no-print:hidden print:block">
-        {clinica && fatura && <FaturaPrint fatura={fatura} clinica={clinica} />}
-      </div>
+      {/* Hidden Print Component via Portal */}
+      {clinica && fatura && createPortal(
+        <div className="fatura-print-portal hidden no-print:hidden print:block">
+          <FaturaPrint fatura={fatura} clinica={clinica} />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

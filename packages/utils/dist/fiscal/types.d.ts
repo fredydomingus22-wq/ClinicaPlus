@@ -165,8 +165,8 @@ export interface AgtConsultRequest {
     submissionUUID: string;
     taxRegistrationNumber: string;
     submissionTimeStamp: string;
-    invoiceNo: string;
-    documentNo?: string;
+    documentNo: string;
+    invoiceNo?: string;
     softwareInfo: AgtSoftwareInfo;
     jwsSignature: string;
 }

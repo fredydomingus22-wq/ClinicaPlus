@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, refreshSession } from './client';
 import type { 
   LoginInput, 
   AuthResponse, 
@@ -32,9 +32,7 @@ export const authApi = {
     apiClient.post<{ data: { clinica: unknown; accessToken: string } }>('/clinicas/registar', data)
       .then(r => r.data.data),
 
-  refresh: () => 
-    apiClient.post<{ data: AuthResponse }>('/auth/refresh')
-      .then(r => r.data.data),
+  refresh: () => refreshSession(),
 
   logout: () => 
     apiClient.post('/auth/logout')

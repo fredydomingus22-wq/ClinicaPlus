@@ -132,15 +132,7 @@ class CertificationService {
      */
     signSoftwareJWS(data) {
         const key = this.ensureProducerKey();
-        // Fonte de verdade (skill AGT): jwsSoftwareSignature assina APENAS:
-        // { productId, productVersion, softwareValidationNumber }
-        // (mesmo quando `softwareInfoDetail` inclui `signatureVersion` no registarFactura).
-        const payload = {
-            productId: data.productId,
-            productVersion: data.productVersion,
-            softwareValidationNumber: data.softwareValidationNumber,
-        };
-        return this.signWithKey(payload, key);
+        return this.signWithKey(data, key);
     }
     /**
      * jwsDocumentSignature: Assina com a chave do TENANT (Contribuinte)
